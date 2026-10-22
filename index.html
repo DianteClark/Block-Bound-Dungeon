@@ -28,7 +28,7 @@
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:var(--body);overscroll-behavior:none}
 body{background-color:#140f1a;background-size:160px 96px}
 button{font:inherit;color:inherit}
-.stk{display:block;flex:none;-webkit-user-drag:none;user-select:none}
+.stk{display:block;flex:none;-webkit-user-drag:none;user-select:none;image-rendering:auto}
 [hidden]{display:none!important}
 h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;letter-spacing:.5px}
 p{margin:0}
@@ -84,8 +84,6 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .choice{display:flex;gap:12px;align-items:center;text-align:left;width:100%;padding:10px 12px;cursor:pointer;transition:transform .1s}
 .choice:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.45)}
 .choice .ic{width:58px;height:58px;display:grid;place-items:center;background:radial-gradient(circle,#3d3150,#221b2b 75%);border-radius:14px;flex:none}
-.choice:nth-child(odd) .ic .stk{transform:rotate(-5deg)}
-.choice:nth-child(even) .ic .stk{transform:rotate(4deg)}
 .choice b{font-family:var(--display);font-size:20px;font-weight:400;display:block;letter-spacing:.3px}
 .choice small{color:var(--muted);font-size:13px;line-height:1.35;display:block}
 .choice .price{margin-left:auto;font-family:var(--display);color:var(--coin);font-size:19px;flex:none;display:flex;align-items:center;gap:2px}
@@ -100,10 +98,7 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .title{font-family:var(--display);font-size:30px;color:#fff;text-shadow:0 3px 0 #000}
 
 /* sticker headline text */
-.logo{font-family:var(--display);font-size:46px;line-height:.95;text-align:center;color:var(--torch2);margin-top:6px;transform:rotate(-3deg);
-  text-shadow:
-    3px 0 0 #fff,-3px 0 0 #fff,0 3px 0 #fff,0 -3px 0 #fff,2px 2px 0 #fff,-2px -2px 0 #fff,2px -2px 0 #fff,-2px 2px 0 #fff,
-    0 9px 0 rgba(0,0,0,.55)}
+.logo{font-family:var(--display);font-size:46px;line-height:.95;text-align:center;color:var(--torch2);margin-top:6px;transform:rotate(-3deg);text-shadow:3.50px 0.00px 0 #fff,3.38px 0.91px 0 #fff,3.03px 1.75px 0 #fff,2.47px 2.47px 0 #fff,1.75px 3.03px 0 #fff,0.91px 3.38px 0 #fff,0.00px 3.50px 0 #fff,-0.91px 3.38px 0 #fff,-1.75px 3.03px 0 #fff,-2.47px 2.47px 0 #fff,-3.03px 1.75px 0 #fff,-3.38px 0.91px 0 #fff,-3.50px 0.00px 0 #fff,-3.38px -0.91px 0 #fff,-3.03px -1.75px 0 #fff,-2.47px -2.47px 0 #fff,-1.75px -3.03px 0 #fff,-0.91px -3.38px 0 #fff,-0.00px -3.50px 0 #fff,0.91px -3.38px 0 #fff,1.75px -3.03px 0 #fff,2.47px -2.47px 0 #fff,3.03px -1.75px 0 #fff,3.38px -0.91px 0 #fff,2.00px 0.00px 0 #fff,1.73px 1.00px 0 #fff,1.00px 1.73px 0 #fff,0.00px 2.00px 0 #fff,-1.00px 1.73px 0 #fff,-1.73px 1.00px 0 #fff,-2.00px 0.00px 0 #fff,-1.73px -1.00px 0 #fff,-1.00px -1.73px 0 #fff,-0.00px -2.00px 0 #fff,1.00px -1.73px 0 #fff,1.73px -1.00px 0 #fff,0 9px 0 rgba(0,0,0,.55)}
 .logo span{display:block;color:#ff8a3c}
 .logo span+span{color:#c77dff;font-size:54px}
 .heroes{display:flex;justify-content:center;gap:6px;margin-top:10px}
@@ -175,7 +170,7 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .hitflash .stk{filter:brightness(2.5) saturate(0)}
 
 .float{position:fixed;z-index:50;pointer-events:none;font-family:var(--display);font-size:26px;color:#fff;
-  text-shadow:2px 0 0 #000,-2px 0 0 #000,0 2px 0 #000,0 -2px 0 #000,2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,0 5px 0 rgba(0,0,0,.5);
+  text-shadow:2.40px 0.00px 0 #000,2.22px 0.92px 0 #000,1.70px 1.70px 0 #000,0.92px 2.22px 0 #000,0.00px 2.40px 0 #000,-0.92px 2.22px 0 #000,-1.70px 1.70px 0 #000,-2.22px 0.92px 0 #000,-2.40px 0.00px 0 #000,-2.22px -0.92px 0 #000,-1.70px -1.70px 0 #000,-0.92px -2.22px 0 #000,-0.00px -2.40px 0 #000,0.92px -2.22px 0 #000,1.70px -1.70px 0 #000,2.22px -0.92px 0 #000,0 5px 0 rgba(0,0,0,.5);
   transform:translate(-50%,-50%);animation:floatup 1.05s ease-out forwards;white-space:nowrap}
 .float.big{font-size:38px;color:var(--torch2)}
 @keyframes floatup{0%{opacity:0;transform:translate(-50%,-30%) scale(.5) rotate(-6deg)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.2) rotate(3deg)}30%{transform:translate(-50%,-70%) scale(1) rotate(-2deg)}100%{opacity:0;transform:translate(-50%,-170%) scale(1)}}
@@ -216,7 +211,7 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
 #fxc{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:75}
 #banner{position:fixed;inset:0;z-index:72;display:grid;place-items:center;pointer-events:none}
 #banner .b{text-align:center;animation:banner 2s ease forwards}
-#banner h1{font-family:var(--display);font-size:52px;color:#fff;text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,0 8px 0 rgba(0,0,0,.5)}
+#banner h1{font-family:var(--display);font-size:52px;color:#fff;text-shadow:3.50px 0.00px 0 #000,3.33px 1.08px 0 #000,2.83px 2.06px 0 #000,2.06px 2.83px 0 #000,1.08px 3.33px 0 #000,0.00px 3.50px 0 #000,-1.08px 3.33px 0 #000,-2.06px 2.83px 0 #000,-2.83px 2.06px 0 #000,-3.33px 1.08px 0 #000,-3.50px 0.00px 0 #000,-3.33px -1.08px 0 #000,-2.83px -2.06px 0 #000,-2.06px -2.83px 0 #000,-1.08px -3.33px 0 #000,-0.00px -3.50px 0 #000,1.08px -3.33px 0 #000,2.06px -2.83px 0 #000,2.83px -2.06px 0 #000,3.33px -1.08px 0 #000,0 8px 0 rgba(0,0,0,.5)}
 #banner p{font-family:var(--display);font-size:22px;color:var(--torch2);text-shadow:0 3px 0 #000}
 @keyframes banner{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.08)}25%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
 .coach{position:fixed;z-index:66;max-width:260px;background:#fff;color:#1d1424;border-radius:14px;padding:10px 12px;font-size:14px;font-weight:600;box-shadow:0 6px 0 rgba(0,0,0,.5);animation:pop .3s cubic-bezier(.3,1.5,.5,1);cursor:pointer}

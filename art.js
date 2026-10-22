@@ -334,43 +334,58 @@ const ART = {
     + ln('M50 22 L50 78 M50 34 L36 46 M50 34 L64 46 M50 56 L36 68 M50 56 L64 68','#c8fbff',5) + hl(32,22,3,9,-10,.4),
 };
 
-/* ---------- rendering ---------- */
-const STICKER_FILTER = `<filter id="s" x="-25%" y="-25%" width="150%" height="155%" color-interpolation-filters="sRGB">
-<feMorphology in="SourceAlpha" operator="dilate" radius="5.5" result="d"/>
-<feGaussianBlur in="d" stdDeviation=".6" result="db"/>
-<feFlood flood-color="#ffffff"/><feComposite in2="db" operator="in" result="w"/>
-<feOffset in="db" dy="5" result="o"/><feGaussianBlur in="o" stdDeviation="1.5" result="ob"/>
-<feFlood flood-color="#000" flood-opacity=".45"/><feComposite in2="ob" operator="in" result="sh"/>
-<feMerge><feMergeNode in="sh"/><feMergeNode in="w"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+/* ---------- rendering (pure vector: no SVG filters, so it stays sharp at any size) ---------- */
 const SVG_CACHE = {};
-/* color variants of existing art: hue rotation or a tint matrix */
+/* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
-  frostwisp:{base:'ghost', m:'0.72 0 0 0 0  0 0.88 0 0 0  0 0 1.1 0 0.04  0 0 0 1 0'},
+  frostwisp:{base:'ghost', m:[0.72,0,0,0, 0,0.88,0,0, 0,0,1.1,0.04]},
   icespider:{base:'spider', hue:300},
-  frostskel:{base:'skeleton', m:'0.75 0 0 0 0  0 0.9 0 0 0  0 0 1.1 0 0.05  0 0 0 1 0'},
-  frostgolem:{base:'golem', m:'0.62 0 0 0 0  0 0.86 0 0 0.02  0 0.12 1.15 0 0.06  0 0 0 1 0'},
+  frostskel:{base:'skeleton', m:[0.75,0,0,0, 0,0.9,0,0, 0,0,1.1,0.05]},
+  frostgolem:{base:'golem', m:[0.62,0,0,0, 0,0.86,0,0.02, 0,0.12,1.15,0.06]},
   icewitch:{base:'warlock', hue:300},
   voidimp:{base:'imp', hue:275},
   voidslime:{base:'slime', hue:140},
-  shade:{base:'ghost', m:'0.36 0 0 0 0.04  0 0.3 0 0 0.02  0 0 0.5 0 0.1  0 0 0 1 0'},
-  abyssknight:{base:'darkknight', m:'1 0 0 0 0.03  0 0.55 0 0 0  0.25 0 1.25 0 0.05  0 0 0 1 0'},
+  shade:{base:'ghost', m:[0.36,0,0,0.04, 0,0.3,0,0.02, 0,0,0.5,0.1]},
+  abyssknight:{base:'darkknight', m:[1,0,0,0.03, 0,0.55,0,0, 0.25,0,1.25,0.05]},
   chaoswyrm:{base:'wyrm', hue:95},
-  bloodaxe:{base:'axe', m:'1.15 0 0 0 0.1  0 0.55 0 0 0  0 0 0.55 0 0  0 0 0 1 0'},
+  bloodaxe:{base:'axe', m:[1.15,0,0,0.1, 0,0.55,0,0, 0,0,0.55,0]},
   gravetome:{base:'book', hue:230},
   philflask:{base:'potion_health', hue:45},
-  warmcloak:{base:'chainmail', m:'1.1 0 0 0 0.08  0 0.7 0 0 0  0 0 0.6 0 0  0 0 0 1 0'},
+  warmcloak:{base:'chainmail', m:[1.1,0,0,0.08, 0,0.7,0,0, 0,0,0.6,0]},
   stoneward:{base:'armor', hue:20},
   souljar:{base:'potion_health', hue:170},
 };
+function hueMatrix(deg){
+  const a = Math.cos(deg*Math.PI/180), b = Math.sin(deg*Math.PI/180);
+  return [0.213+0.787*a-0.213*b, 0.715-0.715*a-0.715*b, 0.072-0.072*a+0.928*b, 0,
+          0.213-0.213*a+0.143*b, 0.715+0.285*a+0.140*b, 0.072-0.072*a-0.283*b, 0,
+          0.213-0.213*a-0.787*b, 0.715-0.715*a+0.715*b, 0.072+0.928*a+0.072*b, 0];
+}
+function recolor(svg, V){
+  const m = V.hue!=null ? hueMatrix(V.hue) : V.m;
+  const cl = v => Math.max(0, Math.min(255, Math.round(v*255)));
+  return svg.replace(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g, h=>{
+    let x = h.slice(1); if(x.length===3) x = x.split('').map(ch=>ch+ch).join('');
+    const r = parseInt(x.slice(0,2),16)/255, g = parseInt(x.slice(2,4),16)/255, b = parseInt(x.slice(4,6),16)/255;
+    const R = m[0]*r+m[1]*g+m[2]*b+m[3], G = m[4]*r+m[5]*g+m[6]*b+m[7], B = m[8]*r+m[9]*g+m[10]*b+m[11];
+    return '#'+[R,G,B].map(v=>cl(v).toString(16).padStart(2,'0')).join('');
+  });
+}
+/* die-cut sticker: the art's own silhouette, thickened, drawn as shadow + edge + white border */
+const OUT = 6.5;
+const SIL = (cls, col, w) => `.${cls} *{fill:${col}!important;stroke:${col}!important;stroke-width:${w}px!important;opacity:1!important;stroke-linejoin:round!important;stroke-linecap:round!important}`;
+const STICKER_CSS = `<style>${SIL('sk','#000',OUT*2+1)}${SIL('se','#d9d1e4',OUT*2+2.6)}${SIL('sw','#ffffff',OUT*2)}</style>`;
 function artSVG(name, sticker=true){
   const k = name+'|'+sticker; if(SVG_CACHE[k]) return SVG_CACHE[k];
   const V = VARIANTS[name];
   const fn = ART[V ? V.base : name]; if(!fn) throw new Error('missing art '+name);
   SW = 4;
   let inner = fn();
-  let vdef = '';
-  if(V){ vdef = `<filter id="v" color-interpolation-filters="sRGB">${V.hue!=null?`<feColorMatrix type="hueRotate" values="${V.hue}"/>`:`<feColorMatrix type="matrix" values="${V.m}"/>`}</filter>`; inner = `<g filter="url(#v)">${inner}</g>`; }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 124"><defs>${sticker?STICKER_FILTER:''}${vdef}</defs>${sticker?`<g filter="url(#s)">${inner}</g>`:inner}</svg>`;
+  if(V) inner = recolor(inner, V);
+  const body = sticker
+    ? `${STICKER_CSS}<g class="sk" transform="translate(0 5.5)" opacity=".42">${inner}</g><g class="se">${inner}</g><g class="sw">${inner}</g>${inner}`
+    : inner;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 124" shape-rendering="geometricPrecision">${body}</svg>`;
   return (SVG_CACHE[k] = svg);
 }
 const URL_CACHE = {};

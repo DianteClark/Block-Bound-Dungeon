@@ -517,7 +517,7 @@ function titleScreen(){
     <div class="heroes">${img('knight',76)}${img('rogue',76)}${img('mage',76)}</div>
     ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, Floor ${save.floor}</button>`:''}
     <button class="btn ${save?'ghost':''}" id="startBtn">${save?'New Run':'Enter the Dungeon'}</button>
-    <button class="btn ghost" id="skillBtn"><span class="inline" style="justify-content:center">${img('rune',28)} Skill Tree <span class="muted" style="font-size:15px;margin-left:6px">${img('shard',22)}${soulShards()}</span></span></button>
+    <button class="btn ghost" id="skillBtn"><span class="inline" style="justify-content:center">${img('rune',28)} Skill Tree <span class="muted" style="font-size:15px;margin-left:8px;display:inline-flex;align-items:center;gap:2px">${img('shard',22)}${soulShards()}</span></span></button>
     <div class="row2">
       <button class="btn ghost" id="codexBtn"><span class="inline" style="justify-content:center">${img('book',26)} Codex</span></button>
       <button class="btn ghost" id="trophyBtn"><span class="inline" style="justify-content:center">${img('trophy',26)} ${Object.keys(ach).length}/${Object.keys(ACH).length}</span></button>
