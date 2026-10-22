@@ -12,7 +12,7 @@
 :root{
   --bg:#120f17; --panel:#1d1824; --panel2:#262030; --line:#3a3046;
   --text:#eae3f2; --muted:#9a8fab; --torch:#ff9d3c; --torch2:#ffcf7a;
-  --sword:#e5484d; --shield:#3e8ef7; --heal:#3dbb6a; --coin:#f2c230; --stone:#6b6476; --rainbow:#c77dff;
+  --sword:#e5484d; --shield:#3e8ef7; --heal:#3dbb6a; --coin:#f2c230; --venom:#9d4edd;
   --display:'Pixelify Sans', ui-monospace, monospace;
   --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
@@ -20,799 +20,150 @@
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--body);overscroll-behavior:none}
 body{background:radial-gradient(ellipse at 50% -10%, #2a1d33 0%, var(--bg) 60%) fixed}
 button{font:inherit;color:inherit}
+.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block;flex:none}
 #app{max-width:460px;margin:0 auto;padding:10px 12px calc(16px + env(safe-area-inset-bottom));min-height:100%;display:flex;flex-direction:column;gap:10px}
 [hidden]{display:none!important}
 h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;letter-spacing:.5px}
+p{margin:0}
 
 /* run bar */
-#runbar{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
-.rb-top{display:flex;align-items:center;gap:12px;font-family:var(--display);font-size:17px}
-.rb-top .floor{margin-left:auto;color:var(--muted);font-size:14px}
-.hpbar{position:relative;height:16px;background:#2c1418;border-radius:8px;overflow:hidden;flex:1;min-width:80px}
+#runbar{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 10px}
+.rb-top{display:flex;align-items:center;gap:9px;font-family:var(--display);font-size:17px}
+.rb-top .floor{margin-left:auto;color:var(--muted);font-size:13px;white-space:nowrap}
+.inline{display:flex;align-items:center;gap:4px}
+.hpbar{position:relative;height:16px;background:#2c1418;border-radius:8px;overflow:hidden;flex:1;min-width:70px}
 .hpbar > i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#ff6a6f,var(--sword));border-radius:8px;transition:width .3s}
-.hpbar > span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:700;text-shadow:0 1px 2px #000}
-.relics{display:flex;flex-wrap:wrap;gap:4px;min-height:0}
-.relic{width:28px;height:28px;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:7px;font-size:16px;cursor:pointer;padding:0}
-.relic.used{opacity:.35}
+.hpbar > span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:700;text-shadow:0 1px 2px #000;font-family:var(--body)}
+.rb-items{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.slots{display:flex;gap:4px}
+.slot,.relic{width:30px;height:30px;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:7px;cursor:pointer;padding:0}
+.slot.empty{border-style:dashed;opacity:.45;cursor:default}
+.slot.sel{border-color:var(--torch);box-shadow:0 0 8px var(--torch)}
+.relic.used{opacity:.3}
+.sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+.relics{display:flex;flex-wrap:wrap;gap:4px}
 
-/* panels & screens */
+/* screens */
 .screen{display:flex;flex-direction:column;gap:12px;animation:fade .25s ease}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
 .btn{display:block;width:100%;padding:13px 14px;border-radius:12px;border:1px solid #6a4a2a;background:linear-gradient(#ffae55,#e07a1f);color:#2a1606;font-family:var(--display);font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 3px 0 #8a4810}
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #8a4810}
 .btn.ghost{background:var(--panel2);color:var(--text);border-color:var(--line);box-shadow:0 3px 0 #0b0910}
-.btn:disabled{opacity:.4;pointer-events:none}
-.choice{display:flex;gap:12px;align-items:center;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;box-shadow:0 3px 0 #0b0910}
+.choice{display:flex;gap:12px;align-items:center;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;box-shadow:0 3px 0 #0b0910}
 .choice:active{transform:translateY(2px);box-shadow:none}
-.choice .ic{font-size:30px;width:44px;height:44px;display:grid;place-items:center;background:var(--panel2);border-radius:10px;flex:none}
+.choice .ic{width:52px;height:52px;display:grid;place-items:center;background:var(--panel2);border-radius:10px;flex:none}
 .choice b{font-family:var(--display);font-size:18px;display:block}
 .choice small{color:var(--muted);font-size:13px;line-height:1.35;display:block}
-.choice .price{margin-left:auto;font-family:var(--display);color:var(--coin);font-size:17px;flex:none}
+.choice .price{margin-left:auto;font-family:var(--display);color:var(--coin);font-size:17px;flex:none;display:flex;align-items:center;gap:3px}
 .choice:disabled{opacity:.4;pointer-events:none}
+.choice .rar{font-size:11px;font-family:var(--body);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.rar1{color:#b8b0c4}.rar2{color:#8dbcff}.rar3{color:#ffcf7a}
 .muted{color:var(--muted)}
 .center{text-align:center}
+.scene{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.scene .art{width:112px;height:112px;display:grid;place-items:center;background:radial-gradient(circle,#3a2c48,#1d1824 70%);border-radius:50%;margin-bottom:4px}
 
 /* title */
-.title-art{font-size:54px;letter-spacing:6px;text-align:center;margin-top:18px}
-.logo{font-size:40px;line-height:1;text-align:center;color:var(--torch2);text-shadow:0 0 18px rgba(255,157,60,.45),0 3px 0 #7a3a0a}
+.logo{font-size:40px;line-height:1;text-align:center;color:var(--torch2);text-shadow:0 0 18px rgba(255,157,60,.45),0 3px 0 #7a3a0a;margin-top:8px}
+.heroes{display:flex;justify-content:center;gap:10px;margin-top:14px}
 .how{margin:0;padding-left:18px;line-height:1.5;font-size:14px;color:#d4cbe0}
 .how li{margin:4px 0}
 .chip{display:inline-block;padding:0 6px;border-radius:5px;font-weight:700;color:#fff;font-size:13px}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:13px;margin-top:8px}
+.legend span{display:flex;align-items:center;gap:6px}
+.blk{width:18px;height:18px;border-radius:4px;display:grid;place-items:center;flex:none}
+
+/* hero select */
+.hero{align-items:flex-start}
+.hero .ic{width:72px;height:72px}
+.hero .stats{display:flex;gap:10px;margin-top:4px;font-size:13px;color:#d4cbe0}
 
 /* map */
 .steps{display:flex;gap:5px;justify-content:center;margin:2px 0 4px}
 .steps i{width:22px;height:8px;border-radius:4px;background:var(--panel2);border:1px solid var(--line)}
 .steps i.done{background:#6b4f80}
 .steps i.now{background:var(--torch);box-shadow:0 0 8px var(--torch)}
-.steps i.boss{width:30px}
+.steps i.boss{width:30px;background:#5a2020}
 
 /* combat */
 #combat{display:flex;flex-direction:column;gap:8px}
-#enemyPanel{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;position:relative}
-#eEmoji{font-size:46px;width:62px;height:62px;display:grid;place-items:center;background:radial-gradient(circle,#3a2c48,#1d1824 70%);border-radius:50%;flex:none}
+#enemyPanel{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+#eArt{width:72px;height:72px;display:grid;place-items:center;background:radial-gradient(circle,#4a3a5c,#1d1824 72%);border-radius:50%;flex:none}
 .einfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-.ename{font-family:var(--display);font-size:18px;display:flex;align-items:center;gap:6px}
-.tag{font-size:11px;padding:1px 6px;border-radius:5px;background:#5a2a6a;color:#f2d7ff;font-family:var(--body);font-weight:700;text-transform:uppercase}
+.ename{font-family:var(--display);font-size:18px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:1px 6px;border-radius:5px;background:#5a2a6a;color:#f2d7ff;font-family:var(--body);font-weight:700;text-transform:uppercase}
 .tag.boss{background:#7a2020;color:#ffd6d6}
-.erow{display:flex;gap:8px;align-items:center}
+.tag.pass{background:#2a3a5a;color:#cfe0ff;cursor:pointer}
+.erow{display:flex;gap:6px;align-items:center}
 .ebar > i{background:linear-gradient(#c58cff,#8a3fd1)}
-.badge{font-size:13px;font-weight:700;padding:2px 7px;border-radius:7px;background:#173158;color:#bcd8ff;white-space:nowrap}
-#intent{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 8px;align-self:flex-start}
+.badge{display:flex;align-items:center;gap:3px;font-size:13px;font-weight:700;padding:1px 6px 1px 3px;border-radius:7px;background:var(--panel2);white-space:nowrap;cursor:pointer}
+#intent{display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 8px 3px 4px;align-self:flex-start}
 #intent .val{font-family:var(--display);font-size:16px}
 #intent .cd{color:var(--muted);font-size:12px}
 #intent.urgent{border-color:var(--sword);box-shadow:0 0 10px rgba(229,72,77,.5)}
 #intent.urgent .cd{color:#ff9a9d;font-weight:700}
-#playerPanel{display:flex;gap:8px;align-items:center;font-size:14px}
-#playerPanel .stat{display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-family:var(--display);font-size:16px}
-#rerollBtn{margin-left:auto;padding:6px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);font-family:var(--display);font-size:15px;cursor:pointer}
+#playerPanel{display:flex;gap:8px;align-items:center}
+#playerPanel .stat{display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:4px 9px 4px 5px;font-family:var(--display);font-size:16px;cursor:pointer}
+#rerollBtn{margin-left:auto;display:flex;align-items:center;gap:5px;padding:4px 10px 4px 6px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);font-family:var(--display);font-size:16px;cursor:pointer}
 #rerollBtn:disabled{opacity:.35}
 #board{display:block;margin:0 auto;touch-action:none;user-select:none;-webkit-user-select:none}
 .shake{animation:shake .32s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,1px)}80%{transform:translate(3px,0)}}
 .hitflash{animation:hitflash .35s}
-@keyframes hitflash{0%{filter:none}30%{filter:brightness(2.2) saturate(0)}100%{filter:none}}
-
-.float{position:fixed;z-index:50;pointer-events:none;font-family:var(--display);font-weight:700;font-size:24px;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.8);transform:translate(-50%,-50%);animation:floatup 1s ease-out forwards;white-space:nowrap}
-.float.big{font-size:34px;color:var(--torch2)}
+@keyframes hitflash{0%{filter:none}30%{filter:brightness(2.4) saturate(0)}100%{filter:none}}
+.float{position:fixed;z-index:50;pointer-events:none;font-family:var(--display);font-weight:700;font-size:22px;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.8);transform:translate(-50%,-50%);animation:floatup 1s ease-out forwards;white-space:nowrap}
+.float.big{font-size:32px;color:var(--torch2)}
 @keyframes floatup{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
 
-#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#2d2538;border:1px solid var(--line);color:var(--text);padding:10px 14px;border-radius:12px;font-size:14px;max-width:min(420px,90vw);opacity:0;pointer-events:none;transition:.2s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#2d2538;border:1px solid var(--line);color:var(--text);padding:10px 14px;border-radius:12px;font-size:14px;max-width:min(420px,90vw);opacity:0;pointer-events:none;transition:.2s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;gap:10px;align-items:center}
 #toast.on{opacity:1;transform:translateX(-50%)}
 #toast b{font-family:var(--display);font-size:16px}
+.stats3{display:flex;justify-content:space-around;text-align:center;font-family:var(--display);font-size:20px}
+.stats3 small{display:block;color:var(--muted);font-size:12px;font-family:var(--body)}
 </style>
 </head>
 <body>
 <div id="app">
   <header id="runbar" hidden>
     <div class="rb-top">
-      <span>❤️</span>
+      <span id="heroIcon"></span>
       <div class="hpbar"><i id="hpFill"></i><span id="hpText"></span></div>
-      <span>💰 <b id="goldText">0</b></span>
+      <span class="inline" id="goldWrap"><span id="coinIcon"></span><b id="goldText">0</b></span>
       <span class="floor" id="floorText"></span>
     </div>
-    <div class="relics" id="relicBar"></div>
+    <div class="rb-items">
+      <div class="slots" id="potionBar"></div>
+      <div class="sep"></div>
+      <div class="relics" id="relicBar"></div>
+    </div>
   </header>
 
   <main id="view"></main>
 
   <section id="combat" hidden>
     <div id="enemyPanel">
-      <div id="eEmoji"></div>
+      <div id="eArt"></div>
       <div class="einfo">
-        <div class="ename"><span id="eName"></span><span id="eTag"></span></div>
+        <div class="ename"><span id="eName"></span><span id="eTags"></span></div>
         <div class="erow">
           <div class="hpbar ebar"><i id="eHpFill"></i><span id="eHpText"></span></div>
-          <span class="badge" id="eArmor" hidden></span>
+          <span id="eBadges" style="display:flex;gap:4px"></span>
         </div>
         <div id="intent"></div>
       </div>
     </div>
     <div id="playerPanel">
-      <span class="stat" id="shieldStat" title="Shield">🛡️ <span id="shieldText">0</span></span>
-      <span class="stat" id="comboStat" title="Combo streak">🔥 <span id="streakText">×1</span></span>
-      <button id="rerollBtn">🎲 <span id="rerollText">1</span></button>
+      <span class="stat" id="shieldStat"><span id="shieldIcon"></span><span id="shieldText">0</span></span>
+      <span class="stat" id="comboStat"><span id="flameIcon"></span><span id="streakText">-</span></span>
+      <button id="rerollBtn"><span id="diceIcon"></span><span id="rerollText">1</span></button>
     </div>
     <canvas id="board"></canvas>
   </section>
 </div>
 <div id="toast"></div>
 
-<script>
-'use strict';
-/* ============ helpers ============ */
-const $ = s => document.querySelector(s);
-const rand = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
-const pick = a => a[Math.floor(Math.random()*a.length)];
-const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
-function weighted(entries){
-  const total = entries.reduce((s,e)=>s+e[1],0); let r = Math.random()*total;
-  for(const [it,w] of entries){ if((r-=w) < 0) return it; }
-  return entries[entries.length-1][0];
-}
-const store = {
-  get(k,d){ try{ const v = localStorage.getItem('bbd_'+k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
-  set(k,v){ try{ localStorage.setItem('bbd_'+k, JSON.stringify(v)); }catch(e){} }
-};
-let toastTimer;
-function toast(html, ms=2200){ const t=$('#toast'); t.innerHTML=html; t.classList.add('on'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'), ms); }
-function floatText(el, text, color, big){
-  const r = el.getBoundingClientRect(); const f = document.createElement('div');
-  f.className = 'float'+(big?' big':''); f.textContent = text; if(color) f.style.color = color;
-  f.style.left = (r.left + r.width/2 + rand(-24,24))+'px'; f.style.top = (r.top + r.height/2 + rand(-8,8))+'px';
-  document.body.appendChild(f); setTimeout(()=>f.remove(), 1000);
-}
-function bump(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-
-/* ============ data ============ */
-const N = 8;
-const TYPES = {
-  sword:  {c:'#e5484d', d:'#8f2227', l:'#ff8a8d'},
-  shield: {c:'#3e8ef7', d:'#1c4c99', l:'#8dbcff'},
-  heal:   {c:'#3dbb6a', d:'#1d6b3a', l:'#86e6a8'},
-  coin:   {c:'#f2c230', d:'#9a740a', l:'#ffe58a'},
-  rainbow:{c:'#c77dff', d:'#6a2c9e', l:'#ecc8ff'},
-  stone:  {c:'#6b6476', d:'#38333f', l:'#958da2'},
-};
-const SHAPE_SRC = [
-  ['#'], ['##'], ['#','#'], ['###'], ['#','#','#'], ['####'], ['#','#','#','#'], ['#####'], ['#','#','#','#','#'],
-  ['##','##'], ['###','###','###'], ['###','###'], ['##','##','##'],
-  ['##','#.'], ['##','.#'], ['#.','##'], ['.#','##'],
-  ['###','#..','#..'], ['###','..#','..#'], ['#..','#..','###'], ['..#','..#','###'],
-  ['###','.#.'], ['.#.','###'], ['#.','##','#.'], ['.#','##','.#'],
-  ['##.','.##'], ['.##','##.'], ['#.','##','.#'], ['.#','##','#.'],
-  ['#..','###'], ['..#','###'], ['###','#..'], ['###','..#'],
-  ['##','#.','#.'], ['##','.#','.#'], ['#.','#.','##'], ['.#','.#','##'],
-  ['.#.','###','.#.'],
-];
-const SHAPES = SHAPE_SRC.map(rows=>{
-  const cells=[]; rows.forEach((row,r)=>[...row].forEach((ch,c)=>{ if(ch==='#') cells.push([r,c]); }));
-  return {cells, h:rows.length, w:Math.max(...rows.map(r=>r.length))};
-});
-
-const RELICS = {
-  whetstone:{name:'Whetstone', icon:'🗡️', desc:'Sword blocks deal +1 damage.', r:1},
-  tower:{name:'Tower Shield', icon:'🛡️', desc:'Shield blocks give +1 shield.', r:1},
-  fang:{name:'Vampire Fang', icon:'🦷', desc:'Heal 2 for every line you clear.', r:1},
-  idol:{name:'Golden Idol', icon:'🗿', desc:'Coin blocks give +1 extra gold.', r:1},
-  chainmail:{name:'Chainmail', icon:'🧥', desc:'Start every fight with 8 shield.', r:1},
-  thickskin:{name:'Thick Skin', icon:'🐢', desc:'Take 1 less damage from every hit.', r:1},
-  feather:{name:'Feather Charm', icon:'🪶', desc:'Small pieces show up far more often.', r:1},
-  magnet:{name:'Gold Magnet', icon:'🧲', desc:'+40% gold from fight rewards.', r:1},
-  powder:{name:'Black Powder', icon:'💣', desc:'Clearing 3+ lines at once deals +12 damage.', r:2},
-  hourglass:{name:'Hourglass', icon:'⏳', desc:'Enemy actions take 1 extra turn to arrive.', r:2},
-  sledge:{name:'Sledgehammer', icon:'🔨', desc:'Cleared rubble blocks deal 4 damage each.', r:2},
-  spikes:{name:'Spiked Pauldrons', icon:'🦔', desc:'When an attack hits your shield, deal 5 damage back.', r:2},
-  drum:{name:'War Drum', icon:'🥁', desc:'Combo streaks build twice as fast.', r:2},
-  crossed:{name:'Crossed Blades', icon:'⚔️', desc:'Clearing a row and a column together deals +8 damage.', r:2},
-  dice:{name:'Loaded Dice', icon:'🎲', desc:'+1 hand reroll each fight.', r:2},
-  prism:{name:'Prism Shard', icon:'💎', desc:'Rainbow blocks appear: they slash, block and heal at once.', r:3},
-  phoenix:{name:'Phoenix Feather', icon:'🪽', desc:'The first time you would die, revive at 50% HP.', r:3},
-  bloodpact:{name:'Blood Pact', icon:'🩸', desc:'Sword blocks deal +2 damage. Lose 10 max HP on pickup.', r:3, onGet(){ run.maxHp=Math.max(10,run.maxHp-10); run.hp=Math.min(run.hp,run.maxHp);} },
-};
-const BOONS = [
-  {id:'vital', name:'Vitality', icon:'❤️', desc:'+6 max HP and heal 6.', apply(){ run.maxHp+=6; heal(6);} },
-  {id:'mend', name:'Mend', icon:'🩹', desc:'Heal 15 HP.', apply(){ heal(15);} },
-  {id:'purse', name:'Coin Purse', icon:'👛', desc:'+25 gold.', apply(){ run.gold+=25;} },
-];
-
-// moves: k = atk | multi | curse | armor | heal | drain ; v = value ; t = turns ; n = hits
-const ENEMIES = {
-  normal:[
-    {name:'Cave Rat', emoji:'🐀', hp:28, moves:[{k:'atk',v:5,t:3},{k:'atk',v:5,t:3},{k:'curse',v:2,t:2}]},
-    {name:'Vampire Bat', emoji:'🦇', hp:22, moves:[{k:'atk',v:3,t:2},{k:'drain',v:4,t:3}]},
-    {name:'Skeleton', emoji:'💀', hp:36, moves:[{k:'armor',v:6,t:2},{k:'atk',v:9,t:4}]},
-    {name:'Gloop', emoji:'🦠', hp:42, moves:[{k:'curse',v:3,t:3},{k:'atk',v:6,t:3}]},
-    {name:'Cave Spider', emoji:'🕷️', hp:32, moves:[{k:'curse',v:2,t:2},{k:'atk',v:4,t:2},{k:'atk',v:4,t:2}]},
-    {name:'Goblin', emoji:'👺', hp:34, moves:[{k:'atk',v:6,t:3},{k:'multi',v:3,n:3,t:4}]},
-  ],
-  elite:[
-    {name:'Ogre', emoji:'👹', hp:85, moves:[{k:'armor',v:10,t:3},{k:'atk',v:15,t:5}]},
-    {name:'Warlock', emoji:'🧙', hp:70, moves:[{k:'curse',v:5,t:3},{k:'atk',v:8,t:2},{k:'heal',v:12,t:3}]},
-    {name:'Stone Golem', emoji:'🗿', hp:100, moves:[{k:'armor',v:14,t:3},{k:'atk',v:12,t:3},{k:'curse',v:4,t:3}]},
-  ],
-  boss:[
-    {name:'The Bone King', emoji:'☠️', hp:150, moves:[{k:'atk',v:10,t:3},{k:'curse',v:4,t:2},{k:'armor',v:15,t:2},{k:'multi',v:4,n:3,t:4}]},
-    {name:'Hydra', emoji:'🐍', hp:210, moves:[{k:'multi',v:4,n:3,t:3},{k:'heal',v:20,t:3},{k:'curse',v:5,t:3},{k:'atk',v:14,t:4}]},
-    {name:'Ancient Dragon', emoji:'🐉', hp:280, moves:[{k:'curse',v:6,t:3},{k:'atk',v:18,t:4},{k:'armor',v:20,t:2},{k:'multi',v:5,n:4,t:4}]},
-  ],
-};
-const ROOMS = {
-  combat:{icon:'⚔️', name:'Monster', desc:'A regular fight. Gold and a boon.'},
-  elite:{icon:'😈', name:'Elite', desc:'A tough fight. Pick a relic.'},
-  rest:{icon:'🔥', name:'Campfire', desc:'Heal up or train.'},
-  shop:{icon:'🛒', name:'Merchant', desc:'Spend gold on relics and potions.'},
-  treasure:{icon:'🎁', name:'Treasure', desc:'A free relic, no strings.'},
-  event:{icon:'❓', name:'Mystery', desc:'Something strange lies ahead.'},
-  boss:{icon:'👑', name:'Boss', desc:'The floor guardian.'},
-};
-const FLOORS = 3, STEPS = 8; // steps 0..7, step 7 = boss
-
-/* ============ run state ============ */
-let run = null, cb = null, drag = null;
-const has = id => !!run && run.relics.includes(id);
-function heal(n){ run.hp = Math.min(run.maxHp, run.hp + n); }
-
-function newRun(){
-  run = {hp:60, maxHp:60, gold:20, relics:[], floor:1, step:0, kills:0, phoenixUsed:false, choices:null};
-  store.set('runs', store.get('runs',0)+1);
-  goMap();
-}
-function gainRelic(id){
-  run.relics.push(id); const R = RELICS[id]; if(R.onGet) R.onGet();
-  renderRunbar(); toast(`${R.icon} <b>${R.name}</b><br>${R.desc}`);
-}
-function relicOffers(n, minR=1){
-  const pool = Object.keys(RELICS).filter(id=>!has(id) && RELICS[id].r>=minR);
-  const fallback = Object.keys(RELICS).filter(id=>!has(id));
-  return shuffle(pool.length>=n?pool:fallback).slice(0,n);
-}
-
-/* ============ UI shell ============ */
-function show(which){
-  $('#combat').hidden = which!=='combat';
-  $('#view').hidden = which==='combat';
-  $('#runbar').hidden = !run || which==='title';
-  if(run) renderRunbar();
-  window.scrollTo(0,0);
-}
-function renderRunbar(){
-  $('#hpFill').style.width = (100*Math.max(0,run.hp)/run.maxHp)+'%';
-  $('#hpText').textContent = `${Math.max(0,run.hp)} / ${run.maxHp}`;
-  $('#goldText').textContent = run.gold;
-  $('#floorText').textContent = `Floor ${run.floor} · ${Math.min(run.step+1,STEPS)}/${STEPS}`;
-  const bar = $('#relicBar'); bar.innerHTML='';
-  run.relics.forEach(id=>{
-    const R = RELICS[id]; const b = document.createElement('button');
-    b.className = 'relic'+(id==='phoenix'&&run.phoenixUsed?' used':''); b.textContent = R.icon; b.title = R.name;
-    b.onclick = ()=>toast(`${R.icon} <b>${R.name}</b><br>${R.desc}`);
-    bar.appendChild(b);
-  });
-  bar.hidden = run.relics.length===0;
-}
-function view(html){ const v=$('#view'); v.innerHTML = `<div class="screen">${html}</div>`; return v; }
-function choiceBtn({icon,name,desc,price,disabled,id}){
-  return `<button class="choice" data-id="${id}" ${disabled?'disabled':''}><span class="ic">${icon}</span><span><b>${name}</b><small>${desc}</small></span>${price!=null?`<span class="price">${price}g</span>`:''}</button>`;
-}
-function bindChoices(fn){ $('#view').querySelectorAll('.choice').forEach(b=>b.onclick=()=>fn(b.dataset.id)); }
-
-/* ============ title ============ */
-function titleScreen(){
-  run = null; show('title');
-  const best = store.get('best', null);
-  view(`
-    <div class="title-art">🧱🗝️🐉</div>
-    <h1 class="logo">BLOCK BOUND<br>DUNGEON</h1>
-    <p class="center muted" style="margin:0">A block-blasting roguelike dungeon crawl</p>
-    <div class="card">
-      <ul class="how">
-        <li>Drag pieces onto the 8×8 grid. Fill a full <b>row or column</b> to clear it.</li>
-        <li>Cleared blocks fire: <span class="chip" style="background:var(--sword)">sword</span> hits, <span class="chip" style="background:var(--shield)">shield</span> blocks, <span class="chip" style="background:var(--heal)">heart</span> heals, <span class="chip" style="background:var(--coin);color:#3a2a00">coin</span> pays.</li>
-        <li>Clear several lines at once, or clear on back-to-back moves, to stack a <b>combo multiplier</b>.</li>
-        <li>Every piece you place is a turn. Watch the enemy's countdown — and their rubble.</li>
-        <li>No room for any piece? The ceiling caves in and you take damage.</li>
-        <li>Beat 3 floors and their bosses to win.</li>
-      </ul>
-    </div>
-    <button class="btn" id="startBtn">Enter the Dungeon</button>
-    ${best?`<p class="center muted" style="margin:0;font-size:13px">Best: ${best.won?'🏆 Cleared the dungeon':`Floor ${best.floor}`} · ${best.kills} foes slain</p>`:''}
-  `);
-  $('#startBtn').onclick = newRun;
-}
-
-/* ============ map ============ */
-function genChoices(){
-  const s = run.step;
-  if(s===STEPS-1) return ['boss'];
-  if(s===0) return ['combat'];
-  const w = [['combat',40],['elite',s>=2?13:0],['rest',s>=3?12:0],['shop',12],['treasure',8],['event',14]].filter(e=>e[1]>0);
-  const n = Math.random()<0.45?3:2; const out=[];
-  if(s===STEPS-2) out.push('rest');
-  let guard=0;
-  while(out.length<n && guard++<50){ const r = weighted(w); if(!out.includes(r)) out.push(r); }
-  return shuffle(out);
-}
-function goMap(){
-  if(!run.choices) run.choices = genChoices();
-  show('map');
-  let dots=''; for(let i=0;i<STEPS;i++) dots += `<i class="${i<run.step?'done':i===run.step?'now':''} ${i===STEPS-1?'boss':''}"></i>`;
-  view(`
-    <div class="center"><h2>Floor ${run.floor}</h2><div class="muted" style="font-size:13px;margin-top:2px">${['The Damp Cellars','The Bone Halls','The Dragon\'s Depths'][run.floor-1]}</div></div>
-    <div class="steps">${dots}</div>
-    <p class="muted center" style="margin:0">Choose your path</p>
-    ${run.choices.map(k=>choiceBtn({id:k,...ROOMS[k]})).join('')}
-  `);
-  bindChoices(enterRoom);
-}
-function enterRoom(k){
-  run.choices = null;
-  if(k==='combat'||k==='elite'||k==='boss') startCombat(k);
-  else if(k==='rest') restScreen();
-  else if(k==='shop') shopScreen();
-  else if(k==='treasure') treasureScreen();
-  else if(k==='event') eventScreen();
-}
-function advance(){
-  run.step++;
-  if(run.step>=STEPS){
-    run.floor++; run.step=0;
-    if(run.floor>FLOORS) return endScreen(true);
-    heal(Math.round(run.maxHp*0.3));
-    toast(`🕯️ You descend deeper and catch your breath (+30% HP).`);
-  }
-  goMap();
-}
-
-/* ============ non-combat rooms ============ */
-function restScreen(){
-  show('rest');
-  const amt = Math.round(run.maxHp*0.35);
-  view(`<div class="center"><div style="font-size:54px">🔥</div><h2>Campfire</h2><p class="muted">The fire crackles. Rest a while.</p></div>
-    ${choiceBtn({id:'heal',icon:'💤',name:'Rest',desc:`Heal ${amt} HP.`})}
-    ${choiceBtn({id:'train',icon:'🏋️',name:'Train',desc:'+8 max HP.'})}`);
-  bindChoices(id=>{ if(id==='heal') heal(amt); else { run.maxHp+=8; run.hp+=8; } advance(); });
-}
-function treasureScreen(){
-  show('treasure');
-  const [id] = relicOffers(1); const g = rand(10,20);
-  view(`<div class="center"><div style="font-size:54px">🎁</div><h2>Treasure!</h2><p class="muted">Inside the chest: ${g} gold and…</p></div>
-    ${id?choiceBtn({id, ...RELICS[id]}):''}
-    <button class="btn" id="takeBtn">Take it</button>`);
-  const take = ()=>{ run.gold+=g; if(id) gainRelic(id); advance(); };
-  $('#takeBtn').onclick = take; bindChoices(take);
-}
-function shopScreen(){
-  show('shop');
-  const stock = relicOffers(3).map(id=>({id, price:[0,55,80,110][RELICS[id].r]+rand(-5,5), sold:false}));
-  let potionPrice = 20;
-  const render = ()=>{
-    view(`<div class="center"><div style="font-size:54px">🧙‍♂️</div><h2>The Merchant</h2><p class="muted">"Gold for goods, friend."</p></div>
-      ${stock.map(s=>s.sold?'':choiceBtn({id:s.id,...RELICS[s.id],price:s.price,disabled:run.gold<s.price})).join('')}
-      ${choiceBtn({id:'potion',icon:'🧪',name:'Healing Potion',desc:'Heal 20 HP.',price:potionPrice,disabled:run.gold<potionPrice||run.hp>=run.maxHp})}
-      <button class="btn ghost" id="leaveBtn">Leave</button>`);
-    bindChoices(id=>{
-      if(id==='potion'){ run.gold-=potionPrice; heal(20); potionPrice+=10; }
-      else { const s=stock.find(x=>x.id===id); run.gold-=s.price; s.sold=true; gainRelic(id); }
-      renderRunbar(); render();
-    });
-    $('#leaveBtn').onclick = advance;
-  };
-  render();
-}
-const EVENTS = [
-  ()=>({icon:'⛩️', title:'Ancient Shrine', text:'A blood-stained altar hums with old power.', opts:[
-    {name:'Offer blood', icon:'🩸', desc:'Lose 10 HP. Gain a relic.', ok:()=>run.hp>10, go(){ run.hp-=10; const [id]=relicOffers(1); if(id) gainRelic(id); }},
-    {name:'Pray', icon:'🙏', desc:'Heal 10 HP.', go(){ heal(10); }},
-  ]}),
-  ()=>({icon:'🌊', title:'Glittering Pool', text:'Coins shimmer at the bottom of a black pool. Something moves below.', opts:[
-    {name:'Reach in', icon:'🖐️', desc:'60%: +45 gold. 40%: lose 9 HP.', go(){ if(Math.random()<0.6){ run.gold+=45; toast('💰 You grab a fistful of gold! +45'); } else { run.hp-=9; toast('🦷 Something bites! −9 HP'); } }},
-    {name:'Walk away', icon:'🚶', desc:'Nothing happens.', go(){} },
-  ]}),
-  ()=>({icon:'⚒️', title:'Wandering Smith', text:'A dwarf with a portable anvil offers to reinforce your armor.', opts:[
-    {name:'Pay 30 gold', icon:'💰', desc:'+8 max HP.', ok:()=>run.gold>=30, go(){ run.gold-=30; run.maxHp+=8; run.hp+=8; }},
-    {name:'No thanks', icon:'🚶', desc:'Move on.', go(){} },
-  ]}),
-  ()=>({icon:'🦴', title:'Pile of Bones', text:'A fallen adventurer. Their pack looks heavy.', opts:[
-    {name:'Search', icon:'🔍', desc:'+30 gold, but lose 5 HP to a trap.', ok:()=>run.hp>5, go(){ run.gold+=30; run.hp-=5; }},
-    {name:'Pay respects', icon:'🕯️', desc:'Heal 6 HP.', go(){ heal(6); }},
-  ]}),
-  ()=>({icon:'🎰', title:'Goblin Gambler', text:'"Double or nothing, eh? Gimme 25 gold."', opts:[
-    {name:'Gamble', icon:'🎲', desc:'50%: win 50 gold. 50%: lose 25.', ok:()=>run.gold>=25, go(){ if(Math.random()<0.5){ run.gold+=25; toast('🎉 You win! +25 net gold'); } else { run.gold-=25; toast('😩 The goblin cackles. −25 gold'); } }},
-    {name:'Decline', icon:'🙅', desc:'Move on.', go(){} },
-  ]}),
-];
-function eventScreen(){
-  show('event');
-  const ev = pick(EVENTS)();
-  view(`<div class="center"><div style="font-size:54px">${ev.icon}</div><h2>${ev.title}</h2><p class="muted">${ev.text}</p></div>
-    ${ev.opts.map((o,i)=>choiceBtn({id:i,icon:o.icon,name:o.name,desc:o.desc,disabled:o.ok&&!o.ok()})).join('')}`);
-  bindChoices(i=>{ ev.opts[i].go(); if(run.hp<=0) return endScreen(false); advance(); });
-}
-
-/* ============ rewards & end ============ */
-function rewardScreen(kind){
-  show('reward');
-  let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):rand(10,18);
-  if(has('magnet')) g = Math.round(g*1.4);
-  run.gold += g; renderRunbar();
-  let offers;
-  if(kind==='combat'){
-    offers = shuffle(BOONS.slice()).slice(0,2).map(b=>({...b, boon:true}));
-    if(Math.random()<0.35){ const [id]=relicOffers(1); if(id) offers.push({id,...RELICS[id]}); }
-    else offers.push(pick(BOONS.filter(b=>!offers.some(o=>o.id===b.id))));
-  } else {
-    offers = relicOffers(3, kind==='boss'?2:1).map(id=>({id,...RELICS[id]}));
-  }
-  view(`<div class="center"><div style="font-size:54px">${kind==='boss'?'🏆':'✨'}</div><h2>${kind==='boss'?'Boss defeated!':'Victory!'}</h2><p class="muted">+${g} gold. Choose a reward:</p></div>
-    ${offers.map(o=>choiceBtn(o)).join('')}
-    <button class="btn ghost" id="skipBtn">Skip</button>`);
-  bindChoices(id=>{ const b = BOONS.find(x=>x.id===id); if(b) b.apply(); else gainRelic(id); advance(); });
-  $('#skipBtn').onclick = advance;
-}
-function endScreen(won){
-  show('end'); $('#runbar').hidden = false; renderRunbar();
-  const best = store.get('best', null);
-  const score = (won?100:run.floor*10+run.step);
-  const bestScore = best ? (best.won?100:best.floor*10+(best.step||0)) : -1;
-  if(score>bestScore) store.set('best', {floor:run.floor, step:run.step, kills:run.kills, won});
-  view(`<div class="center"><div style="font-size:64px">${won?'👑':'🪦'}</div><h2>${won?'You conquered the dungeon!':'You have fallen…'}</h2>
-    <p class="muted">${won?'The Ancient Dragon is slain. Legends will be told.':`Floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`}</p></div>
-    <div class="card"><div style="display:flex;justify-content:space-around;text-align:center;font-family:var(--display);font-size:20px">
-      <div>${run.kills}<div class="muted" style="font-size:12px;font-family:var(--body)">foes slain</div></div>
-      <div>${run.relics.length}<div class="muted" style="font-size:12px;font-family:var(--body)">relics</div></div>
-      <div>${run.gold}<div class="muted" style="font-size:12px;font-family:var(--body)">gold</div></div>
-    </div></div>
-    <button class="btn" id="againBtn">New Run</button>
-    <button class="btn ghost" id="titleBtn">Title</button>`);
-  $('#againBtn').onclick = newRun; $('#titleBtn').onclick = titleScreen;
-}
-
-/* ============ combat ============ */
-function rollType(){
-  const e = [['sword',46],['shield',22],['heal',13],['coin',10]];
-  if(has('prism')) e.push(['rainbow',12]);
-  return weighted(e);
-}
-function shapeWeight(s){
-  const n = s.cells.length;
-  let w = n<=2?0.9 : n<=4?1.2 : n<=5?0.9 : 0.45;
-  if(has('feather')){ if(n<=3) w*=2.4; if(n>=6) w*=0.4; }
-  return w;
-}
-function newPiece(){ const s = weighted(SHAPES.map(x=>[x,shapeWeight(x)])); return {...s, type:rollType(), used:false}; }
-function fits(p,r,c){
-  for(const [dr,dc] of p.cells){ const rr=r+dr, cc=c+dc; if(rr<0||cc<0||rr>=N||cc>=N||cb.board[rr*N+cc]) return false; }
-  return true;
-}
-function fitsAnywhere(p){ for(let r=0;r<=N-p.h;r++) for(let c=0;c<=N-p.w;c++) if(fits(p,r,c)) return true; return false; }
-function dealHand(){
-  let hand;
-  for(let i=0;i<30;i++){ hand=[newPiece(),newPiece(),newPiece()]; if(hand.some(fitsAnywhere)) break; }
-  cb.hand = hand;
-}
-
-function startCombat(kind){
-  const tpl = kind==='boss' ? ENEMIES.boss[run.floor-1] : pick(kind==='elite' ? ENEMIES.elite : ENEMIES.normal);
-  const f = run.floor-1, hpMul = 1+0.4*f, dmgMul = 1+0.3*f;
-  const maxHp = Math.round(tpl.hp*hpMul);
-  cb = {
-    kind, board:Array(N*N).fill(null), hand:[], fx:[], streak:0, over:false,
-    shield: has('chainmail')?8:0,
-    rerolls: 1+(has('dice')?1:0),
-    enemy:{...tpl, maxHp, hp:maxHp, armor:0, mi:0, hpMul, dmgMul, intent:null},
-  };
-  // floors 2+ start with a little rubble
-  if(f>0) addStones(f*2, true);
-  nextIntent(); dealHand();
-  show('combat'); layout(); renderHUD();
-}
-function nextIntent(){
-  const e = cb.enemy, m = e.moves[e.mi % e.moves.length]; e.mi++;
-  const it = {...m, left: m.t + (has('hourglass')?1:0)};
-  if(['atk','multi','drain'].includes(m.k)) it.v = Math.round(m.v*e.dmgMul);
-  else if(m.k==='curse') it.v = m.v + (run.floor-1);
-  else it.v = Math.round(m.v*e.hpMul);
-  e.intent = it;
-}
-function addStones(n, silent){
-  const empty = []; cb.board.forEach((v,i)=>{ if(!v) empty.push(i); });
-  shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]='stone'; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type:'stone'}); });
-}
-
-function place(idx, r, c){
-  const p = cb.hand[idx];
-  p.cells.forEach(([dr,dc])=>{ cb.board[(r+dr)*N + c+dc] = p.type; });
-  p.used = true;
-  resolveClears();
-  if(checkEnd()) return;
-  enemyTick();
-  if(checkEnd()) return;
-  if(cb.hand.every(x=>x.used)) dealHand();
-  checkStuck();
-  if(checkEnd()) return;
-  renderHUD();
-}
-function fullLines(board){
-  const rows=[], cols=[];
-  for(let r=0;r<N;r++){ let ok=true; for(let c=0;c<N;c++) if(!board[r*N+c]){ok=false;break;} if(ok) rows.push(r); }
-  for(let c=0;c<N;c++){ let ok=true; for(let r=0;r<N;r++) if(!board[r*N+c]){ok=false;break;} if(ok) cols.push(c); }
-  return {rows, cols};
-}
-const MULT = [0,1,1.5,2,3,3.5,4,4.5,5];
-function resolveClears(){
-  const {rows, cols} = fullLines(cb.board);
-  const lines = rows.length + cols.length;
-  if(!lines){ cb.streak = 0; return; }
-  const set = new Set();
-  rows.forEach(r=>{ for(let c=0;c<N;c++) set.add(r*N+c); });
-  cols.forEach(c=>{ for(let r=0;r<N;r++) set.add(r*N+c); });
-  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,stone:0};
-  const now = performance.now();
-  set.forEach(i=>{ const t = cb.board[i]; cnt[t]++; cb.fx.push({i, type:t, t0:now}); cb.board[i]=null; });
-
-  const mult = MULT[Math.min(lines,8)] + cb.streak*(has('drum')?0.5:0.25);
-  const swordVal = 2 + (has('whetstone')?1:0) + (has('bloodpact')?2:0);
-  let dmg = Math.round((cnt.sword*swordVal + cnt.rainbow*2) * mult);
-  let sh  = Math.round((cnt.shield*(2+(has('tower')?1:0)) + cnt.rainbow) * mult);
-  let hp  = Math.round((cnt.heal*2 + cnt.rainbow) * mult);
-  const gold = cnt.coin*(1+(has('idol')?1:0));
-  if(has('sledge')) dmg += cnt.stone*4;
-  if(has('powder') && lines>=3) dmg += 12;
-  if(has('crossed') && rows.length && cols.length) dmg += 8;
-  if(has('fang')) hp += 2*lines;
-
-  const boardEl = $('#board');
-  if(lines>=2 || cb.streak>=1){
-    const label = ['','','DOUBLE!','TRIPLE!','QUAD!','PENTA!'][Math.min(lines,5)] || 'MEGA!';
-    floatText(boardEl, `${lines>=2?label+' ':''}×${mult.toFixed(2).replace(/\.?0+$/,'')}`, null, true);
-  }
-  if(dmg>0) damageEnemy(dmg);
-  if(sh>0){ cb.shield += sh; floatText($('#shieldStat'), `+${sh}🛡️`, '#8dbcff'); }
-  if(hp>0){ const before=run.hp; heal(hp); const got=run.hp-before; if(got>0) floatText($('#hpFill').parentElement, `+${got}`, '#86e6a8'); }
-  if(gold>0){ run.gold += gold; floatText($('#goldText'), `+${gold}g`, '#ffe58a'); }
-  cb.streak++;
-}
-function damageEnemy(n){
-  const e = cb.enemy; let d = n;
-  if(e.armor>0){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
-  e.hp = Math.max(0, e.hp - d);
-  const el = $('#eEmoji');
-  floatText(el, `-${n}`, '#ff8a8d', n>=20); bump(el,'hitflash');
-}
-function hitPlayer(n, src){
-  let v = n; if(has('thickskin')) v = Math.max(0, v-1);
-  const absorbed = Math.min(cb.shield, v); cb.shield -= absorbed; v -= absorbed;
-  if(absorbed>0 && has('spikes')) damageEnemy(5);
-  run.hp -= v;
-  const hpEl = $('#hpFill').parentElement;
-  floatText(hpEl, v>0?`-${v}`:'Blocked!', v>0?'#ff6a6f':'#8dbcff');
-  bump($('#app'),'shake');
-}
-function enemyTick(){
-  const e = cb.enemy, it = e.intent;
-  it.left--;
-  if(it.left>0) return;
-  switch(it.k){
-    case 'atk': hitPlayer(it.v); break;
-    case 'multi': for(let i=0;i<it.n;i++) hitPlayer(it.v); break;
-    case 'drain': hitPlayer(it.v); e.hp = Math.min(e.maxHp, e.hp+it.v); floatText($('#eEmoji'), `+${it.v}`, '#86e6a8'); break;
-    case 'curse': addStones(it.v); floatText($('#board'), `Rubble ×${it.v}`, '#c9c2d4'); break;
-    case 'armor': e.armor += it.v; floatText($('#eEmoji'), `+${it.v} armor`, '#8dbcff'); break;
-    case 'heal': e.hp = Math.min(e.maxHp, e.hp+it.v); floatText($('#eEmoji'), `+${it.v}`, '#86e6a8'); break;
-  }
-  bump($('#eEmoji'),'shake');
-  nextIntent();
-}
-function checkStuck(){
-  let guard = 0;
-  while(!cb.hand.some(p=>!p.used && fitsAnywhere(p)) && guard++<5){
-    const dmg = 4 + run.floor*2;
-    toast(`🪨 <b>Cave-in!</b> No room to move. The ceiling collapses.`);
-    hitPlayer(dmg);
-    // clear the two fullest rows
-    const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0,2);
-    const now = performance.now();
-    rows.forEach(([r])=>{ for(let c=0;c<N;c++){ const i=r*N+c; if(cb.board[i]){ cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; } } });
-    cb.streak = 0;
-    dealHand();
-  }
-}
-function checkEnd(){
-  if(run.hp<=0){
-    if(has('phoenix') && !run.phoenixUsed){
-      run.phoenixUsed = true; run.hp = Math.round(run.maxHp/2);
-      toast('🪽 <b>Phoenix Feather</b> — you rise from the ashes!'); renderHUD(); return false;
-    }
-    cb.over = true; renderHUD();
-    setTimeout(()=>endScreen(false), 900); return true;
-  }
-  if(cb.enemy.hp<=0){
-    cb.over = true; run.kills++; renderHUD();
-    floatText($('#eEmoji'), 'Defeated!', '#ffcf7a', true);
-    setTimeout(()=>rewardScreen(cb.kind), 900); return true;
-  }
-  return false;
-}
-function intentInfo(it){
-  switch(it.k){
-    case 'atk': return ['⚔️', `${it.v}`, `Attacks for ${it.v}`];
-    case 'multi': return ['⚔️', `${it.v}×${it.n}`, `Attacks ${it.n} times for ${it.v}`];
-    case 'drain': return ['🩸', `${it.v}`, `Drains ${it.v} HP from you`];
-    case 'curse': return ['🪨', `×${it.v}`, `Drops ${it.v} rubble blocks on your grid`];
-    case 'armor': return ['🛡️', `+${it.v}`, `Gains ${it.v} armor`];
-    case 'heal': return ['💚', `+${it.v}`, `Heals ${it.v}`];
-  }
-}
-function renderHUD(){
-  if(!cb) return;
-  const e = cb.enemy;
-  $('#eEmoji').textContent = e.emoji;
-  $('#eName').textContent = e.name;
-  $('#eTag').innerHTML = cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':'';
-  $('#eHpFill').style.width = (100*e.hp/e.maxHp)+'%';
-  $('#eHpText').textContent = `${e.hp} / ${e.maxHp}`;
-  const ar = $('#eArmor'); ar.hidden = e.armor<=0; ar.textContent = `🛡️ ${e.armor}`;
-  const [ic,val,desc] = intentInfo(e.intent);
-  const intent = $('#intent');
-  intent.innerHTML = `<span>${ic}</span><span class="val">${val}</span><span class="cd">${e.intent.left===1?'next turn!':`in ${e.intent.left} turns`}</span>`;
-  intent.classList.toggle('urgent', e.intent.left===1);
-  intent.onclick = ()=>toast(`<b>${e.name}</b><br>${desc} ${e.intent.left===1?'after your next move':`in ${e.intent.left} moves`}.`);
-  $('#shieldText').textContent = cb.shield;
-  const m = cb.streak*(has('drum')?0.5:0.25);
-  $('#streakText').textContent = cb.streak ? `+${m.toFixed(2).replace(/\.?0+$/,'')}` : '—';
-  $('#rerollText').textContent = cb.rerolls;
-  $('#rerollBtn').disabled = cb.rerolls<=0 || cb.over;
-  renderRunbar();
-}
-$('#rerollBtn').onclick = ()=>{
-  if(!cb || cb.rerolls<=0 || cb.over) return;
-  cb.rerolls--;
-  cb.hand = cb.hand.map(p=>p.used?p:newPiece());
-  if(!cb.hand.some(p=>!p.used && fitsAnywhere(p))) checkStuck();
-  if(!checkEnd()) renderHUD();
-};
-$('#comboStat').onclick = ()=>toast('<b>Combo streak</b><br>Each move in a row that clears a line adds to your multiplier. Miss a clear and it resets.');
-$('#shieldStat').onclick = ()=>toast('<b>Shield</b><br>Absorbs enemy damage before your HP. Carries over until it\'s used up.');
-
-/* ============ canvas rendering ============ */
-const cv = $('#board'), ctx = cv.getContext('2d');
-let L = {};
-function layout(){
-  const wrapW = Math.min($('#combat').clientWidth || 360, 440);
-  const top = cv.getBoundingClientRect().top + window.scrollY;
-  const pad = 6, gap = 14, trayCells = 2.9;
-  const byWidth = (wrapW - pad*2)/N;
-  const byHeight = (window.innerHeight - top - pad*2 - gap - 12)/(N + trayCells);
-  const cs = Math.max(28, Math.floor(Math.min(byWidth, byHeight)));
-  const bw = cs*N, W = Math.max(bw + pad*2, Math.min(wrapW, bw+pad*2+40));
-  const trayH = Math.round(cs*trayCells), H = pad + bw + gap + trayH + pad;
-  const dpr = window.devicePixelRatio || 1;
-  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
-  cv.style.width = W+'px'; cv.style.height = H+'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  L = {W,H,cs,bx:(W-bw)/2,by:pad,bw,ty:pad+bw+gap,trayH,slotW:W/3};
-}
-window.addEventListener('resize', ()=>{ if(cb && !$('#combat').hidden) layout(); });
-
-function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-function drawIcon(type, cx, cy, s){
-  ctx.save(); ctx.translate(cx,cy); ctx.scale(s/40, s/40);
-  ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3.5; ctx.lineCap='round'; ctx.lineJoin='round';
-  if(type==='sword'){
-    ctx.beginPath(); ctx.moveTo(-8,8); ctx.lineTo(9,-9); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-10,2); ctx.lineTo(-2,10); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-9,9); ctx.lineTo(-12,12); ctx.stroke();
-  } else if(type==='shield'){
-    ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(10,-7); ctx.quadraticCurveTo(10,7,0,12); ctx.quadraticCurveTo(-10,7,-10,-7); ctx.closePath(); ctx.fill();
-  } else if(type==='heal'){
-    ctx.beginPath(); ctx.moveTo(0,10); ctx.bezierCurveTo(-14,0,-9,-13,0,-5); ctx.bezierCurveTo(9,-13,14,0,0,10); ctx.fill();
-  } else if(type==='coin'){
-    ctx.beginPath(); ctx.arc(0,0,9,0,Math.PI*2); ctx.stroke();
-    ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$',0,1);
-  } else if(type==='rainbow'){
-    ctx.beginPath(); for(let i=0;i<10;i++){ const a = -Math.PI/2 + i*Math.PI/5, r = i%2?5:11; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); } ctx.closePath(); ctx.fill();
-  } else if(type==='stone'){
-    ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=2.5;
-    ctx.beginPath(); ctx.moveTo(-9,-6); ctx.lineTo(-2,0); ctx.lineTo(-5,8); ctx.moveTo(-2,0); ctx.lineTo(8,-3); ctx.stroke();
-  }
-  ctx.restore();
-}
-function drawCell(x, y, s, type, alpha=1){
-  const t = TYPES[type]; const g = Math.max(1, s*0.04), r = s*0.16;
-  ctx.globalAlpha = alpha;
-  rrect(x+g, y+g, s-2*g, s-2*g, r); ctx.fillStyle = t.d; ctx.fill();
-  rrect(x+g, y+g, s-2*g, s-2*g - s*0.09, r); ctx.fillStyle = t.c; ctx.fill();
-  rrect(x+g+s*0.12, y+g+s*0.08, s-2*g-s*0.24, s*0.12, s*0.06); ctx.fillStyle = t.l; ctx.globalAlpha = alpha*0.55; ctx.fill();
-  ctx.globalAlpha = alpha;
-  if(s>=18) drawIcon(type, x+s/2, y+s/2-s*0.03, s*0.62);
-  ctx.globalAlpha = 1;
-}
-function drawPiece(p, x, y, s, alpha){ p.cells.forEach(([r,c])=>drawCell(x+c*s, y+r*s, s, p.type, alpha)); }
-function trayRect(i){
-  const p = cb.hand[i]; const {slotW, ty, trayH, cs} = L;
-  const s = Math.min(cs*0.6, (slotW-14)/p.w, (trayH-14)/p.h);
-  return {s, x: i*slotW + (slotW - p.w*s)/2, y: ty + (trayH - p.h*s)/2};
-}
-
-function frame(){
-  requestAnimationFrame(frame);
-  if(!cb || $('#combat').hidden || !L.cs) return;
-  const {W,H,cs,bx,by,bw,ty,trayH} = L;
-  ctx.clearRect(0,0,W,H);
-  // board
-  rrect(bx-4, by-4, bw+8, bw+8, 12); ctx.fillStyle = '#0d0a11'; ctx.fill();
-  ctx.strokeStyle = '#3a3046'; ctx.lineWidth = 2; ctx.stroke();
-  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-    const x = bx+c*cs, y = by+r*cs, t = cb.board[r*N+c];
-    if(t) drawCell(x,y,cs,t);
-    else { rrect(x+2,y+2,cs-4,cs-4,cs*0.14); ctx.fillStyle = (r+c)%2 ? '#1b1622' : '#1f1927'; ctx.fill(); }
-  }
-  // preview
-  if(drag && drag.valid){
-    const p = cb.hand[drag.idx];
-    const sim = cb.board.slice(); p.cells.forEach(([dr,dc])=>{ sim[(drag.r+dr)*N + drag.c+dc] = p.type; });
-    const {rows, cols} = fullLines(sim);
-    ctx.fillStyle = 'rgba(255,207,122,.22)';
-    rows.forEach(r=>{ rrect(bx, by+r*cs, bw, cs, 6); ctx.fill(); });
-    cols.forEach(c=>{ rrect(bx+c*cs, by, cs, bw, 6); ctx.fill(); });
-    drawPiece(p, bx+drag.c*cs, by+drag.r*cs, cs, 0.45);
-  }
-  // clear / drop effects
-  const now = performance.now();
-  cb.fx = cb.fx.filter(f=>now-f.t0 < 420);
-  cb.fx.forEach(f=>{
-    const k = (now-f.t0)/420, r = Math.floor(f.i/N), c = f.i%N;
-    if(f.drop){ // rubble falling in
-      const y0 = by + r*cs - (1-k)*cs*1.5;
-      drawCell(bx+c*cs, y0, cs, 'stone', Math.min(1,k*2));
-    } else {
-      const s = cs*(1+k*0.35), x = bx+c*cs - (s-cs)/2, y = by+r*cs - (s-cs)/2;
-      drawCell(x, y, s, f.type, 1-k);
-      ctx.globalAlpha = (1-k)*0.6; rrect(x,y,s,s,s*0.16); ctx.fillStyle='#fff'; ctx.fill(); ctx.globalAlpha=1;
-    }
-  });
-  // tray
-  rrect(4, ty-2, W-8, trayH+4, 12); ctx.fillStyle = 'rgba(255,255,255,.03)'; ctx.fill();
-  cb.hand.forEach((p,i)=>{
-    if(p.used || (drag && drag.idx===i)) return;
-    const {s,x,y} = trayRect(i);
-    drawPiece(p, x, y, s, fitsAnywhere(p) ? 1 : 0.3);
-  });
-  // dragged piece
-  if(drag){
-    const p = cb.hand[drag.idx];
-    drawPiece(p, drag.x - p.w*cs/2, drag.y - drag.lift - p.h*cs/2, cs, drag.valid?0.95:0.75);
-  }
-}
-requestAnimationFrame(frame);
-
-/* ============ input ============ */
-function pt(e){ const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; }
-function updateDrag(){
-  const p = cb.hand[drag.idx], {cs,bx,by} = L;
-  const ox = drag.x - p.w*cs/2, oy = drag.y - drag.lift - p.h*cs/2;
-  drag.c = Math.round((ox-bx)/cs); drag.r = Math.round((oy-by)/cs);
-  drag.valid = fits(p, drag.r, drag.c);
-}
-cv.addEventListener('pointerdown', e=>{
-  if(!cb || cb.over) return;
-  const {x,y} = pt(e);
-  if(y < L.ty - 10) return;
-  const i = Math.min(2, Math.max(0, Math.floor(x / L.slotW)));
-  const p = cb.hand[i]; if(!p || p.used) return;
-  drag = {idx:i, x, y, lift: e.pointerType==='mouse' ? 0 : L.cs*1.8, valid:false};
-  try{ cv.setPointerCapture(e.pointerId); }catch(_){}
-  updateDrag(); e.preventDefault();
-});
-cv.addEventListener('pointermove', e=>{ if(!drag) return; const {x,y} = pt(e); drag.x=x; drag.y=y; updateDrag(); e.preventDefault(); });
-cv.addEventListener('pointerup', ()=>{
-  if(!drag) return; const d = drag; drag = null;
-  if(d.valid && !cb.over) place(d.idx, d.r, d.c);
-});
-cv.addEventListener('pointercancel', ()=>{ drag = null; });
-
-/* ============ boot ============ */
-titleScreen();
-</script>
+<script src="sprites.js"></script>
+<script src="game.js"></script>
 </body>
 </html>
