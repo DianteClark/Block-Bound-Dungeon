@@ -197,6 +197,70 @@ input[type=range]{width:55%;accent-color:var(--torch)}
 .toggle.on::after{left:25px;background:#fff}
 .records{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;color:#ddd3e8}
 .records b{font-family:var(--display);font-weight:400;font-size:17px;color:#fff}
+
+/* ---------- polish pass ---------- */
+.screen .choice, .screen .mnode-row{animation:dealIn .42s cubic-bezier(.2,1.3,.4,1) backwards;animation-delay:calc(var(--i,0)*70ms)}
+@keyframes dealIn{from{opacity:0;transform:translateY(18px) rotate(-2deg) scale(.96)}to{opacity:1;transform:none}}
+.choice:hover{border-color:var(--line2)}
+.hpbar > i.trail{background:#fff;opacity:.55;transition:width .5s ease .35s}
+.hpbar > i.trail::after{display:none}
+body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, transparent 45%, rgba(150,0,10,.55) 100%);animation:beat 1.1s infinite}
+@keyframes beat{0%,100%{opacity:.75}15%{opacity:1}30%{opacity:.8}45%{opacity:1}}
+#combat.enter #enemyPanel{animation:dropIn .5s cubic-bezier(.2,1.4,.4,1)}
+#combat.enter #board{animation:fade .5s ease}
+@keyframes dropIn{from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:none}}
+#eArt.flee .stk{animation:flee .8s ease-in forwards}
+@keyframes flee{to{transform:translateX(220px) rotate(20deg);opacity:0}}
+#fxc{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:75}
+#banner{position:fixed;inset:0;z-index:72;display:grid;place-items:center;pointer-events:none}
+#banner .b{text-align:center;animation:banner 2s ease forwards}
+#banner h1{font-family:var(--display);font-size:52px;color:#fff;text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,0 8px 0 rgba(0,0,0,.5)}
+#banner p{font-family:var(--display);font-size:22px;color:var(--torch2);text-shadow:0 3px 0 #000}
+@keyframes banner{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.08)}25%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
+.coach{position:fixed;z-index:66;max-width:260px;background:#fff;color:#1d1424;border-radius:14px;padding:10px 12px;font-size:14px;font-weight:600;box-shadow:0 6px 0 rgba(0,0,0,.5);animation:pop .3s cubic-bezier(.3,1.5,.5,1);cursor:pointer}
+.coach b{font-family:var(--display);font-weight:400;font-size:16px;display:block;color:#b8323a}
+.coach::after{content:'';position:absolute;left:var(--ax,50%);width:14px;height:14px;background:#fff;transform:translateX(-50%) rotate(45deg)}
+.coach.below::after{top:-6px}.coach.above::after{bottom:-6px}
+.coach small{display:block;color:#7a6f8a;font-size:11px;margin-top:4px}
+/* map */
+.maphead{display:flex;align-items:flex-end;justify-content:space-between}
+.heatchip{display:inline-flex;align-items:center;gap:3px;background:#5a1f1f;border:2px solid #b8323a;color:#ffd6d6;border-radius:10px;padding:0 8px 0 2px;font-family:var(--display);font-size:15px}
+.map{position:relative;margin:4px 0 8px}
+.map svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.mnode{position:absolute;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;border:3px solid var(--line);background:radial-gradient(circle,#3d3150,#1d1724 75%);display:grid;place-items:center;padding:0;cursor:default;transition:transform .15s}
+.mnode.boss{width:76px;height:76px}
+.mnode.avail{border-color:#fff;cursor:pointer;animation:avail 1.2s infinite}
+.mnode.avail:active{transform:translate(-50%,-50%) scale(.92)}
+@keyframes avail{0%,100%{box-shadow:0 0 0 rgba(255,180,80,0),0 4px 0 #000}50%{box-shadow:0 0 18px rgba(255,180,80,.9),0 4px 0 #000}}
+.mnode.done{opacity:.55;border-color:#9a7ab6}
+.mnode.done::after{content:'';position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;background:#45c674 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10l3.5 3.5L15 7' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat;border:2px solid #1d1424}
+.mnode.locked{opacity:.38;filter:saturate(.4)}
+.mnode.here{border-color:var(--torch);opacity:1}
+.legend2{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;font-size:12px;color:var(--muted)}
+.legend2 span{display:flex;align-items:center;gap:2px}
+/* codex & trophies */
+.tabs{display:flex;gap:6px}
+.tabs button{flex:1;padding:8px;border-radius:12px;border:2px solid var(--line);background:var(--panel2);font-family:var(--display);font-size:17px;cursor:pointer}
+.tabs button.on{background:var(--torch);color:#2a1606;border-color:#fff}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cell{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;text-align:center;cursor:pointer;line-height:1.15}
+.cell.unk .stk{filter:brightness(0) opacity(.45)}
+.cell.unk{color:var(--muted)}
+.troph{display:flex;gap:10px;align-items:center;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:8px 10px}
+.troph.lock .stk{filter:grayscale(1) brightness(.5)}
+.troph.lock{opacity:.7}
+.troph b{font-family:var(--display);font-weight:400;font-size:17px;display:block}
+.troph small{color:var(--muted);font-size:12px}
+.row2{display:flex;gap:8px}
+.row2 .btn{font-size:18px;padding:10px}
+.heatsel{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.heatsel button{width:40px;height:40px;border-radius:12px;border:2px solid var(--line2);background:var(--panel2);font-family:var(--display);font-size:22px;cursor:pointer}
+.heatsel button:disabled{opacity:.3}
+.heatsel .mid{flex:1;text-align:center}
+.heatsel .mid b{font-family:var(--display);font-weight:400;font-size:20px;display:block;color:#ff8a80}
+.heatsel .mid small{color:var(--muted);font-size:12px}
+.relicrow{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+#intent .then{display:flex;align-items:center;gap:2px;opacity:.6;font-size:11px;color:var(--muted);margin-left:2px;padding-left:6px;border-left:2px solid var(--line)}
 </style>
 </head>
 <body>
@@ -206,7 +270,7 @@ input[type=range]{width:55%;accent-color:var(--torch)}
   <header id="runbar" hidden>
     <div class="rb-top">
       <span id="heroIcon"></span>
-      <div class="hpbar"><i id="hpFill"></i><span id="hpText"></span></div>
+      <div class="hpbar"><i class="trail" id="hpTrail"></i><i id="hpFill"></i><span id="hpText"></span></div>
       <span class="inline" id="goldWrap"><span id="coinIcon"></span><b id="goldText">0</b></span>
       <span class="floor" id="floorText"></span>
       <button class="iconbtn" id="gearBtn" aria-label="Settings"></button>
@@ -226,7 +290,7 @@ input[type=range]{width:55%;accent-color:var(--torch)}
       <div class="einfo">
         <div class="ename"><span id="eName"></span><span id="eTags"></span></div>
         <div class="erow">
-          <div class="hpbar ebar"><i id="eHpFill"></i><span id="eHpText"></span></div>
+          <div class="hpbar ebar"><i class="trail" id="eHpTrail"></i><i id="eHpFill"></i><span id="eHpText"></span></div>
           <span id="eBadges" style="display:flex;gap:4px"></span>
         </div>
         <div id="intent"></div>
@@ -243,6 +307,8 @@ input[type=range]{width:55%;accent-color:var(--torch)}
   </section>
 </div>
 <div id="modal" hidden></div>
+<div id="banner" hidden></div>
+<canvas id="fxc"></canvas>
 <div id="toast"></div>
 
 <script src="art.js"></script>

@@ -100,6 +100,12 @@ const Sound = (() => {
     defeat(){ [62,61,58,55,50].forEach((m,i)=>tone({type:'sawtooth', f:mtof(m), dur:0.5, vol:0.08, lp:900, delay:i*0.22, rev:0.6})); },
     door(){ noise({f:300, f2:100, dur:0.6, vol:0.25, rev:0.5}); tone({type:'sine', f:90, f2:60, dur:0.5, vol:0.2}); },
     buy(){ sfx.coin(); tone({type:'triangle', f:880, dur:0.15, vol:0.08, delay:0.12}); },
+    heartbeat(){ tone({type:'sine', f:70, f2:45, dur:0.16, vol:0.35}); tone({type:'sine', f:62, f2:40, dur:0.2, vol:0.28, delay:0.2}); },
+    trophy(){ [72,76,79,84,88].forEach((m,i)=>tone({type:'triangle', f:mtof(m), dur:0.35, vol:0.1, delay:i*0.07, rev:0.5})); },
+    whoosh(){ noise({f:300, f2:3000, filter:'bandpass', q:1.2, dur:0.45, vol:0.18, rev:0.3}); },
+    flee(){ [79,76,72,67].forEach((m,i)=>tone({type:'square', f:mtof(m), dur:0.08, vol:0.05, lp:3000, delay:i*0.06})); noise({f:2000, f2:6000, filter:'highpass', dur:0.3, vol:0.08}); },
+    blast(){ noise({f:1500, f2:80, dur:0.7, vol:0.5, rev:0.4}); tone({type:'sine', f:90, f2:30, dur:0.5, vol:0.5}); },
+    map(){ tone({type:'triangle', f:mtof(69), dur:0.12, vol:0.07}); tone({type:'triangle', f:mtof(74), dur:0.2, vol:0.07, delay:0.07}); },
   };
   function play(name, ...args){ try{ if(ctx && vol.sfx>0 && sfx[name]) sfx[name](...args); }catch(e){} }
 
@@ -160,6 +166,7 @@ const Sound = (() => {
     },
   };
 
+  document.addEventListener('visibilitychange', ()=>{ if(!ctx) return; try{ if(document.hidden) ctx.suspend(); else ctx.resume(); }catch(e){} });
   function setVolume(kind, v){ vol[kind] = v; if(!ctx) return; if(kind==='sfx') sfxBus.gain.value = v; else musicBus.gain.value = v*0.55; }
   function vibrate(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
   return {unlock, play, music:(m)=>Music.set(m), setVolume, vibrate, get ready(){ return !!ctx; }};

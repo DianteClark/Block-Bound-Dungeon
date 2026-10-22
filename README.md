@@ -20,14 +20,21 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **Perfect clears.** Empty the whole grid for a big bonus hit.
 - **Hero specials.** Clearing lines charges your hero's special move: Knight *Bulwark*, Rogue *Shadowstep* and Mage *Meteor*.
 - **Turns.** Every piece you place is one turn. Enemies telegraph their next move with a countdown: attacks, multi-hits, life drain, armor, healing, rage, rubble or ice.
+- **Damage preview.** While you drag a piece over the grid, a pill shows exactly what the clear will do: multiplier, damage, shield, healing, gold and poison.
+- **Enemy intents** show what the enemy does next, how many moves away it is, and the move after that.
 - **Cave-ins.** If no piece fits in any rotation, the ceiling collapses: you take damage and the two fullest rows are cleared.
 
 ## The run
 
 - **3 heroes**, each with a starting relic, potions and a special move.
-- **3 floors, 8 rooms each.** Fights, elites, campfires, merchants, treasure and mystery events, with a boss at the end of each floor: the Bone King, the Hydra and the Ancient Dragon.
+- **3 floors with a branching map.** Choose your route down through fights, elites, campfires, merchants, treasure and mystery events to the boss at the bottom of each floor: the Bone King, the Hydra and the Ancient Dragon.
+- **Treasure Goblins** sometimes appear in place of a fight. Catch them before they run off with their loot.
+- **Heat levels.** Winning unlocks Heat 1 to 5, each adding a new challenge.
 - **Enemy passives:** Armored, Regenerates, Ethereal and Thorns.
-- **27 relics**, **6 potions** (tap a potion twice to drink it) and permanent block upgrades.
+- **34 relics**, **6 potions** (tap a potion twice to drink it), **Blast blocks** that set off everything around them, and permanent block upgrades.
+- **10 mystery events**, and campfires where you can rest, train, upgrade or meditate to charge your special.
+- **Codex** of every monster and relic you've discovered, and **14 trophies** to unlock.
+- **First-fight tips** walk new players through the basics (replay them from Settings).
 - **Auto-save.** Your run is saved between rooms, so you can close the app and continue later.
 - **Settings** (gear icon): music and sound volume, screen shake, vibration, lifetime records, abandon run, and **Reset all data**.
 

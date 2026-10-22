@@ -7,6 +7,7 @@ const rand = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const pick = a => a[Math.floor(Math.random()*a.length)];
 const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const fmt = x => (Math.round(x*100)/100).toString();
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 function weighted(entries){
   const total = entries.reduce((s,e)=>s+e[1],0); let r = Math.random()*total;
   for(const [it,w] of entries){ if((r-=w) < 0) return it; }
@@ -16,26 +17,39 @@ const store = {
   get(k,d){ try{ const v = localStorage.getItem('bbd_'+k); return v==null?d:JSON.parse(v); }catch(e){ return d; } },
   set(k,v){ try{ if(v==null) localStorage.removeItem('bbd_'+k); else localStorage.setItem('bbd_'+k, JSON.stringify(v)); }catch(e){} },
 };
-const settings = Object.assign({music:0.5, sfx:0.7, shake:true, vibrate:true}, store.get('settings', {}));
+const settings = Object.assign({music:0.5, sfx:0.7, shake:true, flash:true, vibrate:true}, store.get('settings', {}));
 Sound.setVolume('music', settings.music); Sound.setVolume('sfx', settings.sfx);
 const sfx = (n,...a) => Sound.play(n,...a);
 
 let toastTimer;
 function toast(html, icon, ms=2400){
-  const t = $('#toast'); t.innerHTML = (icon?img(icon,34):'') + `<div>${html}</div>`;
+  const t = $('#toast'); t.innerHTML = (icon?img(icon,36):'') + `<div>${html}</div>`;
   t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('on'), ms);
 }
 function floatText(el, text, color, big){
   if(!el) return;
-  const r = el.getBoundingClientRect(); const f = document.createElement('div');
+  const r = el.getBoundingClientRect(); if(!r.width && !r.height) return;
+  const f = document.createElement('div');
   f.className = 'float'+(big?' big':''); f.textContent = text; if(color) f.style.color = color;
   f.style.left = (r.left + r.width/2 + rand(-24,24))+'px'; f.style.top = (r.top + r.height/2 + rand(-8,8))+'px';
   document.body.appendChild(f); setTimeout(()=>f.remove(), 1100);
 }
 function bump(el, cls){ if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function shake(){ if(settings.shake) bump($('#app'),'shake'); }
-function flash(color){ const f=$('#flash'); f.style.background=color; bump(f,'on'); }
+function flash(color){ if(!settings.flash) return; const f=$('#flash'); f.style.background=color; bump(f,'on'); }
 function buzz(ms){ if(settings.vibrate) Sound.vibrate(ms); }
+function banner(title, sub, ms=2000){
+  const b = $('#banner'); b.hidden = false; b.innerHTML = `<div class="b"><h1>${title}</h1>${sub?`<p>${sub}</p>`:''}</div>`;
+  sfx('whoosh'); clearTimeout(banner.t); banner.t = setTimeout(()=>{ b.hidden = true; }, ms);
+}
+/* animated number text */
+function tween(el, to){
+  if(!el) return; const from = +(el.dataset.v ?? to); el.dataset.v = to;
+  if(from===to){ el.textContent = to; return; }
+  const t0 = performance.now(), dur = 420;
+  const step = now => { const k = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-k,3); el.textContent = Math.round(from+(to-from)*e); if(k<1 && +el.dataset.v===to) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
 
 /* ================= data ================= */
 const N = 8;
@@ -46,9 +60,11 @@ const TYPES = {
   coin:   {c:'#f7c936', d:'#9a740a', l:'#fff0a8', name:'Coin'},
   rainbow:{c:'#c77dff', d:'#6a2c9e', l:'#f0d6ff', name:'Rainbow'},
   venom:  {c:'#a259e6', d:'#4f1f78', l:'#dcb6ff', name:'Venom'},
+  blast:  {c:'#ff7a2f', d:'#a8400a', l:'#ffc49a', name:'Blast'},
   stone:  {c:'#736b7f', d:'#38333f', l:'#a69eb2', name:'Rubble'},
   ice:    {c:'#a6def4', d:'#4f8fb0', l:'#f0fbff', name:'Ice'},
 };
+const JUNK = t => t==='stone' || t==='ice';
 const SHAPE_SRC = [
   ['#'], ['##'], ['###'], ['####'], ['#####'],
   ['##','##'], ['###','###','###'], ['###','###'],
@@ -75,6 +91,14 @@ const CLASSES = {
     desc:'Fragile but explosive. Rainbow blocks appear and big clears detonate.',
     ult:{name:'Meteor', need:9, spr:'potion_fire', desc:'Detonate the fullest row and column at x2.5, even if they are not full.'}},
 };
+const HEAT = [
+  {name:'Normal', desc:'The standard dungeon.'},
+  {name:'Heat 1', desc:'Enemies have 15% more HP.'},
+  {name:'Heat 2', desc:'Enemies also deal 15% more damage.'},
+  {name:'Heat 3', desc:'You also start with 10 less max HP.'},
+  {name:'Heat 4', desc:'Elites also gain a random passive.'},
+  {name:'Heat 5', desc:'Bosses also have 25% more HP.'},
+];
 
 const RELICS = {
   oath:{name:'Oath Shield', spr:'oath', desc:'Shield blocks give +1. Start every fight with 6 shield.', r:0, starter:true},
@@ -89,6 +113,8 @@ const RELICS = {
   feather:{name:'Feather Charm', spr:'feather', desc:'Small pieces show up far more often.', r:1},
   magnet:{name:'Gold Magnet', spr:'magnet', desc:'+40% gold from fight rewards.', r:1},
   cauldron:{name:'Witch\'s Cauldron', spr:'cauldron', desc:'+1 potion slot. Gain a random potion now.', r:1, onGet(){ run.potionSlots++; givePotion(); }},
+  clover:{name:'Lucky Clover', spr:'clover', desc:'Merchant prices are 20% lower.', r:1},
+  hearth:{name:'Hearthstone', spr:'r_rest', desc:'Campfires heal 50% more and also give +4 max HP.', r:1},
   powder:{name:'Black Powder', spr:'bomb', desc:'Clearing 3+ lines at once deals +12 damage.', r:2},
   hourglass:{name:'Hourglass', spr:'hourglass', desc:'Enemy actions take 1 extra turn to arrive.', r:2},
   sledge:{name:'Sledgehammer', spr:'hammer', desc:'Cleared rubble and ice deal 4 damage each.', r:2},
@@ -99,23 +125,28 @@ const RELICS = {
   toxin:{name:'Toxic Gland', spr:'potion_venom', desc:'Venom blocks appear. Each one poisons the enemy when cleared.', r:2},
   ring:{name:'Ring of Echoes', spr:'ring', desc:'Your first clear each fight has its multiplier doubled.', r:2},
   battery:{name:'Soul Lantern', spr:'flame', desc:'Your hero special charges 50% faster.', r:2},
+  satchel:{name:'Bomb Satchel', spr:'satchel', desc:'Blast blocks appear. When cleared they also fire every block around them.', r:2},
+  mirror:{name:'Mirror Shield', spr:'mirror', desc:'The first enemy attack each fight is fully blocked.', r:2},
+  leech:{name:'Leech Blade', spr:'leech', desc:'Heal 1 HP for every 8 damage you deal with clears.', r:2},
   prism:{name:'Prism Shard', spr:'gem', desc:'Rainbow blocks appear: they slash, block and heal at once.', r:3},
   phoenix:{name:'Phoenix Feather', spr:'phoenix', desc:'The first time you would die, revive at 50% HP.', r:3},
   bloodpact:{name:'Blood Pact', spr:'drop', desc:'Sword blocks deal +2 damage. Lose 10 max HP on pickup.', r:3, onGet(){ run.maxHp=Math.max(10,run.maxHp-10); run.hp=Math.min(run.hp,run.maxHp); }},
   crown:{name:'Miser\'s Crown', spr:'crown', desc:'After each fight, gain 10% interest on your gold (max 15).', r:3},
   purist:{name:'Purity Sigil', spr:'gem', desc:'Pure lines (all one block type) give +1 multiplier instead of +0.5.', r:3},
+  scythe:{name:'Reaper\'s Scythe', spr:'axe', desc:'Clears deal 50% more damage to enemies below 30% HP.', r:3},
 };
 
 const POTIONS = {
-  health:{name:'Health Potion', spr:'potion_health', desc:'Heal 20 HP.', any:true, use(){ const b=run.hp; heal(20); floatText($('#hpFill').parentElement, `+${run.hp-b}`, '#86e6a8'); sfx('heal'); }},
+  health:{name:'Health Potion', spr:'potion_health', desc:'Heal 20 HP.', any:true, use(){ const b=run.hp; heal(20); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); sfx('heal'); }},
   fire:{name:'Fire Flask', spr:'potion_fire', desc:'Deal 20 damage to the enemy (more on deeper floors).', use(){ flash('rgba(255,120,40,.6)'); damageEnemy(20 + 6*(run.floor-1), true); }},
   iron:{name:'Iron Tonic', spr:'potion_iron', desc:'Gain 15 shield.', use(){ cb.shield += 15; floatText($('#shieldStat'), '+15', '#a8ceff'); sfx('shield'); }},
   smoke:{name:'Smoke Bomb', spr:'potion_smoke', desc:'Draw a fresh hand and delay the enemy by 2 turns.', use(){ dealHand(); cb.enemy.intent.left += 2; }},
   bomb:{name:'Rubble Bomb', spr:'bomb', desc:'Blast every rubble and ice block off the grid. 3 damage each.', use(){
-    const set = []; cb.board.forEach((t,i)=>{ if(t==='stone'||t==='ice') set.push(i); });
+    const set = []; cb.board.forEach((t,i)=>{ if(JUNK(t)) set.push(i); });
     if(!set.length){ toast('No rubble to blast. The fuse fizzles.', 'bomb'); return; }
-    set.forEach(i=>{ shards(i, cb.board[i], 6); cb.board[i]=null; });
-    sfx('rubble'); shake(); damageEnemy(3*set.length, true);
+    const now = performance.now();
+    set.forEach(i=>{ shards(i, cb.board[i], 6); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; });
+    sfx('blast'); shake(); damageEnemy(3*set.length, true);
   }},
   venom:{name:'Venom Vial', spr:'potion_venom', desc:'Poison the enemy for 8.', use(){ cb.enemy.poison += 8; floatText($('#eArt'), '+8 poison', '#dcb6ff'); sfx('poison'); }},
 };
@@ -173,6 +204,8 @@ const ENEMIES = [
     boss:{name:'Ancient Dragon', spr:'dragon', hp:340, passive:{id:'armor',v:20}, moves:[M('curse',6,3),M('atk',22,4),M('rage',3,2),M('multi',6,4,4),M('ice',5,3)]},
   },
 ];
+const GOBLIN = {name:'Treasure Goblin', spr:'goldgoblin', hp:34, rare:true, moves:[M('flee',0,7)]};
+const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), {...f.boss,floor:i+1,boss:true}]), {...GOBLIN, floor:0}];
 const PASSIVES = {
   regen:{name:'Regenerates', desc:v=>`Heals ${v} HP every turn.`},
   armor:{name:'Armored', desc:v=>`Starts the fight with ${v} armor.`},
@@ -183,7 +216,7 @@ const FLOOR_NAMES = ['The Damp Cellars','The Bone Halls','The Dragon\'s Depths']
 const ROOMS = {
   combat:{spr:'r_combat', name:'Monster', desc:'A regular fight. Gold and a boon.'},
   elite:{spr:'r_elite', name:'Elite', desc:'A tough fight. Pick a relic.'},
-  rest:{spr:'r_rest', name:'Campfire', desc:'Heal, train or sharpen your blocks.'},
+  rest:{spr:'r_rest', name:'Campfire', desc:'Heal, train, sharpen or meditate.'},
   shop:{spr:'r_shop', name:'Merchant', desc:'Relics, potions and upgrades for gold.'},
   treasure:{spr:'r_treasure', name:'Treasure', desc:'A free relic, no strings.'},
   event:{spr:'r_event', name:'Mystery', desc:'Something strange lies ahead.'},
@@ -191,24 +224,63 @@ const ROOMS = {
 };
 const FLOORS = 3, STEPS = 8;
 
+/* ================= trophies ================= */
+const ACH = {
+  first:{name:'First Blood', desc:'Defeat your first enemy.', spr:'sword'},
+  floor2:{name:'Going Deeper', desc:'Reach floor 2.', spr:'r_rest'},
+  floor3:{name:'Into the Depths', desc:'Reach floor 3.', spr:'flame'},
+  win:{name:'Dragonslayer', desc:'Conquer the dungeon.', spr:'dragon'},
+  allheroes:{name:'Full Party', desc:'Win with all three heroes.', spr:'knight'},
+  heat:{name:'Feel the Heat', desc:'Win on Heat 1 or higher.', spr:'rage'},
+  quad:{name:'Quadruple', desc:'Clear 4 lines with one piece.', spr:'r_combat'},
+  pure:{name:'Purist', desc:'Clear a pure line.', spr:'gem'},
+  perfect:{name:'Clean Slate', desc:'Get a perfect clear.', spr:'snow'},
+  bighit:{name:'Overkill', desc:'Deal 100 damage in a single hit.', spr:'bomb'},
+  rich:{name:'Hoarder', desc:'Hold 200 gold at once.', spr:'coin'},
+  relics10:{name:'Collector', desc:'Hold 10 relics in one run.', spr:'r_treasure'},
+  flawless:{name:'Untouchable', desc:'Beat a boss without losing HP in that fight.', spr:'mirror'},
+  goblin:{name:'Finders Keepers', desc:'Catch a Treasure Goblin.', spr:'goldgoblin'},
+};
+function unlock(id){
+  const a = store.get('ach', {}); if(a[id]) return;
+  a[id] = Date.now(); store.set('ach', a);
+  setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}`, 'trophy', 3200); }, 500);
+}
+
 /* ================= run state & persistence ================= */
 let run = null, cb = null, drag = null, press = null, selPotion = -1, screenName = 'title';
 const has = id => !!run && run.relics.includes(id);
+const hpEl = () => $('#hpFill').parentElement;
 function heal(n){ run.hp = Math.min(run.maxHp, run.hp + n); }
 function saveRun(){ if(run) store.set('save', run); }
-function stats(){ return Object.assign({runs:0, wins:0, kills:0, bestFloor:0, bestLines:0, bestHit:0}, store.get('stats', {})); }
+function stats(){ return Object.assign({runs:0, wins:0, kills:0, bestFloor:0, bestLines:0, bestHit:0, winsBy:{}}, store.get('stats', {})); }
 function bumpStats(fn){ const s = stats(); fn(s); store.set('stats', s); }
+function seen(){ return Object.assign({e:{}, r:{}}, store.get('seen', {})); }
+function markSeen(kind, key){ const s = seen(); if(kind==='e'){ s.e[key] = s.e[key] || {seen:1, kills:0}; } else s.r[key] = 1; store.set('seen', s); }
+function markKill(name){ const s = seen(); s.e[name] = s.e[name] || {seen:1, kills:0}; s.e[name].kills++; store.set('seen', s); }
 
 function newRun(cls){
-  const C = CLASSES[cls];
-  run = {cls, hp:C.hp, maxHp:C.hp, gold:C.gold, relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
-    lvl:{sword:0,shield:0,heal:0,coin:0}, floor:1, step:0, kills:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false, choices:null};
+  const C = CLASSES[cls], heat = clamp(+(store.get('heatSel',0)), 0, store.get('heat',0));
+  const hp = C.hp - (heat>=3 ? 10 : 0);
+  run = {cls, heat, hp, maxHp:hp, gold:C.gold, relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
+    lvl:{sword:0,shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
+  run.map = genMap();
   bumpStats(s=>s.runs++);
+  markSeen('r', C.relic);
   sfx('door');
+  banner('Floor 1', FLOOR_NAMES[0]);
   goMap();
+}
+function migrate(r){
+  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
+  if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
+  delete r.choices;
+  return r;
 }
 function gainRelic(id){
   run.relics.push(id); const R = RELICS[id]; if(R.onGet) R.onGet();
+  markSeen('r', id);
+  if(run.relics.length>=10) unlock('relics10');
   renderRunbar(); toast(`<b>${R.name}</b><br>${R.desc}`, R.spr); sfx('buy');
 }
 function relicOffers(n, minR=1){
@@ -221,31 +293,48 @@ function givePotion(id){
   id = id || pick(Object.keys(POTIONS));
   run.potions.push(id); renderRunbar(); return id;
 }
+/* returns true if the run ended */
+function checkDeath(){
+  if(run.hp > 0) return false;
+  if(has('phoenix') && !run.phoenixUsed){
+    run.phoenixUsed = true; run.hp = Math.round(run.maxHp/2);
+    flash('rgba(255,180,60,.6)'); sfx('ult');
+    toast('<b>Phoenix Feather</b><br>You rise from the ashes!', 'phoenix');
+    renderRunbar(); return false;
+  }
+  return true;
+}
 
 /* ================= UI shell ================= */
 function show(which){
   screenName = which;
   $('#combat').hidden = which!=='combat';
   $('#view').hidden = which==='combat';
-  if(which==='combat') $('#view').innerHTML = '';
-  $('#runbar').hidden = !run || which==='title' || which==='heroes';
+  if(which==='combat'){ $('#view').innerHTML = ''; bump($('#combat'),'enter'); }
+  $('#runbar').hidden = !run || which==='title' || which==='heroes' || which==='codex' || which==='trophies';
   selPotion = -1;
+  document.querySelectorAll('.coach').forEach(c=>c.remove());
   if(run) renderRunbar();
-  Sound.music(which==='title'||which==='heroes' ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':'combat') : 'map');
+  updateDanger();
+  Sound.music(['title','heroes','codex','trophies'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':'combat') : 'map');
   window.scrollTo(0,0);
 }
+function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
 function renderRunbar(){
   if(!run) return;
   $('#heroIcon').innerHTML = img(CLASSES[run.cls].spr, 34);
-  $('#hpFill').style.width = (100*Math.max(0,run.hp)/run.maxHp)+'%';
+  const pct = (100*Math.max(0,run.hp)/run.maxHp)+'%';
+  $('#hpFill').style.width = pct; $('#hpTrail').style.width = pct;
   $('#hpText').textContent = `${Math.max(0,run.hp)} / ${run.maxHp}`;
-  $('#coinIcon').innerHTML = img('coin', 22);
-  $('#goldText').textContent = run.gold;
-  $('#floorText').textContent = `F${run.floor}-${Math.min(run.step+1,STEPS)}`;
+  if(!$('#coinIcon').firstChild) $('#coinIcon').innerHTML = img('coin', 22);
+  tween($('#goldText'), run.gold);
+  if(run.gold>=200) unlock('rich');
+  $('#floorText').textContent = `F${run.floor}-${Math.min(run.step+1,STEPS)}${run.heat?` H${run.heat}`:''}`;
   const pb = $('#potionBar'); pb.innerHTML = '';
   for(let i=0;i<run.potionSlots;i++){
     const id = run.potions[i]; const b = document.createElement('button');
     b.className = 'slot'+(id?'':' empty')+(i===selPotion?' sel':'');
+    b.setAttribute('aria-label', id ? POTIONS[id].name : 'Empty potion slot');
     if(id){ b.innerHTML = img(POTIONS[id].spr, 26); b.onclick = ()=>potionTap(i); }
     pb.appendChild(b);
   }
@@ -253,13 +342,14 @@ function renderRunbar(){
   run.relics.forEach(id=>{
     const R = RELICS[id]; const b = document.createElement('button');
     b.className = 'relic'+(id==='phoenix'&&run.phoenixUsed?' used':'');
-    b.innerHTML = img(R.spr, 26); b.title = R.name;
+    b.innerHTML = img(R.spr, 26); b.setAttribute('aria-label', R.name);
     b.onclick = ()=>toast(`<b>${R.name}</b><br>${R.desc}`, R.spr);
     bar.appendChild(b);
   });
+  updateDanger();
 }
 function potionTap(i){
-  const id = run.potions[i], P = POTIONS[id];
+  const id = run.potions[i], P = POTIONS[id]; if(!P) return;
   const inFight = cb && !cb.over && !$('#combat').hidden;
   if(!inFight && !P.any){ toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Use it during a fight.</span>`, P.spr); return; }
   if(selPotion !== i){ selPotion = i; renderRunbar(); toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Tap again to drink.</span>`, P.spr); return; }
@@ -274,29 +364,47 @@ function choiceBtn({id,spr,name,desc,price,disabled,r,size}){
   const rar = r ? `<span class="rar rar${r}">${['','Common','Uncommon','Rare'][r]}</span>` : '';
   return `<button class="choice" data-id="${id}" ${disabled?'disabled':''}><span class="ic">${img(spr, size||44)}</span><span><b>${name}</b>${rar}<small>${desc}</small></span>${price!=null?`<span class="price">${img('coin',18)}${price}</span>`:''}</button>`;
 }
-function bindChoices(fn){ $('#view').querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ sfx('click'); fn(b.dataset.id); }); }
+function bindChoices(fn){
+  let used = false;
+  $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick=()=>{ if(used && !b.dataset.multi) return; used = true; sfx('click'); fn(b.dataset.id); }; });
+}
 function scene(spr, title, text){ return `<div class="scene"><div class="art">${img(spr, 112)}</div><h2 class="title">${title}</h2>${text?`<p class="muted">${text}</p>`:''}</div>`; }
 function blockChip(type){ return `<img class="blk" src="${blockCanvas(type, 44).toDataURL()}" alt="">`; }
 document.addEventListener('pointerdown', ()=>Sound.unlock(), {capture:true});
+
+/* ---------- coach marks (first-time tips) ---------- */
+function coach(id, title, text, el, above){
+  const done = store.get('tut', {}); if(done[id] || !el) return;
+  document.querySelectorAll('.coach').forEach(c=>c.remove());
+  const r = el.getBoundingClientRect ? el.getBoundingClientRect() : el, d = document.createElement('div');
+  d.className = 'coach ' + (above?'above':'below');
+  d.innerHTML = `<b>${title}</b>${text}<small>Tap to dismiss</small>`;
+  document.body.appendChild(d);
+  const w = d.offsetWidth, x = clamp(r.left + r.width/2 - w/2, 10, innerWidth - w - 10);
+  d.style.left = x+'px';
+  d.style.top = clamp(above ? r.top - d.offsetHeight - 12 : r.bottom + 12, 8, innerHeight - d.offsetHeight - 8) + 'px';
+  d.style.setProperty('--ax', clamp(r.left + r.width/2 - x, 16, w-16)+'px');
+  const close = ()=>{ d.remove(); const t = store.get('tut', {}); t[id] = 1; store.set('tut', t); };
+  d.onclick = close;
+}
 
 /* ================= settings ================= */
 function openSettings(){
   sfx('click');
   const m = $('#modal'); m.hidden = false;
   const st = stats();
-  const tg = (k,label) => `<div class="row"><label>${label}</label><button class="toggle ${settings[k]?'on':''}" data-k="${k}"></button></div>`;
-  m.innerHTML = `<div class="card">
+  const tg = (k,label) => `<div class="row"><label>${label}</label><button class="toggle ${settings[k]?'on':''}" data-k="${k}" aria-label="${label}"></button></div>`;
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Settings">
     <div class="row"><h2 class="title" style="font-size:26px">Settings</h2>${img('gear',34)}</div>
-    <div class="row"><label>Music</label><input type="range" min="0" max="1" step="0.05" value="${settings.music}" data-v="music"></div>
-    <div class="row"><label>Sound</label><input type="range" min="0" max="1" step="0.05" value="${settings.sfx}" data-v="sfx"></div>
-    ${tg('shake','Screen shake')}
-    ${tg('vibrate','Vibration')}
+    <div class="row"><label>Music</label><input type="range" min="0" max="1" step="0.05" value="${settings.music}" data-v="music" aria-label="Music volume"></div>
+    <div class="row"><label>Sound</label><input type="range" min="0" max="1" step="0.05" value="${settings.sfx}" data-v="sfx" aria-label="Sound volume"></div>
+    ${tg('shake','Screen shake')}${tg('flash','Screen flashes')}${tg('vibrate','Vibration')}
     <div class="records">
       <div>Runs<br><b>${st.runs}</b></div><div>Wins<br><b>${st.wins}</b></div>
       <div>Foes slain<br><b>${st.kills}</b></div><div>Deepest floor<br><b>${st.bestFloor||'-'}</b></div>
       <div>Best clear<br><b>${st.bestLines} lines</b></div><div>Biggest hit<br><b>${st.bestHit}</b></div>
     </div>
-    ${run && screenName!=='end' ? '<button class="btn ghost" id="abandonBtn">Abandon run</button>' : ''}
+    <div class="row2"><button class="btn ghost" id="tutBtn" style="font-size:16px">Replay tips</button>${run && screenName!=='end' ? '<button class="btn ghost" id="abandonBtn" style="font-size:16px">Abandon run</button>' : ''}</div>
     <button class="btn danger" id="resetBtn">Reset all data</button>
     <button class="btn" id="closeBtn">Done</button>
   </div>`;
@@ -306,32 +414,37 @@ function openSettings(){
   });
   m.querySelectorAll('.toggle').forEach(t=>t.onclick=()=>{
     const k = t.dataset.k; settings[k] = !settings[k]; t.classList.toggle('on', settings[k]); store.set('settings', settings); sfx('click');
-    if(k==='shake' && settings.shake) shake(); if(k==='vibrate' && settings.vibrate) buzz(40);
+    if(k==='shake' && settings.shake) shake(); if(k==='vibrate' && settings.vibrate) buzz(40); if(k==='flash' && settings.flash) flash('rgba(255,255,255,.3)');
   });
+  $('#tutBtn').onclick = ()=>{ store.set('tut', null); toast('Tips will show again in your next fight.', 'book'); };
   let armed = false, armT;
   $('#resetBtn').onclick = ()=>{
     if(!armed){ armed = true; $('#resetBtn').textContent = 'Tap again to erase everything'; sfx('warn'); clearTimeout(armT); armT = setTimeout(()=>{ armed=false; const b=$('#resetBtn'); if(b) b.textContent='Reset all data'; }, 3000); return; }
-    ['save','stats','best','runs'].forEach(k=>store.set(k,null));
-    sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Your saved run and records were erased.', 'bones');
+    ['save','stats','best','runs','seen','ach','heat','heatSel','tut'].forEach(k=>store.set(k,null));
+    sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex and trophies were erased.', 'bones');
   };
   const ab = $('#abandonBtn');
-  if(ab){ let a2=false; ab.onclick = ()=>{ if(!a2){ a2=true; ab.textContent='Tap again to abandon'; sfx('warn'); return; } store.set('save', null); closeSettings(); run=null; cb=null; titleScreen(); }; }
+  if(ab){ let a2=false; ab.onclick = ()=>{ if(!a2){ a2=true; ab.textContent='Tap again'; sfx('warn'); return; } store.set('save', null); closeSettings(); run=null; cb=null; titleScreen(); }; }
   $('#closeBtn').onclick = closeSettings;
   m.onclick = e=>{ if(e.target===m) closeSettings(); };
 }
 function closeSettings(){ $('#modal').hidden = true; $('#modal').innerHTML=''; sfx('click'); }
 $('#gearBtn').onclick = openSettings;
 
-/* ================= title & hero select ================= */
+/* ================= title, hero select, codex, trophies ================= */
 function titleScreen(){
   run = null; cb = null; show('title');
-  const save = store.get('save', null), st = stats();
+  const save = store.get('save', null), st = stats(), ach = store.get('ach', {});
   view(`
-    <div class="titlebar"><button class="iconbtn" id="gear2">${img('gear',28)}</button></div>
+    <div class="titlebar"><button class="iconbtn" id="gear2" aria-label="Settings">${img('gear',28)}</button></div>
     <h1 class="logo"><span>BLOCK BOUND</span><span>DUNGEON</span></h1>
     <div class="heroes">${img('knight',76)}${img('rogue',76)}${img('mage',76)}</div>
     ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, Floor ${save.floor}</button>`:''}
     <button class="btn ${save?'ghost':''}" id="startBtn">${save?'New Run':'Enter the Dungeon'}</button>
+    <div class="row2">
+      <button class="btn ghost" id="codexBtn"><span class="inline" style="justify-content:center">${img('book',26)} Codex</span></button>
+      <button class="btn ghost" id="trophyBtn"><span class="inline" style="justify-content:center">${img('trophy',26)} ${Object.keys(ach).length}/${Object.keys(ACH).length}</span></button>
+    </div>
     <div class="card">
       <ul class="how">
         <li>Drag pieces onto the grid. <b>Tap a piece to rotate it.</b> Fill a full row or column to clear it.</li>
@@ -346,7 +459,7 @@ function titleScreen(){
         <span>${blockChip('ice')} Ice: cracks to rubble</span>
       </div>
       <ul class="how" style="margin-top:8px">
-        <li>Clear several lines at once or back-to-back for a <b>combo multiplier</b>. Lines of a single block type are <b>Pure</b> and score extra. Empty the whole grid for a <b>Perfect</b> clear.</li>
+        <li>Clear several lines at once or back-to-back for a <b>combo multiplier</b>. Lines of a single block type are <b>Pure</b>. Empty the grid for a <b>Perfect</b> clear.</li>
         <li>Clearing lines charges your hero's <b>special move</b>.</li>
         <li>Each piece you place is a turn. Watch the enemy's countdown.</li>
       </ul>
@@ -354,65 +467,159 @@ function titleScreen(){
     ${st.runs?`<p class="center muted" style="font-size:13px">${st.wins} wins in ${st.runs} runs · deepest floor ${st.bestFloor||1}</p>`:''}
   `);
   $('#startBtn').onclick = ()=>{ sfx('click'); if(save) store.set('save', null); heroScreen(); };
-  if(save) $('#contBtn').onclick = ()=>{ sfx('door'); run = save; goMap(); };
+  if(save) $('#contBtn').onclick = ()=>{ sfx('door'); run = migrate(save); goMap(); };
   $('#gear2').onclick = openSettings;
+  $('#codexBtn').onclick = ()=>{ sfx('click'); codexScreen('e'); };
+  $('#trophyBtn').onclick = ()=>{ sfx('click'); trophyScreen(); };
 }
 function heroScreen(){
   show('heroes');
+  const maxHeat = store.get('heat', 0); let heat = clamp(+store.get('heatSel', 0), 0, maxHeat);
   view(`<div class="center"><h2 class="title">Choose your hero</h2></div>
+    ${maxHeat ? `<div class="card heatsel"><button id="hm" aria-label="Less heat">-</button><div class="mid"><b id="hn"></b><small id="hd"></small></div><button id="hp" aria-label="More heat">+</button></div>` : ''}
     ${Object.entries(CLASSES).map(([id,C])=>{
-      const R = RELICS[C.relic];
+      const R = RELICS[C.relic], wins = (stats().winsBy||{})[id]||0;
       return `<button class="choice hero" data-id="${id}"><span class="ic">${img(C.spr,70)}</span><span>
-        <b>${C.name}</b><small>${C.desc}</small>
+        <b>${C.name}${wins?` <span class="rar rar3">${wins} win${wins>1?'s':''}</span>`:''}</b><small>${C.desc}</small>
         <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
         <span class="ult">Special: <b style="font-size:13px;display:inline">${C.ult.name}</b> - ${C.ult.desc}</span>
       </span></button>`; }).join('')}
     <button class="btn ghost" id="backBtn">Back</button>`);
+  const paint = ()=>{ if(!maxHeat) return; $('#hn').textContent = HEAT[heat].name; $('#hd').textContent = HEAT[heat].desc; $('#hm').disabled = heat<=0; $('#hp').disabled = heat>=maxHeat; store.set('heatSel', heat); };
+  if(maxHeat){ $('#hm').onclick = ()=>{ heat--; sfx('click'); paint(); }; $('#hp').onclick = ()=>{ heat++; sfx('rage'); paint(); }; paint(); }
   bindChoices(newRun); $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
+function codexScreen(tab){
+  show('codex');
+  const s = seen();
+  let body = '';
+  if(tab==='e'){
+    const n = ALL_ENEMIES.filter(e=>s.e[e.name]).length;
+    body = `<p class="center muted">${n} / ${ALL_ENEMIES.length} discovered</p><div class="grid">${ALL_ENEMIES.map((e,i)=>{ const k = s.e[e.name]; return `<div class="cell ${k?'':'unk'}" data-i="${i}">${img(e.spr,58)}${k?e.name:'???'}</div>`; }).join('')}</div>`;
+  } else {
+    const ids = Object.keys(RELICS), n = ids.filter(id=>s.r[id]).length;
+    body = `<p class="center muted">${n} / ${ids.length} discovered</p><div class="grid">${ids.map(id=>{ const k = s.r[id]; return `<div class="cell ${k?'':'unk'}" data-r="${id}">${img(RELICS[id].spr,50)}${k?RELICS[id].name:'???'}</div>`; }).join('')}</div>`;
+  }
+  view(`<div class="center"><h2 class="title">Codex</h2></div>
+    <div class="tabs"><button class="${tab==='e'?'on':''}" id="tE">Bestiary</button><button class="${tab==='r'?'on':''}" id="tR">Relics</button></div>
+    ${body}<button class="btn ghost" id="backBtn">Back</button>`);
+  $('#tE').onclick = ()=>{ sfx('click'); codexScreen('e'); }; $('#tR').onclick = ()=>{ sfx('click'); codexScreen('r'); };
+  $('#view').querySelectorAll('.cell').forEach(c=>c.onclick=()=>{
+    sfx('click');
+    if(c.dataset.i!=null){
+      const e = ALL_ENEMIES[+c.dataset.i], k = s.e[e.name];
+      if(!k) return toast('Not yet encountered.', e.spr);
+      const tag = e.boss?'Boss':e.elite?'Elite':e.rare?'Rare':'Monster';
+      toast(`<b>${e.name}</b><br>${tag}${e.floor?`, floor ${e.floor}`:''} · ${e.hp} HP${e.passive?` · ${PASSIVES[e.passive.id].name}`:''}<br><span class="muted">Defeated ${k.kills} time${k.kills===1?'':'s'}</span>`, e.spr, 3200);
+    } else {
+      const R = RELICS[c.dataset.r];
+      if(!s.r[c.dataset.r]) return toast('Not yet found.', R.spr);
+      toast(`<b>${R.name}</b><br>${R.desc}`, R.spr, 3200);
+    }
+  });
+  $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
+}
+function trophyScreen(){
+  show('trophies');
+  const a = store.get('ach', {});
+  view(`<div class="center"><h2 class="title">Trophies</h2><p class="muted">${Object.keys(a).length} / ${Object.keys(ACH).length} unlocked</p></div>
+    ${Object.entries(ACH).map(([id,t])=>`<div class="troph ${a[id]?'':'lock'}">${img(t.spr,44)}<div><b>${t.name}</b><small>${t.desc}</small></div></div>`).join('')}
+    <button class="btn ghost" id="backBtn">Back</button>`);
+  $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
+}
 
-/* ================= map ================= */
-function genChoices(){
-  const s = run.step;
-  if(s===STEPS-1) return ['boss'];
-  if(s===0) return ['combat'];
-  const w = [['combat',38],['elite',s>=2?14:0],['rest',s>=3?11:0],['shop',s>=2?12:0],['treasure',8],['event',16]].filter(e=>e[1]>0);
-  const n = Math.random()<0.5?3:2; const out=[];
-  if(s===STEPS-2) out.push('rest');
-  let guard=0;
-  while(out.length<n && guard++<60){ const r = weighted(w); if(!out.includes(r)) out.push(r); }
-  return shuffle(out);
+/* ================= branching map ================= */
+function genMap(){
+  const rows = [];
+  for(let r=0;r<STEPS;r++){
+    const n = r===STEPS-1 ? 1 : r===0 ? rand(2,3) : rand(2,4);
+    const w = [['combat',40],['elite',r>=2?14:0],['rest',r>=3?9:0],['shop',r>=2?11:0],['treasure',7],['event',16]].filter(e=>e[1]>0);
+    const nodes = [];
+    for(let i=0;i<n;i++){
+      let t;
+      if(r===0) t = 'combat';
+      else if(r===STEPS-1) t = 'boss';
+      else if(r===STEPS-2) t = i===0 ? 'rest' : weighted([['rest',1.2],['shop',1],['event',1],['treasure',0.5]]);
+      else t = weighted(w);
+      nodes.push({t, x: n===1 ? 0.5 : 0.14 + 0.72*i/(n-1) + (Math.random()-.5)*0.06, next:[]});
+    }
+    rows.push(nodes);
+  }
+  if(!rows[STEPS-2].some(n=>n.t==='rest')) rows[STEPS-2][0].t = 'rest';
+  for(let r=0;r<STEPS-1;r++){
+    const A = rows[r], B = rows[r+1], n = A.length, m = B.length;
+    A.forEach((a,i)=>{
+      const j = n===1 ? Math.floor((m-1)/2) : Math.round(i*(m-1)/(n-1));
+      a.next.push(j);
+      if(m>1 && Math.random()<0.45){ const k = j + (Math.random()<0.5?-1:1); if(k>=0 && k<m && !a.next.includes(k)) a.next.push(k); }
+    });
+    B.forEach((b,j)=>{
+      if(!A.some(a=>a.next.includes(j))){ let bi=0, bd=9; A.forEach((a,i)=>{ const d=Math.abs(a.x-b.x); if(d<bd){ bd=d; bi=i; } }); A[bi].next.push(j); }
+    });
+  }
+  return rows;
+}
+function availableNodes(){
+  if(!run.path.length) return run.map[0].map((_,i)=>i);
+  const [r,i] = run.path[run.path.length-1];
+  return r+1 < STEPS ? run.map[r][i].next.slice() : [];
 }
 function goMap(){
   cb = null;
-  if(!run.choices) run.choices = genChoices();
+  run.step = run.path.length;
   saveRun();
   show('map');
-  let dots=''; for(let i=0;i<STEPS;i++) dots += `<i class="${i<run.step?'done':i===run.step?'now':''} ${i===STEPS-1?'boss':''}"></i>`;
+  const RH = 84, H = RH*STEPS, avail = availableNodes(), row = run.step;
+  const pos = (r,i)=>({x: run.map[r][i].x*100, y: RH/2 + r*RH});
+  const onPath = (r,i)=> run.path.some(([a,b])=>a===r&&b===i);
+  let lines = '';
+  run.map.forEach((nodes,r)=>nodes.forEach((n,i)=>n.next.forEach(j=>{
+    const a = pos(r,i), b = pos(r+1,j), trav = onPath(r,i) && onPath(r+1,j);
+    const live = (r===row-1 && onPath(r,i)) || (row===0 && false);
+    lines += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${trav?'#ffcf7a':live?'#ffffff':'#4a3f58'}" stroke-width="${trav?4:3}" stroke-dasharray="${trav?'0':'6 7'}" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="${trav||live?1:.8}"/>`;
+  })));
+  let nodesHtml = '';
+  run.map.forEach((nodes,r)=>nodes.forEach((n,i)=>{
+    const p = pos(r,i), done = onPath(r,i), isAvail = r===row && avail.includes(i);
+    const here = done && run.path.length && run.path[run.path.length-1][0]===r && run.path[run.path.length-1][1]===i;
+    const cls = ['mnode', n.t==='boss'?'boss':'', done?'done':'', here?'here':'', isAvail?'avail':'', (!done && !isAvail && r<=row)?'locked':''].join(' ');
+    nodesHtml += `<button class="${cls}" style="left:${p.x}%;top:${p.y}px" data-r="${r}" data-i="${i}" aria-label="${ROOMS[n.t].name}" ${isAvail?'':'tabindex="-1"'}>${img(ROOMS[n.t].spr, n.t==='boss'?54:40)}</button>`;
+  }));
   view(`
-    <div class="center"><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px;margin-top:2px">${FLOOR_NAMES[run.floor-1]}</div></div>
-    <div class="steps">${dots}</div>
-    <p class="muted center">Choose your path</p>
-    ${run.choices.map(k=>choiceBtn({id:k,...ROOMS[k]})).join('')}
+    <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${FLOOR_NAMES[run.floor-1]}</div></div>
+      ${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}</div>
+    <p class="muted center" style="font-size:13px">Descend toward the boss. Tap a glowing room.</p>
+    <div class="map" style="height:${H}px"><svg viewBox="0 0 100 ${H}" preserveAspectRatio="none">${lines}</svg>${nodesHtml}</div>
+    <div class="legend2">${['combat','elite','rest','shop','treasure','event'].map(k=>`<span>${img(ROOMS[k].spr,20)}${ROOMS[k].name}</span>`).join('')}</div>
   `);
-  bindChoices(enterRoom);
+  let used = false;
+  $('#view').querySelectorAll('.mnode.avail').forEach(b=>b.onclick=()=>{ if(used) return; used = true; sfx('map'); enterRoom(+b.dataset.r, +b.dataset.i); });
+  const target = $('#view .mnode.avail');
+  if(target && row>1) setTimeout(()=>target.scrollIntoView({block:'center', behavior:'smooth'}), 120);
+  if(row===0) coach('map', 'Your path', 'Pick any glowing room. Lines show which rooms connect. The boss waits at the bottom.', $('#view .mnode.avail'), false);
 }
-function enterRoom(k){
-  run.choices = null; sfx('door');
-  if(k==='combat'||k==='elite'||k==='boss') startCombat(k);
+function enterRoom(r, i){
+  run.path.push([r,i]); run.step = run.path.length - 1;
+  const k = run.map[r][i].t;
+  sfx('door');
+  if(k==='combat') startCombat(Math.random()<0.1 ? 'goblin' : 'combat');
+  else if(k==='elite'||k==='boss') startCombat(k);
   else if(k==='rest') restScreen();
   else if(k==='shop') shopScreen();
   else if(k==='treasure') treasureScreen();
-  else if(k==='event') eventScreen();
+  else eventScreen();
 }
 function advance(){
-  run.step++;
-  if(run.step>=STEPS){
-    run.floor++; run.step=0;
+  const last = run.path[run.path.length-1];
+  if(last && last[0]===STEPS-1){
+    run.floor++;
     bumpStats(s=>s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)));
     if(run.floor>FLOORS) return endScreen(true);
+    if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3');
+    run.map = genMap(); run.path = [];
     heal(Math.round(run.maxHp*0.3));
-    toast('You descend deeper and catch your breath. <b>+30% HP</b>', 'r_rest');
+    banner(`Floor ${run.floor}`, FLOOR_NAMES[run.floor-1], 2200);
+    setTimeout(()=>toast('You descend deeper and catch your breath. <b>+30% HP</b>', 'r_rest'), 600);
   }
   goMap();
 }
@@ -420,13 +627,20 @@ function advance(){
 /* ================= non-combat rooms ================= */
 function restScreen(){
   show('rest');
-  const amt = Math.round(run.maxHp*0.35);
-  const up = pick(Object.keys(UPGRADES)); const U = UPGRADES[up];
+  const amt = Math.round(run.maxHp*0.35*(has('hearth')?1.5:1));
+  const up = pick(Object.keys(UPGRADES)); const U = UPGRADES[up], C = CLASSES[run.cls].ult;
   view(`${scene('r_rest','Campfire','The fire crackles. You have time for one thing.')}
-    ${choiceBtn({id:'heal',spr:'heal_icon',name:'Rest',desc:`Heal ${amt} HP.`})}
+    ${choiceBtn({id:'heal',spr:'heal_icon',name:'Rest',desc:`Heal ${amt} HP.${has('hearth')?' +4 max HP.':''}`})}
     ${choiceBtn({id:'train',spr:'heart',name:'Train',desc:'+8 max HP.'})}
-    ${choiceBtn({id:'up',spr:U.spr,name:U.name,desc:U.desc+' (permanent)'})}`);
-  bindChoices(id=>{ if(id==='heal'){ heal(amt); sfx('heal'); } else if(id==='train'){ run.maxHp+=8; run.hp+=8; } else run.lvl[up]++; advance(); });
+    ${choiceBtn({id:'up',spr:U.spr,name:U.name,desc:U.desc+' (permanent)'})}
+    ${choiceBtn({id:'med',spr:C.spr,name:'Meditate',desc:`Start your next fight with ${C.name} fully charged.`, disabled: run.charge>=C.need})}`);
+  bindChoices(id=>{
+    if(id==='heal'){ heal(amt); if(has('hearth')){ run.maxHp+=4; run.hp+=4; } sfx('heal'); }
+    else if(id==='train'){ run.maxHp+=8; run.hp+=8; sfx('armor'); }
+    else if(id==='up'){ run.lvl[up]++; sfx('armor'); }
+    else { run.charge = C.need; sfx('ult'); }
+    advance();
+  });
 }
 function treasureScreen(){
   show('treasure');
@@ -434,28 +648,32 @@ function treasureScreen(){
   view(`${scene('r_treasure','Treasure!',`Inside the chest: ${g} gold and...`)}
     ${id?choiceBtn({id, ...RELICS[id]}):''}
     <button class="btn" id="takeBtn">Take it</button>`);
-  const take = ()=>{ run.gold+=g; sfx('coin'); if(id) gainRelic(id); advance(); };
+  let done = false;
+  const take = ()=>{ if(done) return; done = true; run.gold+=g; sfx('coin'); if(id) gainRelic(id); burstAt($('#goldWrap'), ['#f7c936','#ffe58a'], 16); advance(); };
   $('#takeBtn').onclick = take; bindChoices(take);
 }
 function shopScreen(){
   show('shop');
-  const stock = relicOffers(3).map(id=>({id, price:[0,55,80,115][RELICS[id].r]+rand(-5,5), sold:false}));
-  const pots = shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:rand(18,26), sold:false}));
-  const up = pick(Object.keys(UPGRADES)); let upPrice = 50, upSold=false;
+  const disc = has('clover') ? 0.8 : 1, P = x => Math.round(x*disc);
+  const stock = relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false}));
+  const pots = shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false}));
+  const up = pick(Object.keys(UPGRADES)); const upPrice = P(50), packPrice = P(70); let upSold=false, packSold=false;
   const render = ()=>{
     const full = run.potions.length>=run.potionSlots;
-    view(`${scene('r_shop','The Merchant','"Gold for goods, friend."')}
+    view(`${scene('r_shop','The Merchant', has('clover')?'"Lucky you. Everything is marked down."':'"Gold for goods, friend."')}
       ${stock.map(s=>s.sold?'':choiceBtn({id:'r:'+s.id,...RELICS[s.id],price:s.price,disabled:run.gold<s.price})).join('')}
       ${pots.map(s=>s.sold?'':choiceBtn({id:'p:'+s.id,spr:POTIONS[s.id].spr,name:POTIONS[s.id].name,desc:POTIONS[s.id].desc+(full?' (potion slots full)':''),price:s.price,disabled:run.gold<s.price||full})).join('')}
       ${upSold?'':choiceBtn({id:'u:'+up,spr:UPGRADES[up].spr,name:UPGRADES[up].name,desc:UPGRADES[up].desc+' (permanent)',price:upPrice,disabled:run.gold<upPrice})}
+      ${packSold||run.potionSlots>=5?'':choiceBtn({id:'b:pack',spr:'satchel',name:'Bigger Pack',desc:'+1 potion slot.',price:packPrice,disabled:run.gold<packPrice})}
       <button class="btn ghost" id="leaveBtn">Leave</button>`);
-    bindChoices(key=>{
-      const [kind,id] = key.split(':');
-      if(kind==='r'){ const s=stock.find(x=>x.id===id); run.gold-=s.price; s.sold=true; gainRelic(id); }
-      else if(kind==='p'){ const s=pots.find(x=>x.id===id); run.gold-=s.price; s.sold=true; givePotion(id); sfx('buy'); }
-      else { run.gold-=upPrice; upSold=true; run.lvl[id]++; sfx('buy'); toast(`<b>${UPGRADES[id].name}</b><br>${UPGRADES[id].desc}`, UPGRADES[id].spr); }
+    $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
+      const [kind,id] = b.dataset.id.split(':');
+      if(kind==='r'){ const s=stock.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; gainRelic(id); }
+      else if(kind==='p'){ const s=pots.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; givePotion(id); sfx('buy'); }
+      else if(kind==='u'){ if(run.gold<upPrice||upSold) return; run.gold-=upPrice; upSold=true; run.lvl[id]++; sfx('buy'); toast(`<b>${UPGRADES[id].name}</b><br>${UPGRADES[id].desc}`, UPGRADES[id].spr); }
+      else { if(run.gold<packPrice||packSold) return; run.gold-=packPrice; packSold=true; run.potionSlots++; sfx('buy'); }
       renderRunbar(); render(); saveRun();
-    });
+    }; });
     $('#leaveBtn').onclick = ()=>{ sfx('click'); advance(); };
   };
   render();
@@ -496,6 +714,15 @@ const EVENTS = [
     {name:'Train hard', spr:'r_combat', desc:'Lose 7 HP. Upgrade a random block type.', ok:()=>run.hp>7, go(){ run.hp-=7; sfx('hit'); const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; toast(`<b>${UPGRADES[k].name}</b><br>${UPGRADES[k].desc}`, UPGRADES[k].spr); }},
     {name:'Stretch', spr:'heal_icon', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
   ]}),
+  ()=>({spr:'idol', title:'Cursed Idol', text:'A golden idol grins from a pedestal. The air feels heavy.', opts:[
+    {name:'Take it', spr:'idol', desc:'Gain a rare relic. Lose 8 max HP.', ok:()=>run.maxHp>20, go(){ run.maxHp-=8; run.hp=Math.min(run.hp,run.maxHp); const [id]=relicOffers(1,3); if(id) gainRelic(id); sfx('rage'); }},
+    {name:'Leave it', spr:'r_event', desc:'Some things are better left alone.', go(){} },
+  ]}),
+  ()=>({spr:'knight', title:'Wounded Adventurer', text:'A knight slumps against the wall, clutching a wound.', opts:[
+    {name:'Share a potion', spr:'potion_health', desc:'Give your first potion. Gain 20 gold and a random upgrade.', ok:()=>run.potions.length>0, go(){ run.potions.shift(); run.gold+=20; const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; sfx('heal'); toast(`"Thank you, friend."<br><b>${UPGRADES[k].name}</b>: ${UPGRADES[k].desc}`, UPGRADES[k].spr, 3000); }},
+    {name:'Bandage them', spr:'heal_icon', desc:'Lose 5 HP. Gain 15 gold.', ok:()=>run.hp>5, go(){ run.hp-=5; run.gold+=15; sfx('coin'); }},
+    {name:'Walk past', spr:'r_event', desc:'Move on.', go(){} },
+  ]}),
 ];
 function eventScreen(){
   show('event');
@@ -504,7 +731,8 @@ function eventScreen(){
     ${ev.opts.map((o,i)=>choiceBtn({id:i,spr:o.spr,name:o.name,desc:o.desc,disabled:o.ok&&!o.ok()})).join('')}`);
   bindChoices(i=>{
     const res = ev.opts[i].go();
-    if(run.hp<=0) return endScreen(false);
+    renderRunbar();
+    if(checkDeath()) return endScreen(false);
     if(res==='mimic'){ const mm = ENEMIES[1].elite[1]; return startCombat('elite', {...mm, hp: Math.round(mm.hp*[0.6,1,1.35][run.floor-1])}); }
     advance();
   });
@@ -513,13 +741,15 @@ function eventScreen(){
 /* ================= rewards & end ================= */
 function rewardScreen(kind){
   show('reward');
-  let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):rand(10,18);
+  let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*run.floor:rand(10,18);
   if(has('magnet')) g = Math.round(g*1.4);
   run.gold += g;
   let extra = '';
   if(has('crown')){ const i = Math.min(15, Math.floor(run.gold/10)); run.gold += i; extra += ` +${i} interest.`; }
   if(Math.random() < (kind==='combat'?0.35:0.5)){ const p = givePotion(); if(p) extra += ` Found a ${POTIONS[p].name}!`; }
   renderRunbar(); saveRun();
+  setTimeout(()=>burstAt($('#goldWrap'), ['#f7c936','#ffe58a','#fff'], 22), 150);
+  if(kind==='boss') setTimeout(()=>confetti(80), 100);
   let offers;
   if(kind==='combat'){
     const pool = BOONS.filter(b=>!b.ok||b.ok());
@@ -529,7 +759,8 @@ function rewardScreen(kind){
   } else {
     offers = relicOffers(3, kind==='boss'?2:1).map(id=>({id,...RELICS[id]}));
   }
-  view(`${scene(kind==='boss'?'r_boss':'r_treasure', kind==='boss'?'Boss defeated!':'Victory!', `+${g} gold.${extra} Choose a reward:`)}
+  const title = kind==='boss'?'Boss defeated!':kind==='goblin'?'Caught it!':'Victory!';
+  view(`${scene(kind==='boss'?'r_boss':kind==='goblin'?'goldgoblin':'r_treasure', title, `+${g} gold.${extra} Choose a reward:`)}
     ${offers.map(o=>choiceBtn(o)).join('')}
     <button class="btn ghost" id="skipBtn">Skip</button>`);
   bindChoices(id=>{ const b = BOONS.find(x=>x.id===id); if(b){ b.apply(); sfx('heal'); } else gainRelic(id); advance(); });
@@ -537,16 +768,26 @@ function rewardScreen(kind){
 }
 function endScreen(won){
   cb = null; store.set('save', null);
-  bumpStats(s=>{ if(won) s.wins++; s.kills+=run.kills; s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)); s.bestLines=Math.max(s.bestLines, run.bestLines); s.bestHit=Math.max(s.bestHit, run.bestHit); });
+  let heatMsg = '';
+  bumpStats(s=>{ if(won){ s.wins++; s.winsBy = s.winsBy||{}; s.winsBy[run.cls] = (s.winsBy[run.cls]||0)+1; } s.kills+=run.kills; s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)); s.bestLines=Math.max(s.bestLines, run.bestLines); s.bestHit=Math.max(s.bestHit, run.bestHit); });
+  if(won){
+    unlock('win'); if(run.heat>=1) unlock('heat');
+    const wb = stats().winsBy; if(['knight','rogue','mage'].every(k=>wb[k])) unlock('allheroes');
+    const mh = store.get('heat',0);
+    if(run.heat>=mh && mh<HEAT.length-1){ store.set('heat', mh+1); heatMsg = `<p class="center" style="color:#ff8a80;font-family:var(--display);font-size:18px">${HEAT[mh+1].name} unlocked!</p>`; }
+  }
   show('end'); Sound.music(won?'map':'menu');
   sfx(won?'victory':'defeat');
+  if(won){ confetti(160); banner('VICTORY', 'The dungeon is conquered', 2600); }
   view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':'You have fallen...', won?'The Ancient Dragon is slain. Legends will be told.':`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
+    ${heatMsg}
     <div class="card"><div class="stats3">
       <div>${run.kills}<small>foes slain</small></div>
       <div>${run.dmg}<small>damage</small></div>
       <div>${run.bestHit}<small>biggest hit</small></div>
       <div>${run.bestLines}<small>best clear</small></div>
     </div></div>
+    <div class="card"><p class="center muted" style="font-size:13px;margin-bottom:6px">${CLASSES[run.cls].name}${run.heat?` · Heat ${run.heat}`:''} · ${run.relics.length} relics</p><div class="relicrow">${run.relics.map(id=>img(RELICS[id].spr,30)).join('')}</div></div>
     <button class="btn" id="againBtn">New Run</button>
     <button class="btn ghost" id="titleBtn">Title</button>`);
   $('#againBtn').onclick = ()=>{ sfx('click'); heroScreen(); }; $('#titleBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
@@ -557,6 +798,7 @@ function rollType(){
   const e = [['sword',46],['shield',22],['heal',13],['coin',10]];
   if(has('prism')||has('orb')) e.push(['rainbow',has('prism')&&has('orb')?20:12]);
   if(has('toxin')) e.push(['venom',12]);
+  if(has('satchel')) e.push(['blast',7]);
   return weighted(e);
 }
 function shapeWeight(s){
@@ -570,8 +812,9 @@ function newPiece(){
   for(let k=rand(0,3); k>0; k--) s = rotated(s);
   return {...s, type:rollType(), used:false, rotT:0};
 }
-function fits(p,r,c){
-  for(const [dr,dc] of p.cells){ const rr=r+dr, cc=c+dc; if(rr<0||cc<0||rr>=N||cc>=N||cb.board[rr*N+cc]) return false; }
+function fits(p,r,c,board){
+  board = board || cb.board;
+  for(const [dr,dc] of p.cells){ const rr=r+dr, cc=c+dc; if(rr<0||cc<0||rr>=N||cc>=N||board[rr*N+cc]) return false; }
   return true;
 }
 function fitsAnywhere(p){ for(let r=0;r<=N-p.h;r++) for(let c=0;c<=N-p.w;c++) if(fits(p,r,c)) return true; return false; }
@@ -590,29 +833,40 @@ function dealHand(){
 function startCombat(kind, forced){
   if(!run || run.floor>FLOORS) return;
   const F = ENEMIES[run.floor-1];
-  const tpl = forced || (kind==='boss' ? F.boss : pick(kind==='elite' ? F.elite : F.normal));
-  const maxHp = Math.round(tpl.hp * [1.15,1.4,1.55][run.floor-1] * (kind==='boss'?1.1:(0.92+Math.random()*0.16)));
+  let tpl = forced || (kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal));
+  const heat = run.heat||0;
+  let hpMul = [1.15,1.4,1.55][run.floor-1] * (kind==='boss'?1.1:(0.92+Math.random()*0.16));
+  if(heat>=1) hpMul *= 1.15;
+  if(heat>=5 && kind==='boss') hpMul *= 1.25;
+  if(kind==='goblin') hpMul = [1,1.7,2.4][run.floor-1];
+  if(heat>=4 && kind==='elite' && !tpl.passive){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; }
+  const maxHp = Math.round(tpl.hp * hpMul);
   const pas = tpl.passive || null;
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], fx:[], parts:[], over:false, firstClear:true, doubleNext:false,
-    streak: has('drum') ? 2 : 0,
+    streak: has('drum') ? 2 : 0, tookDmg:false, mirror:has('mirror'), moves:0,
     shield: (has('chainmail')?8:0) + (has('oath')?6:0),
     rerolls: 1+(has('dice')?1:0),
     enemy:{...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null},
   };
-  if(run.floor>1) addBlocks('stone', (run.floor-1)*2, true);
+  markSeen('e', tpl.name);
+  if(run.floor>1 && kind!=='goblin') addBlocks('stone', (run.floor-1)*2, true);
   nextIntent(); dealHand();
   lastEnemySpr = null;
   show('combat'); layout(); renderHUD();
   $('#eArt').className = '';
-  if(kind==='boss'){ flash('rgba(160,20,30,.5)'); sfx('rage'); toast(`<b>${tpl.name}</b><br>Guardian of ${FLOOR_NAMES[run.floor-1]}`, tpl.spr, 2000); }
+  if(kind==='boss'){ flash('rgba(160,20,30,.5)'); sfx('rage'); banner(tpl.name, `Guardian of ${FLOOR_NAMES[run.floor-1]}`, 1800); }
+  if(kind==='goblin'){ sfx('flee'); toast('<b>A Treasure Goblin!</b><br>Catch it before it escapes with its loot.', 'goldgoblin', 2600); }
+  if(run.charge >= CLASSES[run.cls].ult.need) setTimeout(()=>coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true), 900);
+  setTimeout(()=>{ const b = cv.getBoundingClientRect(); coach('drag', 'How to play', 'Drag a piece from the tray onto the grid. Tap a piece to rotate it first.', {left:b.left, width:b.width, top:b.top+L.ty, bottom:b.top+L.ty+L.trayH}, true); }, 400);
 }
 const streakStep = () => has('daggers') ? 0.5 : 0.25;
 function nextIntent(){
   const e = cb.enemy, m = e.moves[e.mi % e.moves.length]; e.mi++;
-  e.intent = {...m, left: m.t + (has('hourglass')?1:0)};
+  e.intent = {...m, left: m.t + (has('hourglass')&&m.k!=='flee'?1:0)};
 }
-function intentDamage(it){ return Math.round(it.v*[1.1,1.25,1.35][run.floor-1]) + cb.enemy.rage; }
+function peekIntent(){ const e = cb.enemy; return e.moves[e.mi % e.moves.length]; }
+function intentDamage(it){ return Math.round(it.v*[1.1,1.25,1.35][run.floor-1]*((run.heat||0)>=2?1.15:1)) + cb.enemy.rage; }
 function addBlocks(type, n, silent){
   const empty = []; cb.board.forEach((v,i)=>{ if(!v) empty.push(i); });
   shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]=type; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type}); });
@@ -620,8 +874,9 @@ function addBlocks(type, n, silent){
 function place(idx, r, c){
   const p = cb.hand[idx];
   p.cells.forEach(([dr,dc])=>{ cb.board[(r+dr)*N + c+dc] = p.type; });
-  p.used = true; selPotion = -1;
+  p.used = true; selPotion = -1; cb.moves++;
   sfx('place'); buzz(8);
+  document.querySelectorAll('.coach').forEach(c=>c.remove());
   resolveClears();
   if(checkEnd()) return;
   enemyTick();
@@ -630,6 +885,9 @@ function place(idx, r, c){
   checkStuck();
   if(checkEnd()) return;
   renderHUD();
+  if(cb.moves===1) setTimeout(()=>{ const b = cv.getBoundingClientRect(); coach('clear', 'Clear lines', 'Fill a whole row or column. Every block in it fires: swords hit, shields block, hearts heal, coins pay. Drag over the grid to preview the result.', {left:b.left, width:b.width, top:b.top+L.ty, bottom:b.top+L.ty+L.trayH}, true); }, 350);
+  else if(cb.moves===2) setTimeout(()=>coach('intent', 'Enemy intent', 'This is what the enemy does next, and how many of your moves until it happens.', $('#intent'), false), 350);
+  if(run.charge >= CLASSES[run.cls].ult.need) coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true);
 }
 function fullLines(board){
   const rows=[], cols=[];
@@ -644,42 +902,47 @@ function lineCells(rows, cols){
   cols.forEach(c=>{ for(let r=0;r<N;r++) set.add(r*N+c); });
   return set;
 }
-function isPure(idxs){
-  const t = cb.board[idxs[0]];
-  return !!t && t!=='stone' && t!=='ice' && idxs.every(i=>cb.board[i]===t);
+function isPure(board, idxs){
+  const t = board[idxs[0]];
+  return !!t && !JUNK(t) && idxs.every(i=>board[i]===t);
 }
-function resolveClears(){
-  const {rows, cols} = fullLines(cb.board);
+/* blast blocks also fire everything around them (chains) */
+function expandBlast(board, set){
+  const q = [...set].filter(i=>board[i]==='blast'), extra = new Set();
+  while(q.length){
+    const i = q.pop(), r = Math.floor(i/N), c = i%N;
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      const rr=r+dr, cc=c+dc; if(rr<0||cc<0||rr>=N||cc>=N) continue;
+      const j = rr*N+cc; if(!board[j] || set.has(j)) continue;
+      set.add(j); extra.add(j); if(board[j]==='blast') q.push(j);
+    }
+  }
+  return extra.size;
+}
+/* work out what a clear on `board` would do, without changing anything */
+function planClear(board){
+  const {rows, cols} = fullLines(board);
   const lines = rows.length + cols.length;
-  if(!lines){ cb.streak = has('drum') ? 2 : 0; return; }
+  if(!lines) return null;
   let pure = 0;
-  rows.forEach(r=>{ if(isPure([...Array(N).keys()].map(c=>r*N+c))) pure++; });
-  cols.forEach(c=>{ if(isPure([...Array(N).keys()].map(r=>r*N+c))) pure++; });
+  rows.forEach(r=>{ if(isPure(board, [...Array(N).keys()].map(c=>r*N+c))) pure++; });
+  cols.forEach(c=>{ if(isPure(board, [...Array(N).keys()].map(r=>r*N+c))) pure++; });
   let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*(has('purist')?1:0.5);
   if(cb.firstClear && has('ring')) mult *= 2;
-  if(cb.doubleNext){ mult *= 2; cb.doubleNext = false; }
-  cb.firstClear = false;
-  fireCells(lineCells(rows, cols), {lines, rows:rows.length, cols:cols.length, mult, pure});
-  cb.streak++;
+  if(cb.doubleNext) mult *= 2;
+  const set = lineCells(rows, cols);
+  const blasted = expandBlast(board, set);
+  return {set, lines, rows:rows.length, cols:cols.length, pure, mult, blasted};
 }
-/* fires every block in `set`, clears them, applies all effects */
-function fireCells(set, o){
-  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,stone:0,ice:0};
-  const now = performance.now();
-  set.forEach(i=>{
-    const t = cb.board[i]; if(!t) return; cnt[t]++;
-    shards(i, t, o.lines>=3?7:5);
-    if(t==='ice'){ cb.board[i]='stone'; cb.fx.push({i,type:'ice',t0:now}); }
-    else { cb.fx.push({i, type:t, t0:now}); cb.board[i]=null; }
-  });
-  const lines = o.lines, mult = o.mult;
-  run.bestLines = Math.max(run.bestLines, lines);
-  const Lv = run.lvl;
+function computeEffects(board, set, o){
+  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0};
+  set.forEach(i=>{ const t = board[i]; if(t) cnt[t]++; });
+  const Lv = run.lvl, mult = o.mult, lines = o.lines;
   const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0);
   const shieldVal = 2 + Lv.shield + (has('tower')?1:0) + (has('oath')?1:0);
   const healVal = 2 + Lv.heal;
   const coinVal = 1 + Lv.coin + (has('idol')?1:0) + (has('daggers')?1:0);
-  let dmg = Math.round((cnt.sword*swordVal + cnt.rainbow*2) * mult);
+  let dmg = Math.round((cnt.sword*swordVal + cnt.rainbow*2 + cnt.blast*3) * mult);
   let sh  = Math.round((cnt.shield*shieldVal + cnt.rainbow) * mult);
   let hp  = Math.round((cnt.heal*healVal + cnt.rainbow) * mult);
   const poison = Math.round(cnt.venom * mult);
@@ -688,16 +951,43 @@ function fireCells(set, o){
   if(lines>=3){ if(has('powder')) dmg += 12; if(has('orb')) dmg += 8; }
   if(has('crossed') && o.rows && o.cols) dmg += 8;
   if(has('fang')) hp += 2*lines;
-  const perfect = cb.board.every(t=>!t);
+  let perfect = true;
+  for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || t==='ice')){ perfect = false; break; } }
   if(perfect) dmg += 20 + 10*(run.floor-1);
-  if(cb.enemy.passive && cb.enemy.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
-
+  const e = cb.enemy;
+  if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
+  if(e.passive && e.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
+  return {dmg, sh, hp, poison, gold, perfect, cnt};
+}
+function resolveClears(){
+  const plan = planClear(cb.board);
+  if(!plan){ cb.streak = has('drum') ? 2 : 0; return; }
+  cb.doubleNext = false; cb.firstClear = false;
+  fireCells(plan.set, plan);
+  cb.streak++;
+}
+/* fires every block in `set`, clears them, applies all effects */
+function fireCells(set, o){
+  const fx = computeEffects(cb.board, set, o);
+  const now = performance.now();
+  set.forEach(i=>{
+    const t = cb.board[i]; if(!t) return;
+    shards(i, t, o.lines>=3?7:5);
+    if(t==='ice'){ cb.board[i]='stone'; cb.fx.push({i,type:'ice',t0:now}); }
+    else { cb.fx.push({i, type:t, t0:now}); cb.board[i]=null; }
+  });
+  const lines = o.lines, mult = o.mult;
+  run.bestLines = Math.max(run.bestLines, lines);
+  if(lines>=4) unlock('quad');
+  if(o.pure) unlock('pure');
+  if(fx.perfect) unlock('perfect');
   const C = CLASSES[run.cls].ult;
   if(!o.noCharge) run.charge = Math.min(C.need, run.charge + lines*(has('battery')?1.5:1));
 
   const boardEl = $('#board');
   sfx('clear', lines, mult); buzz(lines>=2?30:15);
-  if(perfect){ floatText(boardEl, 'PERFECT!', '#ffffff', true); sfx('perfect'); flash('rgba(255,255,255,.45)'); }
+  if(o.blasted){ sfx('blast'); shake(); flash('rgba(255,140,40,.4)'); }
+  if(fx.perfect){ floatText(boardEl, 'PERFECT!', '#ffffff', true); sfx('perfect'); flash('rgba(255,255,255,.45)'); confetti(40); }
   else if(o.label) floatText(boardEl, o.label, null, true);
   else if(lines>=2 || mult>1 || o.pure){
     const label = ['','','DOUBLE! ','TRIPLE! ','QUAD! ','PENTA! '][Math.min(lines,5)] || 'MEGA! ';
@@ -705,31 +995,36 @@ function fireCells(set, o){
   }
   if(o.pure) sfx('pure');
   if(lines>=3 || mult>=3){ shake(); flash('rgba(255,180,80,.35)'); }
-  if(dmg>0) damageEnemy(dmg);
-  if(poison>0){ cb.enemy.poison += poison; floatText($('#eArt'), `+${poison} poison`, '#dcb6ff'); sfx('poison'); }
-  if(sh>0){ cb.shield += sh; floatText($('#shieldStat'), `+${sh}`, '#a8ceff'); sfx('shield'); }
-  if(hp>0){ const before=run.hp; heal(hp); const got=run.hp-before; if(got>0){ floatText($('#hpFill').parentElement, `+${got}`, '#86e6a8'); sfx('heal'); } }
-  if(gold>0){ run.gold += gold; floatText($('#goldWrap'), `+${gold}`, '#ffe58a'); sfx('coin'); }
+  if(fx.dmg>0){ damageEnemy(fx.dmg); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
+  if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText($('#eArt'), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
+  if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
+  if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); } }
+  if(fx.gold>0){ run.gold += fx.gold; floatText($('#goldWrap'), `+${fx.gold}`, '#ffe58a'); sfx('coin'); burstAt($('#goldWrap'), ['#f7c936','#ffe58a'], 6); }
 }
 function damageEnemy(n, noThorns){
   const e = cb.enemy; let d = n;
   if(e.armor>0){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
   e.hp = Math.max(0, e.hp - d); run.dmg += d; run.bestHit = Math.max(run.bestHit, d);
+  if(d>=100) unlock('bighit');
   const el = $('#eArt');
   floatText(el, d>0?`-${d}`:'Blocked', d>0?'#ff8a8d':'#c9c2d4', d>=25);
   el.classList.add('hitflash'); setTimeout(()=>el.classList.remove('hitflash'),110);
   sfx(d>0?'hit':'armor', d>=25);
-  if(d>=25){ shake(); flash('rgba(255,255,255,.3)'); }
+  if(d>=25){ shake(); flash('rgba(255,255,255,.3)'); burstAt(el, ['#fff','#ffcf7a','#ff8a3c'], 14); }
   if(!noThorns && d>0 && e.passive && e.passive.id==='thorns' && e.hp>0) hitPlayer(e.passive.v, true);
 }
 function hitPlayer(n, small){
+  if(cb.mirror && !small){ cb.mirror = false; floatText(hpEl(), 'Reflected!', '#a8ceff'); sfx('block'); return; }
   let v = n; if(has('thickskin')) v = Math.max(0, v-1);
   const absorbed = Math.min(cb.shield, v); cb.shield -= absorbed; v -= absorbed;
   if(absorbed>0 && has('spikes')) damageEnemy(5, true);
+  const wasSafe = run.hp/run.maxHp > 0.3;
   run.hp -= v;
-  floatText($('#hpFill').parentElement, v>0?`-${v}`:'Blocked!', v>0?'#ff6a6f':'#a8ceff');
-  if(v>0){ sfx('hurt'); if(!small){ shake(); flash('rgba(200,20,30,.45)'); buzz(60); } }
+  if(v>0) cb.tookDmg = true;
+  floatText(hpEl(), v>0?`-${v}`:'Blocked!', v>0?'#ff6a6f':'#a8ceff');
+  if(v>0){ sfx('hurt'); if(!small){ shake(); flash('rgba(200,20,30,.45)'); buzz(60); } if(wasSafe && run.hp>0 && run.hp/run.maxHp<=0.3) sfx('heartbeat'); }
   else sfx('block');
+  updateDanger();
 }
 function enemyTick(){
   const e = cb.enemy;
@@ -745,18 +1040,19 @@ function enemyTick(){
   switch(it.k){
     case 'atk': hitPlayer(dmg); break;
     case 'multi': for(let i=0;i<it.n;i++) hitPlayer(dmg, i>0); break;
-    case 'drain': hitPlayer(dmg); e.hp = Math.min(e.maxHp, e.hp+dmg); floatText(art, `+${dmg}`, '#86e6a8'); break;
+    case 'drain': { const before = run.hp; hitPlayer(dmg); const took = Math.max(0, before-run.hp); if(took){ e.hp = Math.min(e.maxHp, e.hp+took); floatText(art, `+${took}`, '#86e6a8'); } break; }
     case 'curse': addBlocks('stone', it.v); floatText($('#board'), `Rubble x${it.v}`, '#c9c2d4'); sfx('rubble'); shake(); break;
     case 'ice': addBlocks('ice', it.v); floatText($('#board'), `Ice x${it.v}`, '#c8f0ff'); sfx('ice'); break;
     case 'armor': e.armor += it.v; floatText(art, `+${it.v} armor`, '#c9c2d4'); sfx('armor'); break;
     case 'heal': e.hp = Math.min(e.maxHp, e.hp+it.v); floatText(art, `+${it.v}`, '#86e6a8'); sfx('heal'); break;
     case 'rage': e.rage += it.v; floatText(art, `Rage +${it.v}`, '#ff9d3c'); sfx('rage'); flash('rgba(255,90,20,.3)'); break;
+    case 'flee': cb.fled = true; return;
   }
   nextIntent();
 }
 function checkStuck(){
   let guard = 0;
-  while(!cb.hand.some(p=>!p.used && fitsAnyRot(p)) && guard++<5){
+  while(!cb.over && !cb.hand.some(p=>!p.used && fitsAnyRot(p)) && guard++<5){
     toast('<b>Cave-in!</b> No room to move. The ceiling collapses.', 'rock');
     sfx('cavein'); flash('rgba(120,100,90,.5)');
     hitPlayer(4 + run.floor*2);
@@ -765,25 +1061,31 @@ function checkStuck(){
     rows.forEach(([r])=>{ for(let c=0;c<N;c++){ const i=r*N+c; if(cb.board[i]){ shards(i, cb.board[i], 4); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; } } });
     cb.streak = 0;
     dealHand();
+    if(run.hp<=0) break;
   }
 }
 function checkEnd(){
   if(!cb || cb.over) return true;
-  if(run.hp<=0){
-    if(has('phoenix') && !run.phoenixUsed){
-      run.phoenixUsed = true; run.hp = Math.round(run.maxHp/2);
-      flash('rgba(255,180,60,.6)'); sfx('ult');
-      toast('<b>Phoenix Feather</b><br>You rise from the ashes!', 'phoenix'); renderHUD(); return false;
-    }
-    cb.over = true; renderHUD();
-    const fight = cb; setTimeout(()=>{ if(cb===fight) endScreen(false); }, 1000); return true;
-  }
+  const fight = cb;
   if(cb.enemy.hp<=0){
-    cb.over = true; run.kills++; renderHUD();
+    cb.over = true; run.kills++; markKill(cb.enemy.name); unlock('first');
+    if(cb.kind==='goblin') unlock('goblin');
+    if(cb.kind==='boss' && !cb.tookDmg) unlock('flawless');
+    renderHUD();
     $('#eArt').classList.add('dead');
-    floatText($('#eArt'), 'Defeated!', '#ffcf7a', true); sfx('kill'); buzz(40);
-    const kind = cb.kind, fight = cb;
+    floatText($('#eArt'), 'Defeated!', '#ffcf7a', true); sfx('kill'); buzz(40); burstAt($('#eArt'), ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30);
+    const kind = cb.kind;
     setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, 1000); return true;
+  }
+  if(run.hp<=0 && checkDeath()){
+    cb.over = true; renderHUD();
+    setTimeout(()=>{ if(cb===fight) endScreen(false); }, 1000); return true;
+  }
+  if(cb.fled){
+    cb.over = true; renderHUD();
+    $('#eArt').classList.add('flee'); sfx('flee');
+    toast('The goblin got away with its loot!', 'goldgoblin');
+    setTimeout(()=>{ if(cb===fight) advance(); }, 1200); return true;
   }
   return false;
 }
@@ -793,12 +1095,13 @@ function useUlt(){
   if(!cb || cb.over) return;
   const C = CLASSES[run.cls].ult;
   if(run.charge < C.need){ toast(`<b>${C.name}</b><br>${C.desc}<br><span class="muted">Charge: ${Math.floor(run.charge)}/${C.need} lines cleared.</span>`, C.spr); return; }
+  document.querySelectorAll('.coach').forEach(c=>c.remove());
   run.charge = 0; sfx('ult'); flash('rgba(255,200,120,.5)'); buzz(60);
   floatText($('#board'), C.name.toUpperCase()+'!', '#ffcf7a', true);
+  const now = performance.now();
   if(run.cls==='knight'){
     const s = 18 + 6*(run.floor-1); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff');
-    const now = performance.now();
-    cb.board.forEach((t,i)=>{ if(t==='stone'||t==='ice'){ shards(i,t,6); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; } });
+    cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,6); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; } });
   } else if(run.cls==='rogue'){
     dealHand(); cb.enemy.intent.left += 1; cb.doubleNext = true;
   } else {
@@ -806,23 +1109,25 @@ function useUlt(){
     for(let r=0;r<N;r++){ const n = cb.board.slice(r*N,r*N+N).filter(Boolean).length; if(n>bn){ bn=n; br=r; } }
     for(let c=0;c<N;c++){ let n=0; for(let r=0;r<N;r++) if(cb.board[r*N+c]) n++; if(n>cn){ cn=n; bc=c; } }
     shake();
-    fireCells(lineCells([br],[bc]), {lines:2, rows:1, cols:1, mult:2.5, label:'METEOR!', noCharge:true});
+    const set = lineCells([br],[bc]); const blasted = expandBlast(cb.board, set);
+    fireCells(set, {lines:2, rows:1, cols:1, mult:2.5, label:'METEOR!', noCharge:true, blasted});
   }
   if(!checkEnd()){ checkStuck(); renderHUD(); }
 }
 
 /* ---------- HUD ---------- */
 function intentInfo(it){
-  const d = intentDamage(it);
+  const d = it.k==='flee' ? 0 : intentDamage(it);
   switch(it.k){
     case 'atk': return ['sword', `${d}`, `Attacks for ${d}`];
     case 'multi': return ['r_combat', `${d}x${it.n}`, `Attacks ${it.n} times for ${d}`];
-    case 'drain': return ['drop', `${d}`, `Drains ${d} HP from you and heals itself`];
+    case 'drain': return ['drop', `${d}`, `Drains up to ${d} HP from you and heals itself by what it takes`];
     case 'curse': return ['rock', `x${it.v}`, `Drops ${it.v} rubble blocks on your grid`];
     case 'ice': return ['snow', `x${it.v}`, `Freezes ${it.v} empty cells. Ice cracks into rubble when cleared`];
     case 'armor': return ['armor', `+${it.v}`, `Gains ${it.v} armor`];
     case 'heal': return ['heal_icon', `+${it.v}`, `Heals ${it.v}`];
     case 'rage': return ['rage', `+${it.v}`, `Enrages: all its attacks deal +${it.v} for the rest of the fight`];
+    case 'flee': return ['r_shop', 'Flee', `Escapes with its loot`];
   }
 }
 let lastEnemySpr = null;
@@ -831,11 +1136,12 @@ function renderHUD(){
   const e = cb.enemy;
   if(lastEnemySpr !== e.spr){ $('#eArt').innerHTML = img(e.spr, 92); lastEnemySpr = e.spr; }
   $('#eName').textContent = e.name;
-  let tags = cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':'';
+  let tags = cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':cb.kind==='goblin'?'<span class="tag" style="background:#7a5608;color:#ffe58a">Rare</span>':'';
   if(e.passive) tags += `<span class="tag pass" id="passTag">${PASSIVES[e.passive.id].name}</span>`;
   $('#eTags').innerHTML = tags;
   if(e.passive) $('#passTag').onclick = ()=>toast(`<b>${PASSIVES[e.passive.id].name}</b><br>${PASSIVES[e.passive.id].desc(e.passive.v)}`, e.spr);
-  $('#eHpFill').style.width = (100*e.hp/e.maxHp)+'%';
+  const ep = (100*e.hp/e.maxHp)+'%';
+  $('#eHpFill').style.width = ep; $('#eHpTrail').style.width = ep;
   $('#eHpText').textContent = `${e.hp} / ${e.maxHp}`;
   let badges = '';
   if(e.armor>0) badges += `<span class="badge" data-b="armor">${img('armor',22)}${e.armor}</span>`;
@@ -847,10 +1153,11 @@ function renderHUD(){
     toast(k==='armor'?`<b>Armor</b><br>Absorbs damage before HP.`:k==='poison'?`<b>Poison</b><br>Deals ${e.poison} damage each turn, then drops by 1.`:`<b>Rage</b><br>Attacks deal +${e.rage} damage.`, k);
   });
   const [ic,val,desc] = intentInfo(e.intent);
+  const nx = intentInfo(peekIntent());
   const intent = $('#intent');
-  intent.innerHTML = `${img(ic,28)}<span class="val">${val}</span><span class="cd">${e.intent.left===1?'NEXT TURN':`in ${e.intent.left} turns`}</span>`;
+  intent.innerHTML = `${img(ic,28)}<span class="val">${val}</span><span class="cd">${e.intent.left===1?'NEXT TURN':`in ${e.intent.left}`}</span>${e.intent.k==='flee'?'':`<span class="then">then ${img(nx[0],18)}${nx[1]}</span>`}`;
   intent.classList.toggle('urgent', e.intent.left===1);
-  intent.onclick = ()=>toast(`<b>${e.name}</b><br>${desc} ${e.intent.left===1?'after your next move':`in ${e.intent.left} moves`}.`, ic);
+  intent.onclick = ()=>toast(`<b>${e.name}</b><br>${desc} ${e.intent.left===1?'after your next move':`in ${e.intent.left} moves`}.${e.intent.k==='flee'?'':`<br><span class="muted">Then: ${nx[2]}.</span>`}`, ic, 3000);
   $('#shieldText').textContent = cb.shield;
   const m = cb.streak*streakStep();
   $('#streakText').textContent = m ? `+${fmt(m)}` : '-';
@@ -859,7 +1166,7 @@ function renderHUD(){
   const C = CLASSES[run.cls].ult, pct = Math.min(100, 100*run.charge/C.need);
   const ub = $('#ultBtn'); ub.style.setProperty('--p', pct);
   ub.classList.toggle('ready', pct>=100);
-  $('#ultIcon').innerHTML = img(C.spr, 30);
+  if(!$('#ultIcon').dataset.k || $('#ultIcon').dataset.k!==run.cls){ $('#ultIcon').innerHTML = img(C.spr, 30); $('#ultIcon').dataset.k = run.cls; }
   $('#ultText').textContent = pct>=100 ? C.name : `${Math.floor(run.charge)}/${C.need}`;
   renderRunbar();
 }
@@ -878,7 +1185,7 @@ $('#ultBtn').onclick = useUlt;
 $('#comboStat').onclick = ()=>toast(`<b>Combo streak</b><br>Each move in a row that clears a line adds +${streakStep()} to your multiplier. Miss a clear and it resets.`, 'flame');
 $('#shieldStat').onclick = ()=>toast('<b>Shield</b><br>Absorbs enemy damage before your HP. Carries over until it\'s used up.', 'shield');
 
-/* ================= block art (sticker candy blocks) ================= */
+/* ================= block art (glossy sticker blocks) ================= */
 const BLK = {};
 function blockCanvas(type, px){
   px = Math.max(8, Math.round(px));
@@ -916,7 +1223,7 @@ function layout(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   L = {W,H,cs,bx:(W-bw)/2,by:pad,bw,ty:pad+bw+gap,trayH,slotW:W/3};
 }
-window.addEventListener('resize', ()=>{ if(cb && !$('#combat').hidden) layout(); });
+window.addEventListener('resize', ()=>{ if(cb && !$('#combat').hidden) layout(); sizeFx(); });
 
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function drawCell(x, y, s, type, alpha=1, baseSize){
@@ -951,9 +1258,24 @@ function shards(i, type, n){
   }
   if(cb.parts.length>500) cb.parts.splice(0, cb.parts.length-500);
 }
+/* the damage preview pill shown while dragging */
+function drawPreview(plan, fx){
+  const items = [['sword',fx.dmg,'#ff8a8d'],['shield',fx.sh,'#a8ceff'],['heal',fx.hp,'#86e6a8'],['coin',fx.gold,'#ffe58a'],['venom',fx.poison,'#dcb6ff']].filter(i=>i[1]>0);
+  const label = (fx.perfect?'PERFECT ':'') + (plan.pure?'PURE ':'') + 'x'+fmt(plan.mult);
+  ctx.font = `20px 'Lilita One', system-ui, sans-serif`;
+  const gs = 20, gap = 6;
+  let w = 16 + ctx.measureText(label).width;
+  items.forEach(i=>{ w += gs + 4 + ctx.measureText(String(i[1])).width + gap; });
+  const x0 = L.W/2 - w/2, y0 = L.by + 6, h = 32;
+  ctx.globalAlpha = 0.92; rrect(x0, y0, w, h, 16); ctx.fillStyle = '#120c16'; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.globalAlpha = 1;
+  let x = x0 + 10; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffcf7a'; ctx.fillText(label, x, y0+h/2+1); x += ctx.measureText(label).width + gap;
+  items.forEach(([t,v,col])=>{ drawGlyph(ctx, t, x, y0+(h-gs)/2, gs); x += gs+4; ctx.fillStyle = col; ctx.fillText(String(v), x, y0+h/2+1); x += ctx.measureText(String(v)).width + gap; });
+}
 function frame(){
   requestAnimationFrame(frame);
-  embers();
+  embers(); drawFx();
   if(!cb || $('#combat').hidden || !L.cs) return;
   const {W,H,cs,bx,by,bw,ty,trayH} = L;
   ctx.clearRect(0,0,W,H);
@@ -967,12 +1289,11 @@ function frame(){
   const now = performance.now();
   if(drag && drag.valid){
     const p = cb.hand[drag.idx];
-    const sim = cb.board.slice(); p.cells.forEach(([dr,dc])=>{ sim[(drag.r+dr)*N + drag.c+dc] = p.type; });
-    const {rows, cols} = fullLines(sim);
     const pulse = 0.22 + 0.12*Math.sin(now/90);
-    ctx.fillStyle = `rgba(255,207,122,${pulse})`;
-    rows.forEach(r=>{ rrect(bx, by+r*cs, bw, cs, 8); ctx.fill(); });
-    cols.forEach(c=>{ rrect(bx+c*cs, by, cs, bw, 8); ctx.fill(); });
+    if(drag.plan){
+      ctx.fillStyle = `rgba(255,207,122,${pulse})`;
+      drag.plan.set.forEach(i=>{ const r=Math.floor(i/N), c=i%N; rrect(bx+c*cs+1, by+r*cs+1, cs-2, cs-2, cs*0.2); ctx.fill(); });
+    }
     drawPiece(p, bx+drag.c*cs, by+drag.r*cs, cs, 0.45);
   }
   cb.fx = cb.fx.filter(f=>now-f.t0 < 420);
@@ -1000,6 +1321,7 @@ function frame(){
   if(drag){
     const p = cb.hand[drag.idx];
     drawPiece(p, drag.x - p.w*cs/2, drag.y - drag.lift - p.h*cs/2, cs, drag.valid?0.97:0.8, true);
+    if(drag.valid && drag.plan && drag.fx) drawPreview(drag.plan, drag.fx);
   }
   cb.parts.forEach(q=>{
     q.x+=q.vx; q.y+=q.vy; q.vy+=0.28; q.vx*=0.985; q.rot+=q.vr; q.life-=q.decay;
@@ -1011,7 +1333,7 @@ function frame(){
   cb.parts = cb.parts.filter(q=>q.life>0 && q.y<H+40);
 }
 
-/* ================= dungeon atmosphere ================= */
+/* ================= dungeon atmosphere & screen effects ================= */
 (function wall(){
   const c = document.createElement('canvas'); c.width = 160; c.height = 96; const x = c.getContext('2d');
   x.fillStyle = '#0d0a11'; x.fillRect(0,0,160,96);
@@ -1033,12 +1355,12 @@ function frame(){
   document.body.style.backgroundImage = `url(${c.toDataURL()})`;
 })();
 const emb = $('#embers'), ex = emb.getContext('2d'); let EMB = [];
-function sizeEmbers(){ emb.width = innerWidth; emb.height = innerHeight; }
-sizeEmbers(); addEventListener('resize', sizeEmbers);
+const fxc = $('#fxc'), fx2 = fxc.getContext('2d'); let FXP = [];
+function sizeFx(){ emb.width = innerWidth; emb.height = innerHeight; const d = Math.min(2, devicePixelRatio||1); fxc.width = innerWidth*d; fxc.height = innerHeight*d; fx2.setTransform(d,0,0,d,0,0); }
+sizeFx();
 function embers(){
   if(EMB.length < 34 && Math.random()<0.25){
-    const side = Math.random();
-    EMB.push({x: side<0.5 ? Math.random()*innerWidth*0.25 : innerWidth*(0.75+Math.random()*0.25), y: innerHeight+10, vy: -(0.4+Math.random()*0.9), vx:(Math.random()-.5)*0.3, s: 1+Math.random()*2.2, life:1, ph:Math.random()*6});
+    EMB.push({x: Math.random()<0.5 ? Math.random()*innerWidth*0.25 : innerWidth*(0.75+Math.random()*0.25), y: innerHeight+10, vy: -(0.4+Math.random()*0.9), vx:(Math.random()-.5)*0.3, s: 1+Math.random()*2.2, life:1, ph:Math.random()*6});
   }
   ex.clearRect(0,0,emb.width,emb.height);
   EMB.forEach(e=>{
@@ -1050,6 +1372,28 @@ function embers(){
   ex.globalAlpha = 1;
   EMB = EMB.filter(e=>e.life>0 && e.y>-10);
 }
+function burstAt(el, colors, n){
+  if(!el || !settings.flash) return;
+  const r = el.getBoundingClientRect(); if(!r.width) return;
+  const cx = r.left + r.width/2, cy = r.top + r.height/2;
+  for(let i=0;i<n;i++){ const a = Math.random()*Math.PI*2, sp = 2+Math.random()*5; FXP.push({x:cx, y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-2, g:0.18, life:1, decay:0.025+Math.random()*0.02, s:3+Math.random()*4, col:pick(colors), rot:0, vr:0, round:true}); }
+}
+function confetti(n){
+  if(!settings.flash) return;
+  const cols = ['#ef5258','#4a98ff','#45c674','#f7c936','#c77dff','#ff8a3c','#fff'];
+  for(let i=0;i<n;i++) FXP.push({x:Math.random()*innerWidth, y:-20-Math.random()*innerHeight*0.4, vx:(Math.random()-.5)*2, vy:2+Math.random()*3, g:0.04, life:1, decay:0.004+Math.random()*0.004, s:6+Math.random()*6, col:pick(cols), rot:Math.random()*6, vr:(Math.random()-.5)*0.3});
+}
+function drawFx(){
+  fx2.clearRect(0,0,innerWidth,innerHeight);
+  if(!FXP.length) return;
+  FXP.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=0.99; p.rot+=p.vr; p.life-=p.decay;
+    fx2.save(); fx2.globalAlpha = Math.max(0, Math.min(1, p.life*1.5)); fx2.translate(p.x,p.y); fx2.rotate(p.rot); fx2.fillStyle = p.col;
+    if(p.round){ fx2.beginPath(); fx2.arc(0,0,p.s/2,0,Math.PI*2); fx2.fill(); } else fx2.fillRect(-p.s/2,-p.s*0.3,p.s,p.s*0.6);
+    fx2.restore();
+  });
+  FXP = FXP.filter(p=>p.life>0 && p.y<innerHeight+30);
+}
 requestAnimationFrame(frame);
 
 /* ================= input: tap to rotate, drag to place ================= */
@@ -1057,14 +1401,22 @@ function pt(e){ const r = cv.getBoundingClientRect(); return {x:e.clientX - r.le
 function updateDrag(){
   const p = cb.hand[drag.idx], {cs,bx,by} = L;
   const ox = drag.x - p.w*cs/2, oy = drag.y - drag.lift - p.h*cs/2;
-  drag.c = Math.round((ox-bx)/cs); drag.r = Math.round((oy-by)/cs);
-  drag.valid = fits(p, drag.r, drag.c);
+  const c = Math.round((ox-bx)/cs), r = Math.round((oy-by)/cs);
+  if(r===drag.r && c===drag.c) return;
+  drag.c = c; drag.r = r;
+  drag.valid = fits(p, r, c);
+  drag.plan = null; drag.fx = null;
+  if(drag.valid){
+    const sim = cb.board.slice(); p.cells.forEach(([dr,dc])=>{ sim[(r+dr)*N + c+dc] = p.type; });
+    drag.plan = planClear(sim);
+    if(drag.plan) drag.fx = computeEffects(sim, drag.plan.set, drag.plan);
+  }
 }
 cv.addEventListener('pointerdown', e=>{
   if(!cb || cb.over) return;
   const {x,y} = pt(e);
   if(y < L.ty - 10) return;
-  const i = Math.min(2, Math.max(0, Math.floor(x / L.slotW)));
+  const i = clamp(Math.floor(x / L.slotW), 0, 2);
   const p = cb.hand[i]; if(!p || p.used) return;
   press = {idx:i, x0:x, y0:y, mouse:e.pointerType==='mouse'};
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
@@ -1074,8 +1426,9 @@ cv.addEventListener('pointermove', e=>{
   if(!cb) return;
   const {x,y} = pt(e);
   if(press && !drag && Math.hypot(x-press.x0, y-press.y0) > 8){
-    drag = {idx:press.idx, x, y, lift: press.mouse ? 0 : L.cs*1.8, valid:false};
+    drag = {idx:press.idx, x, y, lift: press.mouse ? 0 : L.cs*1.8, valid:false, r:null, c:null};
     sfx('pick');
+    document.querySelectorAll('.coach').forEach(c=>c.remove());
   }
   if(!drag) return;
   drag.x=x; drag.y=y; updateDrag(); e.preventDefault();
@@ -1084,7 +1437,7 @@ cv.addEventListener('pointerup', ()=>{
   if(drag){ const d = drag; drag = null; press = null;
     if(d.valid && cb && !cb.over) place(d.idx, d.r, d.c); else if(d.y < L.ty) sfx('invalid');
     return; }
-  if(press){ const i = press.idx; press = null; if(cb && !cb.over && !cb.hand[i].used) rotatePiece(i); }
+  if(press){ const i = press.idx; press = null; if(cb && !cb.over && cb.hand[i] && !cb.hand[i].used) rotatePiece(i); }
 });
 cv.addEventListener('pointercancel', ()=>{ drag = null; press = null; });
 addEventListener('keydown', e=>{ if(e.key==='Escape' && !$('#modal').hidden) closeSettings(); });
