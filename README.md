@@ -1,43 +1,50 @@
 # Block Bound Dungeon
 
-A block-blasting roguelike dungeon crawler for the browser. No build step and no dependencies. All art is hand-made pixel art defined in code.
+A block-blasting roguelike dungeon crawler for the browser. No build step, no dependencies, no image or audio files: the sticker-style pixel art, sound effects and music are all generated in code.
 
 **Play:** https://dianteclark.github.io/Block-Bound-Dungeon/
 
+**Install it like an app:** open the link on your phone, then use Share → *Add to Home Screen* (iPhone) or the browser menu → *Install app* (Android). It gets its own icon, runs full screen and works offline after the first visit.
+
 ## How it plays
 
-- **Grid combat.** Drag pieces onto an 8x8 grid. Fill a full row or column to clear it, Block Blast style.
+- **Grid combat.** Drag pieces onto an 8x8 grid and **tap a piece to rotate it**. Fill a full row or column to clear it.
 - **Blocks are actions.** Every block in a cleared line fires its effect:
   - **Sword** (red): damages the enemy
   - **Shield** (blue): blocks incoming damage
   - **Heart** (green): heals you
   - **Coin** (gold): earns gold
   - **Rainbow** and **Venom** blocks unlock through relics
-- **Combos.** Clearing several lines at once multiplies everything (x1.5, x2, x3...). Clearing on back-to-back moves adds a streak bonus on top.
-- **Turns.** Every piece you place is one turn. Enemies telegraph their next move with a countdown: attacks, multi-hits, life drain, armor, healing, rage, dropping rubble onto your grid, or freezing cells into ice (ice cracks into rubble when cleared).
-- **Cave-ins.** If none of your pieces fit, the ceiling collapses: you take damage and the two fullest rows are cleared.
+- **Combos.** Clearing several lines at once multiplies everything (x1.5, x2, x3...). Clearing on back-to-back moves adds a streak bonus.
+- **Pure lines.** A line made entirely of one block type adds +0.5 to the multiplier. Rotation makes these much easier to build.
+- **Perfect clears.** Empty the whole grid for a big bonus hit.
+- **Hero specials.** Clearing lines charges your hero's special move: Knight *Bulwark*, Rogue *Shadowstep* and Mage *Meteor*.
+- **Turns.** Every piece you place is one turn. Enemies telegraph their next move with a countdown: attacks, multi-hits, life drain, armor, healing, rage, rubble or ice.
+- **Cave-ins.** If no piece fits in any rotation, the ceiling collapses: you take damage and the two fullest rows are cleared.
 
 ## The run
 
-- **3 heroes.** Knight (shields and starting armor), Rogue (fast combos, extra gold, two potions) and Mage (rainbow blocks, explosive big clears).
-- **3 floors, 8 rooms each.** Choose your path through fights, elites, campfires, merchants, treasure and mystery events. Each floor has its own monsters and a boss: the Bone King, the Hydra and the Ancient Dragon.
-- **Enemy passives.** Some foes are Armored, Regenerating, Ethereal (single-line clears do half damage) or have Thorns.
-- **25 relics** that bend the rules, plus **6 potions** you can drink mid-fight (tap a potion twice).
-- **Permanent block upgrades** from campfires, shops, events and rewards (Sharpen, Reinforce, Bless, Gild).
-- **8 mystery events** with risk and reward choices.
+- **3 heroes**, each with a starting relic, potions and a special move.
+- **3 floors, 8 rooms each.** Fights, elites, campfires, merchants, treasure and mystery events, with a boss at the end of each floor: the Bone King, the Hydra and the Ancient Dragon.
+- **Enemy passives:** Armored, Regenerates, Ethereal and Thorns.
+- **27 relics**, **6 potions** (tap a potion twice to drink it) and permanent block upgrades.
+- **Auto-save.** Your run is saved between rooms, so you can close the app and continue later.
+- **Settings** (gear icon): music and sound volume, screen shake, vibration, lifetime records, abandon run, and **Reset all data**.
 
 ## Files
 
 | File | What's in it |
 | --- | --- |
-| `index.html` | Layout and styles |
-| `sprites.js` | Palette, every pixel-art sprite and the sprite renderer |
-| `game.js` | Game data (classes, relics, potions, enemies, events) and all game logic |
+| `index.html` | Layout, styles, dungeon atmosphere |
+| `sprites.js` | Palette, every pixel-art sprite, the sprite and sticker renderers |
+| `audio.js` | Synthesized sound effects and procedural music (menu, map, combat, boss) |
+| `game.js` | Game data and all game logic |
+| `manifest.webmanifest`, `sw.js`, `icons/` | Home Screen app install, offline support and app icons |
 
 ### Adding art
 
-Sprites are grids of palette letters in `sprites.js`. `.` is transparent, and `{m:true}` means you only draw the left half and it gets mirrored. `variant()` makes a recolor of an existing sprite.
+Sprites are grids of palette letters in `sprites.js`. `.` is transparent, and `{m:true}` means you only draw the left half and it gets mirrored. `variant()` makes a recolor of an existing sprite. Every sprite is automatically turned into a die-cut sticker (white border and drop shadow) when shown.
 
 ### Tuning knobs
 
-`MULT` (combo multipliers), `ENEMIES` (per-floor HP and move patterns), the HP and damage scaling in `startCombat` and `intentDamage`, `CLASSES` (starting HP, gold, relic, potions), and the weights in `rollType` and `shapeWeight`.
+`MULT` (combo multipliers), `ENEMIES` (per-floor HP and move patterns), the HP and damage scaling in `startCombat` and `intentDamage`, `CLASSES` (HP, gold, relic, potions, special move cost), and the weights in `rollType` and `shapeWeight`.

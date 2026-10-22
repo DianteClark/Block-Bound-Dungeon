@@ -241,6 +241,19 @@ def('bomb', [
   '...kdddddk..',
   '....kkkkk...']);
 
+def('gear', [
+  '....kk',
+  '.kk.kg',
+  '.kgkgg',
+  '..kggG',
+  'kkggGk',
+  'kgGGk.',
+  'kgGGk.',
+  'kkgGGk',
+  '..kgGG',
+  '.kgkGG',
+  '.kk.kG',
+  '....kk'], {m:true});
 /* ---------- rooms (12x12) ---------- */
 def('r_combat', [
   'kk........kk',
@@ -1033,11 +1046,41 @@ function sprCanvas(name){
   }));
   return (SPR_CACHE[name] = c);
 }
-const SPR_URL = {};
-function sprURL(name){ return SPR_URL[name] || (SPR_URL[name] = sprCanvas(name).toDataURL()); }
-/* <img> markup; size = rendered width in CSS px */
+/* ---------- sticker renderer: white die-cut border + drop shadow ---------- */
+const STK_CACHE = {};
+function _cv(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+function stickerCanvas(name, k, opt){
+  opt = opt || {};
+  const key = name+'|'+k+'|'+(opt.noShadow?1:0)+'|'+(opt.border||'');
+  if(STK_CACHE[key]) return STK_CACHE[key];
+  const base = sprCanvas(name);
+  const w = base.width*k, h = base.height*k;
+  const R = opt.border || Math.max(2, Math.round(k*1.15));
+  const sh = opt.noShadow ? 0 : Math.max(2, Math.round(R*0.9));
+  const pad = R+2, W = w+pad*2, H = h+pad*2+sh;
+  const a = _cv(w,h), ax = a.getContext('2d'); ax.imageSmoothingEnabled = false; ax.drawImage(base,0,0,w,h);
+  const sil = _cv(w,h), sx = sil.getContext('2d'); sx.drawImage(a,0,0); sx.globalCompositeOperation='source-in'; sx.fillStyle='#fff'; sx.fillRect(0,0,w,h);
+  const blob = _cv(W,H), bx = blob.getContext('2d');
+  for(let i=0;i<28;i++){ const t=i/28*Math.PI*2; bx.drawImage(sil, pad+Math.cos(t)*R, pad+Math.sin(t)*R); }
+  for(let i=0;i<14;i++){ const t=i/14*Math.PI*2; bx.drawImage(sil, pad+Math.cos(t)*R*0.55, pad+Math.sin(t)*R*0.55); }
+  const out = _cv(W,H), ox = out.getContext('2d');
+  if(sh){
+    const s2 = _cv(W,H), s2x = s2.getContext('2d'); s2x.drawImage(blob,0,0);
+    s2x.globalCompositeOperation='source-in'; s2x.fillStyle='rgba(0,0,0,.6)'; s2x.fillRect(0,0,W,H);
+    ox.drawImage(s2,0,sh);
+  }
+  ox.drawImage(blob,0,0);
+  ox.drawImage(a,pad,pad);
+  return (STK_CACHE[key] = out);
+}
+const STK_URL = {};
+const DPR = () => Math.min(3, Math.max(1, window.devicePixelRatio||1));
+/* sticker <img>; size ~ rendered CSS width */
 function img(name, size, cls){
-  const c = sprCanvas(name);
-  const w = size, h = Math.round(size * c.height / c.width);
-  return `<img class="px ${cls||''}" src="${sprURL(name)}" width="${w}" height="${h}" alt="">`;
+  const base = sprCanvas(name), dpr = DPR();
+  const k = Math.max(1, Math.round(size*dpr*0.8/base.width));
+  const key = name+'|'+k;
+  const url = STK_URL[key] || (STK_URL[key] = stickerCanvas(name,k).toDataURL());
+  const c = stickerCanvas(name,k);
+  return `<img class="px stk ${cls||''}" src="${url}" width="${Math.round(c.width/dpr)}" height="${Math.round(c.height/dpr)}" alt="">`;
 }
