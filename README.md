@@ -1,6 +1,6 @@
 # Block Bound Dungeon
 
-A block-blasting roguelike dungeon crawler for the browser. No build step, no dependencies, no image or audio files: the sticker-style pixel art, sound effects and music are all generated in code.
+A block-blasting roguelike dungeon crawler for the browser. No build step, no dependencies, no image or audio files: the vector sticker art, sound effects and music are all generated in code.
 
 **Play:** https://dianteclark.github.io/Block-Bound-Dungeon/
 
@@ -36,14 +36,14 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 | File | What's in it |
 | --- | --- |
 | `index.html` | Layout, styles, dungeon atmosphere |
-| `sprites.js` | Palette, every pixel-art sprite, the sprite and sticker renderers |
+| `art.js` | Every illustration as hand-built SVG, the sticker filter and the block glyphs |
 | `audio.js` | Synthesized sound effects and procedural music (menu, map, combat, boss) |
 | `game.js` | Game data and all game logic |
 | `manifest.webmanifest`, `sw.js`, `icons/` | Home Screen app install, offline support and app icons |
 
 ### Adding art
 
-Sprites are grids of palette letters in `sprites.js`. `.` is transparent, and `{m:true}` means you only draw the left half and it gets mirrored. `variant()` makes a recolor of an existing sprite. Every sprite is automatically turned into a die-cut sticker (white border and drop shadow) when shown.
+Each illustration in `art.js` is a small function that returns SVG on a 100x100 canvas, built from helpers like `p()` (outlined path), `c()` (outlined circle), `eye()`, `glow()` and `hl()` (highlight). `img(name, size)` turns any of them into a die-cut sticker with a white border and drop shadow.
 
 ### Tuning knobs
 

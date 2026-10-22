@@ -1,4 +1,4 @@
-/* Block Bound Dungeon — game logic. Sprites: sprites.js. Audio: audio.js. */
+/* Block Bound Dungeon — game logic. Art: art.js. Audio: audio.js. */
 'use strict';
 
 /* ================= helpers ================= */
@@ -275,7 +275,7 @@ function choiceBtn({id,spr,name,desc,price,disabled,r,size}){
   return `<button class="choice" data-id="${id}" ${disabled?'disabled':''}><span class="ic">${img(spr, size||44)}</span><span><b>${name}</b>${rar}<small>${desc}</small></span>${price!=null?`<span class="price">${img('coin',18)}${price}</span>`:''}</button>`;
 }
 function bindChoices(fn){ $('#view').querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ sfx('click'); fn(b.dataset.id); }); }
-function scene(spr, title, text){ return `<div class="scene"><div class="art">${img(spr, sprCanvas(spr).width>=16 ? 104 : 84)}</div><h2 class="title">${title}</h2>${text?`<p class="muted">${text}</p>`:''}</div>`; }
+function scene(spr, title, text){ return `<div class="scene"><div class="art">${img(spr, 112)}</div><h2 class="title">${title}</h2>${text?`<p class="muted">${text}</p>`:''}</div>`; }
 function blockChip(type){ return `<img class="blk" src="${blockCanvas(type, 44).toDataURL()}" alt="">`; }
 document.addEventListener('pointerdown', ()=>Sound.unlock(), {capture:true});
 
@@ -894,15 +894,7 @@ function blockCanvas(type, px){
   gr.addColorStop(0, t.l); gr.addColorStop(0.35, t.c); gr.addColorStop(1, t.c);
   rr(ix, iy, iw, ih - px*0.11, R*0.8); x.fillStyle = gr; x.fill();
   x.globalAlpha = 0.55; rr(ix+iw*0.12, iy+ih*0.07, iw*0.42, ih*0.12, ih*0.06); x.fillStyle = '#fff'; x.fill(); x.globalAlpha = 1;
-  if(px>=14){
-    const gl = sprCanvas('g_'+type), k = Math.max(1, Math.floor(px*0.52/8)), gs = 8*k;
-    const gx = Math.round((px-gs)/2), gy = Math.round((px-gs)/2 - px*0.05);
-    const tmp = document.createElement('canvas'); tmp.width = tmp.height = gs; const tx = tmp.getContext('2d');
-    tx.imageSmoothingEnabled = false; tx.drawImage(gl, 0, 0, gs, gs);
-    tx.globalCompositeOperation = 'source-in'; tx.fillStyle = 'rgba(0,0,0,.35)'; tx.fillRect(0,0,gs,gs);
-    x.drawImage(tmp, gx, gy + Math.max(1,Math.round(k*0.75)));
-    x.imageSmoothingEnabled = false; x.drawImage(gl, gx, gy, gs, gs);
-  }
+  if(px>=12){ const gs = px*0.5; drawGlyph(x, type, (px-gs)/2, (px-gs)/2 - px*0.05, gs); }
   return (BLK[key] = c);
 }
 

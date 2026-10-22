@@ -1,6 +1,6 @@
 /* Network-first service worker: always tries for the latest version, falls back to cache offline. */
-const CACHE = 'bbd-v3';
-const CORE = ['./', 'index.html', 'game.js', 'sprites.js', 'audio.js', 'manifest.webmanifest',
+const CACHE = 'bbd-v4';
+const CORE = ['./', 'index.html', 'game.js', 'art.js', 'audio.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
