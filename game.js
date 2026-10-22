@@ -227,6 +227,7 @@ function show(which){
   screenName = which;
   $('#combat').hidden = which!=='combat';
   $('#view').hidden = which==='combat';
+  if(which==='combat') $('#view').innerHTML = '';
   $('#runbar').hidden = !run || which==='title' || which==='heroes';
   selPotion = -1;
   if(run) renderRunbar();
@@ -587,6 +588,7 @@ function dealHand(){
   cb.hand = hand;
 }
 function startCombat(kind, forced){
+  if(!run || run.floor>FLOORS) return;
   const F = ENEMIES[run.floor-1];
   const tpl = forced || (kind==='boss' ? F.boss : pick(kind==='elite' ? F.elite : F.normal));
   const maxHp = Math.round(tpl.hp * [1.15,1.4,1.55][run.floor-1] * (kind==='boss'?1.1:(0.92+Math.random()*0.16)));
@@ -774,14 +776,14 @@ function checkEnd(){
       toast('<b>Phoenix Feather</b><br>You rise from the ashes!', 'phoenix'); renderHUD(); return false;
     }
     cb.over = true; renderHUD();
-    setTimeout(()=>endScreen(false), 1000); return true;
+    const fight = cb; setTimeout(()=>{ if(cb===fight) endScreen(false); }, 1000); return true;
   }
   if(cb.enemy.hp<=0){
     cb.over = true; run.kills++; renderHUD();
     $('#eArt').classList.add('dead');
     floatText($('#eArt'), 'Defeated!', '#ffcf7a', true); sfx('kill'); buzz(40);
-    const kind = cb.kind;
-    setTimeout(()=>rewardScreen(kind), 1000); return true;
+    const kind = cb.kind, fight = cb;
+    setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, 1000); return true;
   }
   return false;
 }
