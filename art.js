@@ -290,6 +290,48 @@ const ART = {
     + p('M26 12 L74 12 L72 38 C70 54 62 62 50 62 C38 62 30 54 28 38Z','#f7c936') + pn('M58 12 L74 12 L72 38 C70 54 62 62 50 62 C60 54 62 40 58 12Z','#d9a20f') + po('M26 12 L74 12 L72 38 C70 54 62 62 50 62 C38 62 30 54 28 38Z')
     + r(43,60,14,14,3,'#d9a20f') + r(28,72,44,16,5,'#8a5a34') + r(36,76,28,7,2,'#f7c936') + p(star(50,34,10,4.5),'#fff4c8') + hl(36,24,3,9,-10,.6),
   blastblock: () => r(14,14,72,72,16,'#ff7a2f') + c(50,56,20,'#3d3550') + ln('M58 38 C62 28 70 26 74 30','#d9a066',3) + p(star(76,28,7,3),'#ffd23f'),
+
+  /* new heroes */
+  berserker: () => both(p('M26 30 C12 26 6 12 10 2 C16 12 24 16 34 20Z','#efe4c8') + pn('M26 30 C18 28 12 22 10 14 C16 20 24 22 32 24Z','#c9b89a'))
+    + e(50,54,24,20,'#f0c8a0') + brow(32,46,46,51,5) + brow(68,46,54,51,5) + cn(41,54,3.2,K) + cn(59,54,3.2,K) + e(50,61,5,4,'#e0a080')
+    + p('M24 56 C24 82 38 96 50 98 C62 96 76 82 76 56 C68 66 60 66 50 64 C40 66 32 66 24 56Z','#d9562b') + pn('M62 64 C70 62 76 58 76 56 C76 80 64 94 50 98 C64 86 66 74 62 64Z','#a8401c') + po('M24 56 C24 82 38 96 50 98 C62 96 76 82 76 56 C68 66 60 66 50 64 C40 66 32 66 24 56Z')
+    + r(41,66,18,7,3,'#fff') + ink('M47 66 L47 73 M53 66 L53 73',1.5) + ink('M36 76 L40 88 M64 76 L60 88',2.5)
+    + p('M20 40 C20 18 34 10 50 10 C66 10 80 18 80 40Z','#9aa5b5') + pn('M50 10 C66 10 80 18 80 40 L64 40 C64 26 60 16 50 10Z','#6b7787') + po('M20 40 C20 18 34 10 50 10 C66 10 80 18 80 40Z')
+    + r(16,36,68,10,5,'#6b6476') + cn(30,41,2.5,'#c9c2d4') + cn(50,41,2.5,'#c9c2d4') + cn(70,41,2.5,'#c9c2d4') + hl(34,22,4,9,-30,.6),
+  necromancer: () => ln('M86 96 L86 22','#5a3820',5) + scaled(0.34, 69, 0, ()=>skullArt(0,'#e8f0e0','#7dff7a'))
+    + p('M46 6 C62 12 76 32 80 58 C82 74 78 88 76 96 L16 96 C14 88 10 74 12 58 C16 32 30 12 46 6Z','#2e2a3d') + pn('M46 6 C62 12 76 32 80 58 C82 74 78 88 76 96 L62 96 C68 70 66 34 46 6Z','#1d1a28') + po('M46 6 C62 12 76 32 80 58 C82 74 78 88 76 96 L16 96 C14 88 10 74 12 58 C16 32 30 12 46 6Z')
+    + p('M46 26 C60 26 68 40 68 54 C68 66 58 74 46 74 C34 74 24 66 24 54 C24 40 32 26 46 26Z','#cfdcc6') + pn('M46 26 C60 26 68 40 68 54 C68 66 58 74 46 74 C56 66 58 40 46 26Z','#a9b8a0')
+    + e(38,50,5,6,'#16101c') + e(54,50,5,6,'#16101c') + glow(38,50,2.6,'#7dff7a') + glow(54,50,2.6,'#7dff7a') + ink('M40 64 L52 64 M43 61 L43 67 M46 61 L46 67 M49 61 L49 67',2)
+    + ln('M16 92 L76 92','#7dff7a',3) + p(star(46,16,5,2.5),'#7dff7a'),
+  alchemist: () => p('M24 96 C26 80 36 74 50 74 C64 74 74 80 76 96Z','#8a5a34') + pn('M60 75 C70 78 74 84 76 96 L66 96Z','#5a3820') + po('M24 96 C26 80 36 74 50 74 C64 74 74 80 76 96Z')
+    + r(38,78,24,18,4,'#f2e3c0') + e(50,52,24,22,'#f0c8a0') + pn('M66 40 C74 48 74 64 66 72 C70 60 70 50 66 40Z','#d9a87a')
+    + p('M26 44 C20 26 34 10 50 12 C58 4 72 10 72 20 C82 24 80 40 74 46 C72 34 62 28 50 30 C40 28 30 34 26 44Z','#6a3f22')
+    + ln('M26 38 L74 38','#3d3550',4) + c(39,38,9,'#ffb347') + c(61,38,9,'#ffb347') + cn(36,35,3,'#fff','opacity=".8"') + cn(58,35,3,'#fff','opacity=".8"')
+    + cn(41,56,3,K) + cn(59,56,3,K) + cn(40,55,1,'#fff') + cn(58,55,1,'#fff') + p('M40 64 C46 70 54 70 60 64 C54 66 46 66 40 64Z','#7a2a20')
+    + scaled(0.36, 60, 58, ()=>potionArt('#7ee36b','#3dbb6a','#d4ffcc')),
+  /* new monsters */
+  yeti: () => both(p('M26 28 L18 12 L34 22Z','#c9d2df'))
+    + p('M50 12 C66 12 74 18 80 26 C88 30 90 44 86 52 C92 60 90 74 82 80 C80 90 64 96 50 94 C36 96 20 90 18 80 C10 74 8 60 14 52 C10 44 12 30 20 26 C26 18 34 12 50 12Z','#f4f7fb') + pn('M66 14 C74 18 80 26 86 30 C90 40 88 48 86 52 C92 60 90 74 82 80 C80 88 70 94 60 95 C76 80 78 50 66 14Z','#c9d6e6') + po('M50 12 C66 12 74 18 80 26 C88 30 90 44 86 52 C92 60 90 74 82 80 C80 90 64 96 50 94 C36 96 20 90 18 80 C10 74 8 60 14 52 C10 44 12 30 20 26 C26 18 34 12 50 12Z')
+    + p('M50 34 C64 34 72 44 72 58 C72 72 62 80 50 80 C38 80 28 72 28 58 C28 44 36 34 50 34Z','#8fbde0') + brow(34,44,46,50,5) + brow(66,44,54,50,5) + cn(41,52,3.5,K) + cn(59,52,3.5,K)
+    + p('M38 64 C44 72 56 72 62 64 C56 68 44 68 38 64Z','#2a2233') + both(p('M40 65 L42 71 L45 66Z','#fff')) + e(50,58,4,3,'#2a4a6a'),
+  lich: () => p('M50 18 C68 22 84 40 86 62 L90 96 L10 96 L14 62 C16 40 32 22 50 18Z','#2f4a7a') + pn('M50 18 C68 22 84 40 86 62 L90 96 L72 96 C74 62 68 34 50 18Z','#1f3358') + po('M50 18 C68 22 84 40 86 62 L90 96 L10 96 L14 62 C16 40 32 22 50 18Z')
+    + ln('M24 74 L76 74','#c8f0ff',3) + scaled(0.62, 19, 22, ()=>skullArt(0,'#e6f0f6','#7ff0ff'))
+    + p('M26 26 L30 6 L38 20 L44 2 L50 18 L56 2 L62 20 L70 6 L74 26 Z','#c8f0ff') + pn('M50 18 L56 2 L62 20 L70 6 L74 26 L50 26Z','#8fc8e8') + po('M26 26 L30 6 L38 20 L44 2 L50 18 L56 2 L62 20 L70 6 L74 26 Z') + c(50,22,4,'#7ff0ff'),
+  voideye: () => [[-60,'M28 30 C22 18 18 12 12 10'],[-20,'M42 24 C40 12 40 8 36 2'],[20,'M58 24 C60 12 60 8 64 2'],[60,'M72 30 C78 18 82 12 88 10']].map(([a,d])=>ln(d,'#6a2c9e',5)).join('')
+    + c(12,10,6,'#fff') + cn(12,10,3,K) + c(36,2,6,'#fff') + cn(36,2,3,K) + c(64,2,6,'#fff') + cn(64,2,3,K) + c(88,10,6,'#fff') + cn(88,10,3,K)
+    + c(50,56,34,'#8a3fd1') + pn('M50 22 A34 34 0 0 1 50 90 A28 28 0 0 0 50 22Z','#6a2c9e') + c(50,56,34,'none')
+    + e(50,48,18,15,'#fff') + c(50,48,10,'#ffd23f') + rn(48,40,4,16,2,K) + cn(46,45,2.5,'#fff') + brow(30,32,46,38,5) + brow(70,32,54,38,5)
+    + p('M32 74 C40 82 60 82 68 74 C60 78 40 78 32 74Z','#2a1830') + both(pn('M36 75 L39 80 L42 76Z','#fff')) + hl(30,40,4,9,-30,.4),
+  demonlord: () => both(p('M30 30 C14 30 2 18 4 2 C12 14 22 20 36 20Z','#2a2233') + pn('M30 30 C20 30 12 26 8 18 C16 22 24 24 34 22Z','#4a4258'))
+    + both(p('M26 18 L30 2 L38 14Z','#ff9d3c') + p('M40 12 L46 0 L52 12Z','#ffd23f'))
+    + p('M50 16 C74 16 88 34 88 54 C88 76 72 92 50 94 C28 92 12 76 12 54 C12 34 26 16 50 16Z','#a8203a') + pn('M50 16 C74 16 88 34 88 54 C88 76 72 92 50 94 C66 82 76 68 76 52 C76 36 66 24 50 16Z','#7a1028') + po('M50 16 C74 16 88 34 88 54 C88 76 72 92 50 94 C28 92 12 76 12 54 C12 34 26 16 50 16Z')
+    + brow(24,40,44,48,6) + brow(76,40,56,48,6) + glow(36,52,5.5,'#ffd23f') + glow(64,52,5.5,'#ffd23f')
+    + p('M30 68 C40 78 60 78 70 68 C66 82 34 82 30 68Z','#2a0a14') + both(p('M34 70 L37 78 L41 71Z','#fff') + p('M44 72 L46 77 L48 72Z','#fff'))
+    + p('M44 86 L50 98 L56 86Z','#2a2233') + hl(30,30,4,10,-30,.35),
+  shard: () => { const d='M50 6 L70 30 L62 90 L38 90 L30 30Z'; return pn(d,'#7ff0ff') + pn('M50 6 L70 30 L62 90 L50 90Z','#3ec8e0') + pn('M50 6 L58 30 L50 90 L42 30Z','#c8fbff') + po(d) + ink('M30 30 L70 30 M42 30 L50 90 L58 30',2) + p(star(76,18,8,3,4,0),'#fff'); },
+  rune: () => r(20,8,60,84,14,'#8f879b') + pn('M50 8 L66 8 C74 8 80 14 80 22 L80 78 C80 86 74 92 66 92 L50 92Z','#6b6476') + r(20,8,60,84,14,'none')
+    + `<path d="M50 22 L50 78 M50 34 L36 46 M50 34 L64 46 M50 56 L36 68 M50 56 L64 68" stroke="#7ff0ff" stroke-width="14" opacity=".3" stroke-linecap="round" fill="none"/>`
+    + ln('M50 22 L50 78 M50 34 L36 46 M50 34 L64 46 M50 56 L36 68 M50 56 L64 68','#c8fbff',5) + hl(32,22,3,9,-10,.4),
 };
 
 /* ---------- rendering ---------- */
@@ -301,12 +343,34 @@ const STICKER_FILTER = `<filter id="s" x="-25%" y="-25%" width="150%" height="15
 <feFlood flood-color="#000" flood-opacity=".45"/><feComposite in2="ob" operator="in" result="sh"/>
 <feMerge><feMergeNode in="sh"/><feMergeNode in="w"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
 const SVG_CACHE = {};
+/* color variants of existing art: hue rotation or a tint matrix */
+const VARIANTS = {
+  frostwisp:{base:'ghost', m:'0.72 0 0 0 0  0 0.88 0 0 0  0 0 1.1 0 0.04  0 0 0 1 0'},
+  icespider:{base:'spider', hue:300},
+  frostskel:{base:'skeleton', m:'0.75 0 0 0 0  0 0.9 0 0 0  0 0 1.1 0 0.05  0 0 0 1 0'},
+  frostgolem:{base:'golem', m:'0.62 0 0 0 0  0 0.86 0 0 0.02  0 0.12 1.15 0 0.06  0 0 0 1 0'},
+  icewitch:{base:'warlock', hue:300},
+  voidimp:{base:'imp', hue:275},
+  voidslime:{base:'slime', hue:140},
+  shade:{base:'ghost', m:'0.36 0 0 0 0.04  0 0.3 0 0 0.02  0 0 0.5 0 0.1  0 0 0 1 0'},
+  abyssknight:{base:'darkknight', m:'1 0 0 0 0.03  0 0.55 0 0 0  0.25 0 1.25 0 0.05  0 0 0 1 0'},
+  chaoswyrm:{base:'wyrm', hue:95},
+  bloodaxe:{base:'axe', m:'1.15 0 0 0 0.1  0 0.55 0 0 0  0 0 0.55 0 0  0 0 0 1 0'},
+  gravetome:{base:'book', hue:230},
+  philflask:{base:'potion_health', hue:45},
+  warmcloak:{base:'chainmail', m:'1.1 0 0 0 0.08  0 0.7 0 0 0  0 0 0.6 0 0  0 0 0 1 0'},
+  stoneward:{base:'armor', hue:20},
+  souljar:{base:'potion_health', hue:170},
+};
 function artSVG(name, sticker=true){
   const k = name+'|'+sticker; if(SVG_CACHE[k]) return SVG_CACHE[k];
-  const fn = ART[name]; if(!fn) throw new Error('missing art '+name);
+  const V = VARIANTS[name];
+  const fn = ART[V ? V.base : name]; if(!fn) throw new Error('missing art '+name);
   SW = 4;
-  const inner = fn();
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 124">${sticker?`<defs>${STICKER_FILTER}</defs><g filter="url(#s)">${inner}</g>`:inner}</svg>`;
+  let inner = fn();
+  let vdef = '';
+  if(V){ vdef = `<filter id="v" color-interpolation-filters="sRGB">${V.hue!=null?`<feColorMatrix type="hueRotate" values="${V.hue}"/>`:`<feColorMatrix type="matrix" values="${V.m}"/>`}</filter>`; inner = `<g filter="url(#v)">${inner}</g>`; }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 124"><defs>${sticker?STICKER_FILTER:''}${vdef}</defs>${sticker?`<g filter="url(#s)">${inner}</g>`:inner}</svg>`;
   return (SVG_CACHE[k] = svg);
 }
 const URL_CACHE = {};

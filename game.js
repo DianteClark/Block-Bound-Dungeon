@@ -90,7 +90,25 @@ const CLASSES = {
   mage:{name:'Mage', spr:'mage', hp:52, gold:20, relic:'orb', potions:['health'],
     desc:'Fragile but explosive. Rainbow blocks appear and big clears detonate.',
     ult:{name:'Meteor', need:9, spr:'potion_fire', desc:'Detonate the fullest row and column at x2.5, even if they are not full.'}},
+  berserker:{name:'Berserker', spr:'berserker', hp:80, gold:25, relic:'bloodlust', potions:['fire'],
+    desc:'Gets deadlier the more he bleeds. Swords grow stronger as your HP drops.',
+    ult:{name:'Rampage', need:7, spr:'bloodaxe', desc:'Smash the two fullest rows at x3, even if they are not full. Costs 5 HP.'},
+    unlock:{text:'Reach floor 3', cost:120, ok:s=>s.bestFloor>=3}},
+  necromancer:{name:'Necromancer', spr:'necromancer', hp:56, gold:30, relic:'gravetome', potions:['venom'],
+    desc:'Rots enemies from the inside. Venom blocks appear and poison never wears off.',
+    ult:{name:'Raise Dead', need:7, spr:'gravetome', desc:'Turn all rubble and ice into Venom blocks and poison the enemy.'},
+    unlock:{text:'Defeat 60 foes in total', cost:150, ok:s=>s.kills>=60}},
+  alchemist:{name:'Alchemist', spr:'alchemist', hp:60, gold:35, relic:'philflask', potions:['health','bomb'],
+    desc:'Never short on supplies. An extra potion slot and a fresh brew after every fight.',
+    ult:{name:'Transmute', need:6, spr:'philflask', desc:'Turn every block of the most common type on the grid into Rainbow blocks.'},
+    unlock:{text:'Drink 10 potions in total', cost:150, ok:s=>s.potions>=10}},
 };
+const isUnlocked = id => !CLASSES[id].unlock || !!(store.get('heroes', {})[id]);
+function checkHeroUnlocks(){
+  const st = stats(), h = store.get('heroes', {}); let any = null;
+  Object.entries(CLASSES).forEach(([id,C])=>{ if(C.unlock && !h[id] && C.unlock.ok(st)){ h[id] = 1; any = id; } });
+  if(any){ store.set('heroes', h); unlock('roster'); setTimeout(()=>{ sfx('trophy'); toast(`<b>New hero unlocked!</b><br>The ${CLASSES[any].name} joins your party.`, CLASSES[any].spr, 3500); }, 900); }
+}
 const HEAT = [
   {name:'Normal', desc:'The standard dungeon.'},
   {name:'Heat 1', desc:'Enemies have 15% more HP.'},
@@ -134,6 +152,12 @@ const RELICS = {
   crown:{name:'Miser\'s Crown', spr:'crown', desc:'After each fight, gain 10% interest on your gold (max 15).', r:3},
   purist:{name:'Purity Sigil', spr:'gem', desc:'Pure lines (all one block type) give +1 multiplier instead of +0.5.', r:3},
   scythe:{name:'Reaper\'s Scythe', spr:'axe', desc:'Clears deal 50% more damage to enemies below 30% HP.', r:3},
+  bloodlust:{name:'Bloodlust', spr:'bloodaxe', desc:'Sword blocks deal +1 damage for every 20% HP you are missing. Hearts heal 1 less.', r:0, starter:true},
+  gravetome:{name:'Grave Tome', spr:'gravetome', desc:'Venom blocks appear. Poison on enemies never wears off.', r:0, starter:true},
+  philflask:{name:'Philosopher\'s Flask', spr:'philflask', desc:'+1 potion slot. Brew a random potion after every fight.', r:0, starter:true, onGet(){ run.potionSlots++; }},
+  warmcloak:{name:'Warm Cloak', spr:'warmcloak', desc:'Ice shatters completely when cleared instead of leaving rubble.', r:1},
+  stoneward:{name:'Stone Ward', spr:'stoneward', desc:'Immune to Petrify: enemies can\'t turn your blocks to stone.', r:2},
+  souljar:{name:'Soul Jar', spr:'souljar', desc:'Earn 50% more Soul Shards this run.', r:1},
 };
 
 const POTIONS = {
@@ -203,7 +227,32 @@ const ENEMIES = [
     ],
     boss:{name:'Ancient Dragon', spr:'dragon', hp:340, passive:{id:'armor',v:20}, moves:[M('curse',6,3),M('atk',22,4),M('rage',3,2),M('multi',6,4,4),M('ice',5,3)]},
   },
+  { normal:[
+      {name:'Frost Wisp', spr:'frostwisp', hp:70, passive:{id:'ethereal'}, moves:[M('ice',3,2),M('atk',12,2)]},
+      {name:'Ice Spider', spr:'icespider', hp:76, moves:[M('ice',3,2),M('atk',10,2),M('atk',10,2)]},
+      {name:'Snow Yeti', spr:'yeti', hp:96, moves:[M('atk',16,3),M('rage',3,2),M('atk',16,3)]},
+      {name:'Frozen Skeleton', spr:'frostskel', hp:82, moves:[M('armor',12,2),M('petrify',3,3),M('atk',15,3)]},
+    ],
+    elite:[
+      {name:'Frost Golem', spr:'frostgolem', hp:190, passive:{id:'armor',v:25}, moves:[M('armor',18,3),M('ice',5,3),M('atk',20,3)]},
+      {name:'Ice Witch', spr:'icewitch', hp:165, moves:[M('ice',6,3),M('atk',14,2),M('sap',3,3),M('heal',20,3)]},
+    ],
+    boss:{name:'The Frost Lich', spr:'lich', hp:380, passive:{id:'regen',v:4}, moves:[M('ice',6,3),M('petrify',4,3),M('multi',6,4,4),M('sap',4,3),M('atk',24,4)]},
+  },
+  { normal:[
+      {name:'Void Imp', spr:'voidimp', hp:86, moves:[M('atk',11,2),M('shuffle',0,2),M('atk',11,2)]},
+      {name:'Abyssal Ooze', spr:'voidslime', hp:112, moves:[M('curse',5,3),M('petrify',3,3),M('atk',14,3)]},
+      {name:'Void Eye', spr:'voideye', hp:96, passive:{id:'thorns',v:3}, moves:[M('sap',3,2),M('atk',16,3),M('drain',12,3)]},
+      {name:'Shade', spr:'shade', hp:82, passive:{id:'ethereal'}, moves:[M('atk',13,2),M('shuffle',0,2),M('drain',10,3)]},
+    ],
+    elite:[
+      {name:'Abyssal Knight', spr:'abyssknight', hp:220, passive:{id:'thorns',v:4}, moves:[M('atk',26,4),M('armor',18,2),M('multi',9,3,3)]},
+      {name:'Chaos Wyrm', spr:'chaoswyrm', hp:205, passive:{id:'enrage',v:6}, moves:[M('atk',22,3),M('ice',5,3),M('petrify',4,3)]},
+    ],
+    boss:{name:'The Demon Lord', spr:'demonlord', hp:470, passive:{id:'enrage',v:8}, moves:[M('curse',6,3),M('atk',28,4),M('shuffle',0,2),M('multi',8,4,4),M('petrify',5,3),M('sap',5,3),M('rage',4,2)]},
+  },
 ];
+const FS = arr => arr[Math.min(run.floor, arr.length)-1];
 const GOBLIN = {name:'Treasure Goblin', spr:'goldgoblin', hp:34, rare:true, moves:[M('flee',0,7)]};
 const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), {...f.boss,floor:i+1,boss:true}]), {...GOBLIN, floor:0}];
 const PASSIVES = {
@@ -211,8 +260,9 @@ const PASSIVES = {
   armor:{name:'Armored', desc:v=>`Starts the fight with ${v} armor.`},
   ethereal:{name:'Ethereal', desc:()=>'Single-line clears deal half damage. Clear two or more at once.'},
   thorns:{name:'Thorns', desc:v=>`You take ${v} damage every time you hurt it.`},
+  enrage:{name:'Enrages', desc:v=>`Below half HP it flies into a rage: +${v} damage on all attacks.`},
 };
-const FLOOR_NAMES = ['The Damp Cellars','The Bone Halls','The Dragon\'s Depths'];
+const FLOOR_NAMES = ['The Damp Cellars','The Bone Halls','The Dragon\'s Depths','The Frozen Crypt','The Abyss'];
 const ROOMS = {
   combat:{spr:'r_combat', name:'Monster', desc:'A regular fight. Gold and a boon.'},
   elite:{spr:'r_elite', name:'Elite', desc:'A tough fight. Pick a relic.'},
@@ -222,15 +272,20 @@ const ROOMS = {
   event:{spr:'r_event', name:'Mystery', desc:'Something strange lies ahead.'},
   boss:{spr:'r_boss', name:'Boss', desc:'The floor guardian.'},
 };
-const FLOORS = 3, STEPS = 8;
+const FLOORS = 5, STEPS = 8;
 
 /* ================= trophies ================= */
 const ACH = {
   first:{name:'First Blood', desc:'Defeat your first enemy.', spr:'sword'},
   floor2:{name:'Going Deeper', desc:'Reach floor 2.', spr:'r_rest'},
   floor3:{name:'Into the Depths', desc:'Reach floor 3.', spr:'flame'},
-  win:{name:'Dragonslayer', desc:'Conquer the dungeon.', spr:'dragon'},
-  allheroes:{name:'Full Party', desc:'Win with all three heroes.', spr:'knight'},
+  floor4:{name:'Cold Feet', desc:'Reach floor 4.', spr:'snow'},
+  floor5:{name:'Into the Abyss', desc:'Reach floor 5.', spr:'voideye'},
+  dragon:{name:'Dragonslayer', desc:'Defeat the Ancient Dragon.', spr:'dragon'},
+  win:{name:'Lord of the Dungeon', desc:'Defeat the Demon Lord and conquer all 5 floors.', spr:'demonlord'},
+  roster:{name:'Fresh Recruit', desc:'Unlock a new hero.', spr:'berserker'},
+  skilled:{name:'Well Trained', desc:'Buy 10 skill ranks.', spr:'rune'},
+  allheroes:{name:'Full Party', desc:'Win with the Knight, Rogue and Mage.', spr:'knight'},
   heat:{name:'Feel the Heat', desc:'Win on Heat 1 or higher.', spr:'rage'},
   quad:{name:'Quadruple', desc:'Clear 4 lines with one piece.', spr:'r_combat'},
   pure:{name:'Purist', desc:'Clear a pure line.', spr:'gem'},
@@ -247,13 +302,29 @@ function unlock(id){
   setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}`, 'trophy', 3200); }, 500);
 }
 
+/* ================= skill tree (permanent upgrades bought with Soul Shards) ================= */
+const SKILLS = {
+  vit:{name:'Vitality', spr:'heart', desc:'+5 max HP per rank.', cost:[20,40,70]},
+  purse:{name:'Deep Pockets', spr:'coin', desc:'+15 starting gold per rank.', cost:[15,30,50]},
+  fort:{name:'Fortified', spr:'shield', desc:'Start every fight with +4 shield per rank.', cost:[25,45,70]},
+  hands:{name:'Quick Hands', spr:'dice', desc:'+1 hand reroll every fight per rank.', cost:[40,90]},
+  belt:{name:'Potion Belt', spr:'potion_health', desc:'Start each run with an extra random potion per rank.', cost:[30,60]},
+  mend:{name:'Second Wind', spr:'heal_icon', desc:'Heal 5% max HP after every fight per rank.', cost:[35,70]},
+  momentum:{name:'Momentum', spr:'drum', desc:'Start every fight with +1 combo streak per rank.', cost:[40,80]},
+  focus:{name:'Focus', spr:'flame', desc:'Start every fight with +1 special charge per rank.', cost:[30,50,80]},
+  whet:{name:'Whetted Edge', spr:'sword', desc:'Sword blocks deal +1 damage.', cost:[90]},
+  sense:{name:'Treasure Sense', spr:'r_treasure', desc:'Relic rewards offer 4 choices instead of 3.', cost:[100]},
+};
+const skill = id => +(store.get('skills', {})[id] || 0);
+const soulShards = () => +store.get('shards', 0);
+
 /* ================= run state & persistence ================= */
 let run = null, cb = null, drag = null, press = null, selPotion = -1, screenName = 'title';
 const has = id => !!run && run.relics.includes(id);
 const hpEl = () => $('#hpFill').parentElement;
 function heal(n){ run.hp = Math.min(run.maxHp, run.hp + n); }
 function saveRun(){ if(run) store.set('save', run); }
-function stats(){ return Object.assign({runs:0, wins:0, kills:0, bestFloor:0, bestLines:0, bestHit:0, winsBy:{}}, store.get('stats', {})); }
+function stats(){ return Object.assign({runs:0, wins:0, kills:0, bestFloor:0, bestLines:0, bestHit:0, winsBy:{}, potions:0, shards:0}, store.get('stats', {})); }
 function bumpStats(fn){ const s = stats(); fn(s); store.set('stats', s); }
 function seen(){ return Object.assign({e:{}, r:{}}, store.get('seen', {})); }
 function markSeen(kind, key){ const s = seen(); if(kind==='e'){ s.e[key] = s.e[key] || {seen:1, kills:0}; } else s.r[key] = 1; store.set('seen', s); }
@@ -261,9 +332,11 @@ function markKill(name){ const s = seen(); s.e[name] = s.e[name] || {seen:1, kil
 
 function newRun(cls){
   const C = CLASSES[cls], heat = clamp(+(store.get('heatSel',0)), 0, store.get('heat',0));
-  const hp = C.hp - (heat>=3 ? 10 : 0);
-  run = {cls, heat, hp, maxHp:hp, gold:C.gold, relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
-    lvl:{sword:0,shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
+  const hp = C.hp - (heat>=3 ? 10 : 0) + 5*skill('vit');
+  run = {cls, heat, hp, maxHp:hp, gold:C.gold + 15*skill('purse'), relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
+    lvl:{sword:skill('whet'),shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, bosses:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
+  if(RELICS[C.relic].onGet) RELICS[C.relic].onGet();
+  for(let i=0;i<skill('belt');i++) givePotion();
   run.map = genMap();
   bumpStats(s=>s.runs++);
   markSeen('r', C.relic);
@@ -272,7 +345,7 @@ function newRun(cls){
   goMap();
 }
 function migrate(r){
-  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
+  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
   delete r.choices;
   return r;
@@ -311,12 +384,13 @@ function show(which){
   $('#combat').hidden = which!=='combat';
   $('#view').hidden = which==='combat';
   if(which==='combat'){ $('#view').innerHTML = ''; bump($('#combat'),'enter'); }
-  $('#runbar').hidden = !run || which==='title' || which==='heroes' || which==='codex' || which==='trophies';
+  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills'].includes(which);
   selPotion = -1;
   document.querySelectorAll('.coach').forEach(c=>c.remove());
+  document.documentElement.classList.toggle('lock', which==='combat');
   if(run) renderRunbar();
   updateDanger();
-  Sound.music(['title','heroes','codex','trophies'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':'combat') : 'map');
+  Sound.music(['title','heroes','codex','trophies','skills'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':'combat') : 'map');
   window.scrollTo(0,0);
 }
 function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
@@ -354,6 +428,7 @@ function potionTap(i){
   if(!inFight && !P.any){ toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Use it during a fight.</span>`, P.spr); return; }
   if(selPotion !== i){ selPotion = i; renderRunbar(); toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Tap again to drink.</span>`, P.spr); return; }
   selPotion = -1; run.potions.splice(i,1);
+  bumpStats(s=>s.potions++);
   sfx('potion'); P.use();
   renderRunbar();
   if(inFight){ if(!checkEnd()){ checkStuck(); renderHUD(); } }
@@ -384,8 +459,9 @@ function coach(id, title, text, el, above){
   d.style.left = x+'px';
   d.style.top = clamp(above ? r.top - d.offsetHeight - 12 : r.bottom + 12, 8, innerHeight - d.offsetHeight - 8) + 'px';
   d.style.setProperty('--ax', clamp(r.left + r.width/2 - x, 16, w-16)+'px');
-  const close = ()=>{ d.remove(); const t = store.get('tut', {}); t[id] = 1; store.set('tut', t); };
-  d.onclick = close;
+  const t = store.get('tut', {}); t[id] = 1; store.set('tut', t);
+  d.onclick = ()=>d.remove();
+  setTimeout(()=>d.remove(), 9000);
 }
 
 /* ================= settings ================= */
@@ -420,8 +496,8 @@ function openSettings(){
   let armed = false, armT;
   $('#resetBtn').onclick = ()=>{
     if(!armed){ armed = true; $('#resetBtn').textContent = 'Tap again to erase everything'; sfx('warn'); clearTimeout(armT); armT = setTimeout(()=>{ armed=false; const b=$('#resetBtn'); if(b) b.textContent='Reset all data'; }, 3000); return; }
-    ['save','stats','best','runs','seen','ach','heat','heatSel','tut'].forEach(k=>store.set(k,null));
-    sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex and trophies were erased.', 'bones');
+    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes'].forEach(k=>store.set(k,null));
+    sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex, trophies, skills and heroes were erased.', 'bones');
   };
   const ab = $('#abandonBtn');
   if(ab){ let a2=false; ab.onclick = ()=>{ if(!a2){ a2=true; ab.textContent='Tap again'; sfx('warn'); return; } store.set('save', null); closeSettings(); run=null; cb=null; titleScreen(); }; }
@@ -441,6 +517,7 @@ function titleScreen(){
     <div class="heroes">${img('knight',76)}${img('rogue',76)}${img('mage',76)}</div>
     ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, Floor ${save.floor}</button>`:''}
     <button class="btn ${save?'ghost':''}" id="startBtn">${save?'New Run':'Enter the Dungeon'}</button>
+    <button class="btn ghost" id="skillBtn"><span class="inline" style="justify-content:center">${img('rune',28)} Skill Tree <span class="muted" style="font-size:15px;margin-left:6px">${img('shard',22)}${soulShards()}</span></span></button>
     <div class="row2">
       <button class="btn ghost" id="codexBtn"><span class="inline" style="justify-content:center">${img('book',26)} Codex</span></button>
       <button class="btn ghost" id="trophyBtn"><span class="inline" style="justify-content:center">${img('trophy',26)} ${Object.keys(ach).length}/${Object.keys(ACH).length}</span></button>
@@ -470,6 +547,8 @@ function titleScreen(){
   if(save) $('#contBtn').onclick = ()=>{ sfx('door'); run = migrate(save); goMap(); };
   $('#gear2').onclick = openSettings;
   $('#codexBtn').onclick = ()=>{ sfx('click'); codexScreen('e'); };
+  $('#skillBtn').onclick = ()=>{ sfx('click'); skillScreen(); };
+  checkHeroUnlocks();
   $('#trophyBtn').onclick = ()=>{ sfx('click'); trophyScreen(); };
 }
 function heroScreen(){
@@ -479,6 +558,9 @@ function heroScreen(){
     ${maxHeat ? `<div class="card heatsel"><button id="hm" aria-label="Less heat">-</button><div class="mid"><b id="hn"></b><small id="hd"></small></div><button id="hp" aria-label="More heat">+</button></div>` : ''}
     ${Object.entries(CLASSES).map(([id,C])=>{
       const R = RELICS[C.relic], wins = (stats().winsBy||{})[id]||0;
+      if(!isUnlocked(id)) return `<button class="choice hero locked" data-id="lock:${id}"><span class="ic">${img(C.spr,70)}</span><span>
+        <b>${C.name} <span class="rar rar1">Locked</span></b><small>${C.desc}</small>
+        <span class="ult">Unlock: ${C.unlock.text}, or spend <b style="display:inline;font-size:13px">${C.unlock.cost} Soul Shards</b> (you have ${soulShards()}).</span></span></button>`;
       return `<button class="choice hero" data-id="${id}"><span class="ic">${img(C.spr,70)}</span><span>
         <b>${C.name}${wins?` <span class="rar rar3">${wins} win${wins>1?'s':''}</span>`:''}</b><small>${C.desc}</small>
         <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
@@ -487,7 +569,18 @@ function heroScreen(){
     <button class="btn ghost" id="backBtn">Back</button>`);
   const paint = ()=>{ if(!maxHeat) return; $('#hn').textContent = HEAT[heat].name; $('#hd').textContent = HEAT[heat].desc; $('#hm').disabled = heat<=0; $('#hp').disabled = heat>=maxHeat; store.set('heatSel', heat); };
   if(maxHeat){ $('#hm').onclick = ()=>{ heat--; sfx('click'); paint(); }; $('#hp').onclick = ()=>{ heat++; sfx('rage'); paint(); }; paint(); }
-  bindChoices(newRun); $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
+  $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
+    const id = b.dataset.id;
+    if(id.startsWith('lock:')){
+      const k = id.slice(5), C = CLASSES[k];
+      if(soulShards() < C.unlock.cost){ sfx('invalid'); toast(`<b>${C.name}</b><br>${C.unlock.text} to unlock, or collect ${C.unlock.cost} Soul Shards.`, C.spr); return; }
+      if(b.dataset.armed!=='1'){ b.dataset.armed='1'; sfx('warn'); toast(`Tap again to unlock the ${C.name} for ${C.unlock.cost} Soul Shards.`, 'shard'); return; }
+      store.set('shards', soulShards() - C.unlock.cost); const h = store.get('heroes', {}); h[k] = 1; store.set('heroes', h); unlock('roster');
+      sfx('trophy'); confetti(60); heroScreen(); return;
+    }
+    sfx('click'); newRun(id);
+  }; });
+  $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
 function codexScreen(tab){
   show('codex');
@@ -517,6 +610,27 @@ function codexScreen(tab){
       toast(`<b>${R.name}</b><br>${R.desc}`, R.spr, 3200);
     }
   });
+  $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
+}
+function skillScreen(){
+  show('skills');
+  const sk = store.get('skills', {});
+  view(`<div class="center"><h2 class="title">Skill Tree</h2><p class="muted">Permanent upgrades for every hero. Earn Soul Shards by playing runs.</p></div>
+    <div class="card center" style="display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--display);font-size:24px">${img('shard',36)}${soulShards()} Soul Shards</div>
+    ${Object.entries(SKILLS).map(([id,S])=>{
+      const lv = sk[id]||0, max = S.cost.length, cost = S.cost[lv];
+      const pips = `<span class="pips">${S.cost.map((_,i)=>`<i class="${i<lv?'on':''}"></i>`).join('')}</span>`;
+      return `<button class="choice" data-id="${id}" data-multi="1" ${lv>=max||soulShards()<cost?'disabled':''}><span class="ic">${img(S.spr,44)}</span><span><b>${S.name}</b>${pips}<small>${S.desc}</small></span>${lv>=max?'<span class="price" style="color:#86e6a8">MAX</span>':`<span class="price">${img('shard',18)}${cost}</span>`}</button>`;
+    }).join('')}
+    <button class="btn ghost" id="backBtn">Back</button>`);
+  $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
+    const id = b.dataset.id, S = SKILLS[id], s = store.get('skills', {}), lv = s[id]||0, cost = S.cost[lv];
+    if(lv>=S.cost.length || soulShards()<cost) return;
+    store.set('shards', soulShards()-cost); s[id] = lv+1; store.set('skills', s);
+    sfx('buy'); burstAt(b, ['#7ff0ff','#c8fbff','#fff'], 18);
+    if(Object.values(s).reduce((a,v)=>a+v,0)>=10) unlock('skilled');
+    skillScreen();
+  }; });
   $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
 function trophyScreen(){
@@ -595,7 +709,7 @@ function goMap(){
   let used = false;
   $('#view').querySelectorAll('.mnode.avail').forEach(b=>b.onclick=()=>{ if(used) return; used = true; sfx('map'); enterRoom(+b.dataset.r, +b.dataset.i); });
   const target = $('#view .mnode.avail');
-  if(target && row>1) setTimeout(()=>target.scrollIntoView({block:'center', behavior:'smooth'}), 120);
+  if(target && row>1) setTimeout(()=>{ const r = target.getBoundingClientRect(), bar = $('#runbar').getBoundingClientRect().height + 20; const y = window.scrollY + r.top - Math.max(bar + 60, innerHeight*0.45); window.scrollTo({top: Math.max(0, y), behavior:'smooth'}); }, 120);
   if(row===0) coach('map', 'Your path', 'Pick any glowing room. Lines show which rooms connect. The boss waits at the bottom.', $('#view .mnode.avail'), false);
 }
 function enterRoom(r, i){
@@ -615,7 +729,7 @@ function advance(){
     run.floor++;
     bumpStats(s=>s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)));
     if(run.floor>FLOORS) return endScreen(true);
-    if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3');
+    if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3'); if(run.floor===4) unlock('floor4'); if(run.floor===5) unlock('floor5');
     run.map = genMap(); run.path = [];
     heal(Math.round(run.maxHp*0.3));
     banner(`Floor ${run.floor}`, FLOOR_NAMES[run.floor-1], 2200);
@@ -733,7 +847,7 @@ function eventScreen(){
     const res = ev.opts[i].go();
     renderRunbar();
     if(checkDeath()) return endScreen(false);
-    if(res==='mimic'){ const mm = ENEMIES[1].elite[1]; return startCombat('elite', {...mm, hp: Math.round(mm.hp*[0.6,1,1.35][run.floor-1])}); }
+    if(res==='mimic'){ const mm = ENEMIES[1].elite[1]; return startCombat('elite', {...mm, hp: Math.round(mm.hp*FS([0.6,1,1.35,1.6,1.9]))}); }
     advance();
   });
 }
@@ -747,6 +861,8 @@ function rewardScreen(kind){
   let extra = '';
   if(has('crown')){ const i = Math.min(15, Math.floor(run.gold/10)); run.gold += i; extra += ` +${i} interest.`; }
   if(Math.random() < (kind==='combat'?0.35:0.5)){ const p = givePotion(); if(p) extra += ` Found a ${POTIONS[p].name}!`; }
+  if(has('philflask')){ const p = givePotion(); if(p) extra += ` Brewed a ${POTIONS[p].name}.`; }
+  if(skill('mend')){ const h = Math.round(run.maxHp*0.05*skill('mend')); heal(h); extra += ` Recovered ${h} HP.`; }
   renderRunbar(); saveRun();
   setTimeout(()=>burstAt($('#goldWrap'), ['#f7c936','#ffe58a','#fff'], 22), 150);
   if(kind==='boss') setTimeout(()=>confetti(80), 100);
@@ -757,7 +873,7 @@ function rewardScreen(kind){
     while(offers.length<3){ const b = weighted(pool.map(x=>[x,x.w])); if(!offers.includes(b)) offers.push(b); }
     if(Math.random()<0.3){ const [id]=relicOffers(1); if(id) offers[2] = {id,...RELICS[id]}; }
   } else {
-    offers = relicOffers(3, kind==='boss'?2:1).map(id=>({id,...RELICS[id]}));
+    offers = relicOffers(3+(skill('sense')?1:0), kind==='boss'?2:1).map(id=>({id,...RELICS[id]}));
   }
   const title = kind==='boss'?'Boss defeated!':kind==='goblin'?'Caught it!':'Victory!';
   view(`${scene(kind==='boss'?'r_boss':kind==='goblin'?'goldgoblin':'r_treasure', title, `+${g} gold.${extra} Choose a reward:`)}
@@ -776,11 +892,16 @@ function endScreen(won){
     const mh = store.get('heat',0);
     if(run.heat>=mh && mh<HEAT.length-1){ store.set('heat', mh+1); heatMsg = `<p class="center" style="color:#ff8a80;font-family:var(--display);font-size:18px">${HEAT[mh+1].name} unlocked!</p>`; }
   }
+  let earned = run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0);
+  earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?1.5:1));
+  store.set('shards', soulShards() + earned); bumpStats(s=>s.shards += earned);
+  checkHeroUnlocks();
   show('end'); Sound.music(won?'map':'menu');
   sfx(won?'victory':'defeat');
   if(won){ confetti(160); banner('VICTORY', 'The dungeon is conquered', 2600); }
-  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':'You have fallen...', won?'The Ancient Dragon is slain. Legends will be told.':`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
+  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':'You have fallen...', won?'The Demon Lord is banished. Legends will be told.':`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
     ${heatMsg}
+    <div class="card center" style="display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--display);font-size:22px">${img('shard',34)}+${earned} Soul Shards<span class="muted" style="font-size:14px;font-family:var(--body)">(${soulShards()} total)</span></div>
     <div class="card"><div class="stats3">
       <div>${run.kills}<small>foes slain</small></div>
       <div>${run.dmg}<small>damage</small></div>
@@ -797,7 +918,7 @@ function endScreen(won){
 function rollType(){
   const e = [['sword',46],['shield',22],['heal',13],['coin',10]];
   if(has('prism')||has('orb')) e.push(['rainbow',has('prism')&&has('orb')?20:12]);
-  if(has('toxin')) e.push(['venom',12]);
+  if(has('toxin')||has('gravetome')) e.push(['venom',has('toxin')&&has('gravetome')?20:12]);
   if(has('satchel')) e.push(['blast',7]);
   return weighted(e);
 }
@@ -835,22 +956,23 @@ function startCombat(kind, forced){
   const F = ENEMIES[run.floor-1];
   let tpl = forced || (kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal));
   const heat = run.heat||0;
-  let hpMul = [1.15,1.4,1.55][run.floor-1] * (kind==='boss'?1.1:(0.92+Math.random()*0.16));
+  let hpMul = FS([1.15,1.4,1.55,1.6,1.7]) * (kind==='boss'?1.1:(0.92+Math.random()*0.16));
   if(heat>=1) hpMul *= 1.15;
   if(heat>=5 && kind==='boss') hpMul *= 1.25;
-  if(kind==='goblin') hpMul = [1,1.7,2.4][run.floor-1];
+  if(kind==='goblin') hpMul = FS([1,1.7,2.4,3.1,3.8]);
   if(heat>=4 && kind==='elite' && !tpl.passive){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; }
   const maxHp = Math.round(tpl.hp * hpMul);
   const pas = tpl.passive || null;
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], fx:[], parts:[], over:false, firstClear:true, doubleNext:false,
-    streak: has('drum') ? 2 : 0, tookDmg:false, mirror:has('mirror'), moves:0,
-    shield: (has('chainmail')?8:0) + (has('oath')?6:0),
-    rerolls: 1+(has('dice')?1:0),
+    streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0, enraged:false,
+    shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort'),
+    rerolls: 1+(has('dice')?1:0)+skill('hands'),
     enemy:{...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null},
   };
   markSeen('e', tpl.name);
-  if(run.floor>1 && kind!=='goblin') addBlocks('stone', (run.floor-1)*2, true);
+  run.charge = Math.min(CLASSES[run.cls].ult.need, run.charge + skill('focus'));
+  if(run.floor>1 && kind!=='goblin') addBlocks('stone', Math.min(6,(run.floor-1)*2), true);
   nextIntent(); dealHand();
   lastEnemySpr = null;
   show('combat'); layout(); renderHUD();
@@ -866,7 +988,7 @@ function nextIntent(){
   e.intent = {...m, left: m.t + (has('hourglass')&&m.k!=='flee'?1:0)};
 }
 function peekIntent(){ const e = cb.enemy; return e.moves[e.mi % e.moves.length]; }
-function intentDamage(it){ return Math.round(it.v*[1.1,1.25,1.35][run.floor-1]*((run.heat||0)>=2?1.15:1)) + cb.enemy.rage; }
+function intentDamage(it){ return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)) + cb.enemy.rage; }
 function addBlocks(type, n, silent){
   const empty = []; cb.board.forEach((v,i)=>{ if(!v) empty.push(i); });
   shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]=type; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type}); });
@@ -940,9 +1062,11 @@ function computeEffects(board, set, o){
   const Lv = run.lvl, mult = o.mult, lines = o.lines;
   const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0);
   const shieldVal = 2 + Lv.shield + (has('tower')?1:0) + (has('oath')?1:0);
-  const healVal = 2 + Lv.heal;
+  let healVal = 2 + Lv.heal;
+  let swordBonus = 0;
+  if(has('bloodlust')){ swordBonus = Math.floor((1 - Math.max(0,run.hp)/run.maxHp)*5); healVal = Math.max(1, healVal-1); }
   const coinVal = 1 + Lv.coin + (has('idol')?1:0) + (has('daggers')?1:0);
-  let dmg = Math.round((cnt.sword*swordVal + cnt.rainbow*2 + cnt.blast*3) * mult);
+  let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + cnt.rainbow*2 + cnt.blast*3) * mult);
   let sh  = Math.round((cnt.shield*shieldVal + cnt.rainbow) * mult);
   let hp  = Math.round((cnt.heal*healVal + cnt.rainbow) * mult);
   const poison = Math.round(cnt.venom * mult);
@@ -952,7 +1076,7 @@ function computeEffects(board, set, o){
   if(has('crossed') && o.rows && o.cols) dmg += 8;
   if(has('fang')) hp += 2*lines;
   let perfect = true;
-  for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || t==='ice')){ perfect = false; break; } }
+  for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak')))){ perfect = false; break; } }
   if(perfect) dmg += 20 + 10*(run.floor-1);
   const e = cb.enemy;
   if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
@@ -973,7 +1097,7 @@ function fireCells(set, o){
   set.forEach(i=>{
     const t = cb.board[i]; if(!t) return;
     shards(i, t, o.lines>=3?7:5);
-    if(t==='ice'){ cb.board[i]='stone'; cb.fx.push({i,type:'ice',t0:now}); }
+    if(t==='ice' && !has('warmcloak')){ cb.board[i]='stone'; cb.fx.push({i,type:'ice',t0:now}); }
     else { cb.fx.push({i, type:t, t0:now}); cb.board[i]=null; }
   });
   const lines = o.lines, mult = o.mult;
@@ -1005,6 +1129,7 @@ function damageEnemy(n, noThorns){
   const e = cb.enemy; let d = n;
   if(e.armor>0){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
   e.hp = Math.max(0, e.hp - d); run.dmg += d; run.bestHit = Math.max(run.bestHit, d);
+  if(e.passive && e.passive.id==='enrage' && !cb.enraged && e.hp>0 && e.hp<e.maxHp/2){ cb.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ floatText($('#eArt'), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
   if(d>=100) unlock('bighit');
   const el = $('#eArt');
   floatText(el, d>0?`-${d}`:'Blocked', d>0?'#ff8a8d':'#c9c2d4', d>=25);
@@ -1028,7 +1153,7 @@ function hitPlayer(n, small){
 }
 function enemyTick(){
   const e = cb.enemy;
-  if(e.poison>0){ const p = e.poison; e.hp = Math.max(0, e.hp - p); run.dmg += p; e.poison--; floatText($('#eArt'), `-${p}`, '#dcb6ff'); if(e.hp<=0) return; }
+  if(e.poison>0){ const p = e.poison; e.hp = Math.max(0, e.hp - p); run.dmg += p; if(!has('gravetome')) e.poison--; floatText($('#eArt'), `-${p}`, '#dcb6ff'); if(e.hp<=0) return; }
   if(e.passive && e.passive.id==='regen' && e.hp<e.maxHp){ e.hp = Math.min(e.maxHp, e.hp+e.passive.v); }
   const it = e.intent;
   it.left--;
@@ -1047,6 +1172,13 @@ function enemyTick(){
     case 'heal': e.hp = Math.min(e.maxHp, e.hp+it.v); floatText(art, `+${it.v}`, '#86e6a8'); sfx('heal'); break;
     case 'rage': e.rage += it.v; floatText(art, `Rage +${it.v}`, '#ff9d3c'); sfx('rage'); flash('rgba(255,90,20,.3)'); break;
     case 'flee': cb.fled = true; return;
+    case 'petrify': {
+      if(has('stoneward')){ floatText($('#board'), 'Warded!', '#c9c2d4'); sfx('block'); break; }
+      const live = []; cb.board.forEach((t,i)=>{ if(t && !JUNK(t)) live.push(i); });
+      shuffle(live).slice(0,it.v).forEach(i=>{ cb.board[i]='stone'; cb.fx.push({i,type:'stone',t0:performance.now(),drop:true}); });
+      floatText($('#board'), `Petrify x${it.v}`, '#c9c2d4'); sfx('rubble'); break; }
+    case 'sap': { const lost = Math.min(run.charge, it.v); run.charge -= lost; floatText($('#ultBtn'), `-${lost} charge`, '#c77dff'); sfx('poison'); break; }
+    case 'shuffle': cb.hand = cb.hand.map(p=>p.used?p:newPiece()); floatText($('#board'), 'Hand shuffled!', '#c77dff'); sfx('whoosh'); break;
   }
   nextIntent();
 }
@@ -1070,7 +1202,7 @@ function checkEnd(){
   if(cb.enemy.hp<=0){
     cb.over = true; run.kills++; markKill(cb.enemy.name); unlock('first');
     if(cb.kind==='goblin') unlock('goblin');
-    if(cb.kind==='boss' && !cb.tookDmg) unlock('flawless');
+    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; if(!cb.tookDmg) unlock('flawless'); if(cb.enemy.spr==='dragon') unlock('dragon'); }
     renderHUD();
     $('#eArt').classList.add('dead');
     floatText($('#eArt'), 'Defeated!', '#ffcf7a', true); sfx('kill'); buzz(40); burstAt($('#eArt'), ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30);
@@ -1104,6 +1236,20 @@ function useUlt(){
     cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,6); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; } });
   } else if(run.cls==='rogue'){
     dealHand(); cb.enemy.intent.left += 1; cb.doubleNext = true;
+  } else if(run.cls==='berserker'){
+    const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]);
+    run.hp = Math.max(1, run.hp-5); floatText(hpEl(), '-5', '#ff6a6f'); shake();
+    const set = lineCells(rows,[]); const blasted = expandBlast(cb.board, set);
+    fireCells(set, {lines:2, rows:2, cols:0, mult:3, label:'RAMPAGE!', noCharge:true, blasted});
+  } else if(run.cls==='necromancer'){
+    let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ cb.board[i]='venom'; cb.fx.push({i,type:'venom',t0:now,drop:true}); n++; } });
+    const pz = 6 + 3*(run.floor-1); cb.enemy.poison += pz; floatText($('#eArt'), `+${pz} poison`, '#dcb6ff'); sfx('poison');
+    if(n) floatText($('#board'), `${n} raised`, '#dcb6ff');
+  } else if(run.cls==='alchemist'){
+    const cnt = {}; cb.board.forEach(t=>{ if(t && !JUNK(t) && t!=='rainbow') cnt[t]=(cnt[t]||0)+1; });
+    const top = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+    if(top){ cb.board.forEach((t,i)=>{ if(t===top[0]){ cb.board[i]='rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); } }); floatText($('#board'), `${top[1]} transmuted`, '#f0d6ff'); }
+    else { run.charge = CLASSES[run.cls].ult.need; toast('Nothing to transmute yet. Your charge is kept.', 'philflask'); }
   } else {
     let br=0, bc=0, bn=-1, cn=-1;
     for(let r=0;r<N;r++){ const n = cb.board.slice(r*N,r*N+N).filter(Boolean).length; if(n>bn){ bn=n; br=r; } }
@@ -1128,6 +1274,9 @@ function intentInfo(it){
     case 'heal': return ['heal_icon', `+${it.v}`, `Heals ${it.v}`];
     case 'rage': return ['rage', `+${it.v}`, `Enrages: all its attacks deal +${it.v} for the rest of the fight`];
     case 'flee': return ['r_shop', 'Flee', `Escapes with its loot`];
+    case 'petrify': return ['rock', `x${it.v}`, `Turns ${it.v} of your blocks on the grid to stone`];
+    case 'sap': return ['flame', `-${it.v}`, `Drains ${it.v} charge from your special`];
+    case 'shuffle': return ['dice', 'Mix', `Shuffles the pieces in your hand`];
   }
 }
 let lastEnemySpr = null;
@@ -1213,7 +1362,8 @@ function layout(){
   const top = cv.getBoundingClientRect().top + window.scrollY;
   const pad = 8, gap = 14, trayCells = 2.9;
   const byWidth = (wrapW - pad*2)/N;
-  const byHeight = (window.innerHeight - top - pad*2 - gap - 30)/(N + trayCells);
+  const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  const byHeight = (vh - top - pad*2 - gap - 34)/(N + trayCells);
   const cs = Math.max(28, Math.floor(Math.min(byWidth, byHeight)));
   const bw = cs*N, W = Math.max(bw + pad*2, Math.min(wrapW, bw+pad*2+40));
   const trayH = Math.round(cs*trayCells), H = pad + bw + gap + trayH + pad;
@@ -1223,7 +1373,9 @@ function layout(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   L = {W,H,cs,bx:(W-bw)/2,by:pad,bw,ty:pad+bw+gap,trayH,slotW:W/3};
 }
-window.addEventListener('resize', ()=>{ if(cb && !$('#combat').hidden) layout(); sizeFx(); });
+function relayout(){ if(cb && !$('#combat').hidden){ window.scrollTo(0,0); layout(); } sizeFx(); }
+window.addEventListener('resize', relayout);
+if(window.visualViewport) window.visualViewport.addEventListener('resize', relayout);
 
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function drawCell(x, y, s, type, alpha=1, baseSize){

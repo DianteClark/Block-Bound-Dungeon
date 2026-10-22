@@ -18,22 +18,23 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **Combos.** Clearing several lines at once multiplies everything (x1.5, x2, x3...). Clearing on back-to-back moves adds a streak bonus.
 - **Pure lines.** A line made entirely of one block type adds +0.5 to the multiplier. Rotation makes these much easier to build.
 - **Perfect clears.** Empty the whole grid for a big bonus hit.
-- **Hero specials.** Clearing lines charges your hero's special move: Knight *Bulwark*, Rogue *Shadowstep* and Mage *Meteor*.
-- **Turns.** Every piece you place is one turn. Enemies telegraph their next move with a countdown: attacks, multi-hits, life drain, armor, healing, rage, rubble or ice.
+- **Hero specials.** Clearing lines charges your hero's special move: Knight *Bulwark*, Rogue *Shadowstep*, Mage *Meteor*, Berserker *Rampage*, Necromancer *Raise Dead* and Alchemist *Transmute*.
+- **Turns.** Every piece you place is one turn. Enemies telegraph their next move with a countdown: attacks, multi-hits, life drain, armor, healing, rage, rubble, ice, petrify (turns your blocks to stone), sap (drains your special) and shuffle (rerolls your hand).
 - **Damage preview.** While you drag a piece over the grid, a pill shows exactly what the clear will do: multiplier, damage, shield, healing, gold and poison.
 - **Enemy intents** show what the enemy does next, how many moves away it is, and the move after that.
 - **Cave-ins.** If no piece fits in any rotation, the ceiling collapses: you take damage and the two fullest rows are cleared.
 
 ## The run
 
-- **3 heroes**, each with a starting relic, potions and a special move.
-- **3 floors with a branching map.** Choose your route down through fights, elites, campfires, merchants, treasure and mystery events to the boss at the bottom of each floor: the Bone King, the Hydra and the Ancient Dragon.
+- **6 heroes.** Knight, Rogue and Mage from the start; unlock the Berserker, Necromancer and Alchemist through play or with Soul Shards.
+- **5 floors with a branching map.** Choose your route down through fights, elites, campfires, merchants, treasure and mystery events to the boss at the bottom of each floor: the Bone King, the Hydra, the Ancient Dragon, the Frost Lich and the Demon Lord.
 - **Treasure Goblins** sometimes appear in place of a fight. Catch them before they run off with their loot.
 - **Heat levels.** Winning unlocks Heat 1 to 5, each adding a new challenge.
-- **Enemy passives:** Armored, Regenerates, Ethereal and Thorns.
-- **34 relics**, **6 potions** (tap a potion twice to drink it), **Blast blocks** that set off everything around them, and permanent block upgrades.
+- **Enemy passives:** Armored, Regenerates, Ethereal, Thorns and Enrages.
+- **Skill Tree.** Every run earns Soul Shards. Spend them on 10 permanent upgrades such as Vitality, Quick Hands, Focus and Treasure Sense.
+- **40 relics**, **6 potions** (tap a potion twice to drink it), **Blast blocks** that set off everything around them, and permanent block upgrades.
 - **10 mystery events**, and campfires where you can rest, train, upgrade or meditate to charge your special.
-- **Codex** of every monster and relic you've discovered, and **14 trophies** to unlock.
+- **Codex** of every monster and relic you've discovered, and **19 trophies** to unlock.
 - **First-fight tips** walk new players through the basics (replay them from Settings).
 - **Auto-save.** Your run is saved between rooms, so you can close the app and continue later.
 - **Settings** (gear icon): music and sound volume, screen shake, vibration, lifetime records, abandon run, and **Reset all data**.
