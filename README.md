@@ -42,7 +42,9 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **Daily Quests.** Three new quests every day, each worth Soul Shards, plus a bonus for finishing all three.
 - **Journal** of your recent runs and lifetime records.
 - **Auto-save.** Your run is saved constantly, even mid-fight, so you can close the app any time and continue exactly where you left off.
-- **Settings** (gear icon): music and sound volume, screen shake, vibration, lifetime records, abandon run, and **Reset all data**.
+- **Settings** (gear icon): music, sound effect and ambience volume; screen shake, flashes, reduce motion, high-contrast blocks and damage numbers; game speed, left-handed layout, vibration and tips; **backup and restore codes** to move your progress between devices; abandon run and reset all data.
+- **Sound.** Every action has its own synthesized sound, music shifts between menu, map, shop, campfire, combat, boss and Endless moods with crossfades, and a dungeon ambience layer adds wind, dripping water and campfire crackle.
+- **Effects.** Cleared blocks launch projectiles at their targets, cleared lines flash with light beams, placed blocks pop in, and your hero marks your spot on the map. Tap an enemy to see its full move pattern.
 
 ## Files
 

@@ -1,8 +1,8 @@
 /* Block Bound Dungeon — synthesized sound effects and procedural dungeon music (Web Audio, no files). */
 'use strict';
 const Sound = (() => {
-  let ctx = null, master, sfxBus, musicBus, revIn, delayIn, noiseBuf;
-  let vol = {music:0.5, sfx:0.7};
+  let ctx = null, master, sfxBus, musicBus, ambBus, revIn, delayIn, noiseBuf;
+  let vol = {music:0.5, sfx:0.7, amb:0.5};
   const mtof = m => 440 * Math.pow(2, (m-69)/12);
 
   function impulse(sec, decay){
@@ -19,6 +19,7 @@ const Sound = (() => {
     master.connect(comp); comp.connect(ctx.destination);
     sfxBus = ctx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = vol.music*0.55; musicBus.connect(master);
+    ambBus = ctx.createGain(); ambBus.gain.value = vol.amb*0.6; ambBus.connect(master);
     // dungeon reverb
     const rev = ctx.createConvolver(); rev.buffer = impulse(3.2, 2.6);
     revIn = ctx.createGain(); revIn.gain.value = 0.9; revIn.connect(rev); rev.connect(master);
@@ -30,7 +31,7 @@ const Sound = (() => {
     const nd = noiseBuf.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i] = Math.random()*2-1;
     return true;
   }
-  function unlock(){ if(!init()) return; if(ctx.state==='suspended') ctx.resume(); Music.kick(); }
+  function unlock(){ if(!init()) return; if(ctx.state==='suspended') ctx.resume(); Music.kick(); Amb.start(); }
 
   /* ---------- primitives ---------- */
   function tone(o){
@@ -100,6 +101,19 @@ const Sound = (() => {
     defeat(){ [62,61,58,55,50].forEach((m,i)=>tone({type:'sawtooth', f:mtof(m), dur:0.5, vol:0.08, lp:900, delay:i*0.22, rev:0.6})); },
     door(){ noise({f:300, f2:100, dur:0.6, vol:0.25, rev:0.5}); tone({type:'sine', f:90, f2:60, dur:0.5, vol:0.2}); },
     buy(){ sfx.coin(); tone({type:'triangle', f:880, dur:0.15, vol:0.08, delay:0.12}); },
+    steal(){ [84,79,76,72].forEach((m,i)=>tone({type:'square', f:mtof(m), dur:0.07, vol:0.05, lp:4000, delay:i*0.05})); noise({f:5000, filter:'highpass', dur:0.2, vol:0.06}); },
+    petrify(){ noise({f:600, f2:150, dur:0.45, vol:0.35, rev:0.3}); [40,35].forEach((m,i)=>tone({type:'square', f:mtof(m), dur:0.2, vol:0.08, lp:400, delay:i*0.08})); },
+    sap(){ tone({type:'sawtooth', f:900, f2:120, dur:0.45, vol:0.08, lp:2000, rev:0.4}); },
+    shuffle(){ for(let i=0;i<7;i++) noise({f:3000+i*200, filter:'bandpass', q:2, dur:0.04, vol:0.08, delay:i*0.035}); },
+    pet(kind){ const base = {bat:84, slime:60, turtle:52, wisp:88, rat:86, spider:70, imp:76}[kind]||72; tone({type:'triangle', f:mtof(base), f2:mtof(base+7), dur:0.12, vol:0.08}); tone({type:'sine', f:mtof(base+12), dur:0.15, vol:0.05, delay:0.08, rev:0.4}); },
+    phase(){ noise({f:120, f2:900, filter:'bandpass', q:1, dur:1.0, vol:0.4, rev:0.6}); [38,41,45].forEach((m,i)=>tone({type:'sawtooth', f:mtof(m), dur:1.1, vol:0.09, lp:700, delay:i*0.06, rev:0.6})); },
+    combo(n){ const m = 72 + Math.min(n,8)*2; tone({type:'triangle', f:mtof(m), dur:0.14, vol:0.07}); tone({type:'triangle', f:mtof(m+7), dur:0.18, vol:0.06, delay:0.06, rev:0.3}); },
+    levelup(){ [67,72,76,79,84,88].forEach((m,i)=>tone({type:'triangle', f:mtof(m), dur:0.4, vol:0.1, delay:i*0.08, rev:0.5})); },
+    claim(){ [84,88,91].forEach((m,i)=>tone({type:'sine', f:mtof(m), dur:0.3, vol:0.08, delay:i*0.05, rev:0.5})); noise({f:8000, filter:'highpass', dur:0.25, vol:0.05}); },
+    relic(){ [76,83,88,95].forEach((m,i)=>tone({type:'sine', f:mtof(m), dur:0.45, vol:0.07, delay:i*0.06, rev:0.7})); },
+    chest(){ noise({f:400, f2:1200, filter:'bandpass', dur:0.25, vol:0.2}); tone({type:'triangle', f:mtof(64), dur:0.12, vol:0.08, delay:0.18}); sfx.relic(); },
+    anvil(){ tone({type:'square', f:1400, dur:0.35, vol:0.07, lp:5000, rev:0.6}); tone({type:'sine', f:2100, dur:0.5, vol:0.05, rev:0.6}); noise({f:4000, filter:'bandpass', dur:0.08, vol:0.2}); },
+    tick(){ tone({type:'square', f:1800, dur:0.02, vol:0.03, lp:5000}); },
     heartbeat(){ tone({type:'sine', f:70, f2:45, dur:0.16, vol:0.35}); tone({type:'sine', f:62, f2:40, dur:0.2, vol:0.28, delay:0.2}); },
     trophy(){ [72,76,79,84,88].forEach((m,i)=>tone({type:'triangle', f:mtof(m), dur:0.35, vol:0.1, delay:i*0.07, rev:0.5})); },
     whoosh(){ noise({f:300, f2:3000, filter:'bandpass', q:1.2, dur:0.45, vol:0.18, rev:0.3}); },
@@ -109,21 +123,55 @@ const Sound = (() => {
   };
   function play(name, ...args){ try{ if(ctx && vol.sfx>0 && sfx[name]) sfx[name](...args); }catch(e){} }
 
+  /* ---------- ambience: wind, water drips, campfire crackle ---------- */
+  const Amb = {
+    on:false, wind:null, timer:null, kind:'dungeon',
+    start(){
+      if(!ctx || this.on) return; this.on = true;
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 380; f.Q.value = 0.6;
+      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 0.07; lg.gain.value = 160; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+      const g = ctx.createGain(); g.gain.value = 0.05; src.connect(f); f.connect(g); g.connect(ambBus); src.start();
+      this.wind = g;
+      this.timer = setInterval(()=>this.tick(), 400);
+    },
+    tick(){
+      if(!ctx || vol.amb<=0 || ctx.state!=='running') return;
+      if(this.kind==='fire'){ if(Math.random()<0.7) noise({f:2500+Math.random()*3000, filter:'bandpass', q:3, dur:0.03+Math.random()*0.05, vol:0.06+Math.random()*0.08, bus:ambBus}); return; }
+      if(Math.random()<0.12){ const f = 900+Math.random()*900; tone({type:'sine', f, f2:f*0.55, dur:0.12, vol:0.05, bus:ambBus, rev:0.9}); }
+      if(Math.random()<0.02) noise({f:200, f2:90, dur:1.6, vol:0.05, bus:ambBus, rev:0.5});
+    },
+    set(kind){ this.kind = kind; if(this.wind) this.wind.gain.setTargetAtTime(kind==='fire'?0.015:kind==='quiet'?0.02:0.05, ctx.currentTime, 0.8); },
+  };
+
   /* ---------- music ---------- */
   const PROGS = {
     calm:  [[50,53,57],[46,50,53],[48,52,55],[45,48,52]],      // Dm Bb C Am
     fight: [[50,53,57],[46,50,53],[48,52,55],[49,52,57]],      // Dm Bb C A
     boss:  [[50,53,57],[51,55,58],[50,53,57],[49,52,55]],      // Dm Eb Dm C#dim
+    shop:  [[48,52,55],[45,48,52],[41,45,48],[43,47,50]],      // C Am F G
+    rest:  [[45,48,52],[41,45,48],[48,52,55],[43,47,50]],      // Am F C G
+    deep:  [[47,50,54],[48,51,55],[47,50,53],[46,50,53]],      // Bm Cm Bdim Bb
   };
   const MODES = {
     menu:   {tempo:62, prog:'calm'},
     map:    {tempo:70, prog:'calm'},
+    shop:   {tempo:96, prog:'shop', light:true},
+    rest:   {tempo:56, prog:'rest', light:true},
     combat: {tempo:112, prog:'fight'},
     boss:   {tempo:124, prog:'boss'},
+    endless:{tempo:118, prog:'deep'},
   };
   const Music = {
     mode:'off', step:0, next:0, timer:null,
-    set(mode){ this.want = mode; if(!ctx) return; if(mode===this.mode) return; this.mode = mode; this.step = 0; this.next = ctx.currentTime + 0.1; if(!this.timer) this.timer = setInterval(()=>this.tick(), 50); },
+    set(mode){
+      this.want = mode; if(!ctx) return; if(mode===this.mode) return;
+      const g = musicBus.gain, now = ctx.currentTime, v = vol.music*0.55;
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(v*0.15, now+0.25); g.linearRampToValueAtTime(v, now+1.2);
+      this.mode = mode; this.step = 0; this.next = now + 0.3;
+      Amb.set(mode==='rest' ? 'fire' : (mode==='menu'||mode==='shop') ? 'quiet' : 'dungeon');
+      if(!this.timer) this.timer = setInterval(()=>this.tick(), 50);
+    },
     kick(){ if(this.want && this.mode!==this.want) this.set(this.want); },
     tick(){
       if(!ctx || this.mode==='off' || !MODES[this.mode]) return;
@@ -143,6 +191,12 @@ const Sound = (() => {
         });
         tone({type:'sine', f:mtof(ch[0]-12), dur:spb*16, vol:0.07, attack:spb*2, bus:B, delay:at});
       }
+      if(M.light){
+        const step = this.mode==='shop' ? [0,4,6,8,12,14] : [0,8];
+        if(step.includes(st)){ const m = ch[(st/2)%3|0] + 24; tone({type:this.mode==='shop'?'square':'triangle', f:mtof(m), dur:this.mode==='shop'?0.18:0.9, vol:this.mode==='shop'?0.03:0.05, lp:2500, bus:B, delay:at, echo:0.3, rev:0.4}); }
+        if(this.mode==='shop' && st%4===2) noise({f:6000, filter:'highpass', dur:0.03, vol:0.03, bus:B, delay:at});
+        return;
+      }
       if(this.mode==='menu' || this.mode==='map'){
         if((st===0||st===6||st===10) && Math.random()<0.75){
           const m = ch[Math.floor(Math.random()*3)] + 24;
@@ -152,7 +206,7 @@ const Sound = (() => {
         return;
       }
       // combat / boss
-      const boss = this.mode==='boss';
+      const boss = this.mode==='boss' || this.mode==='endless';
       if(st%4===0) tone({type:'sine', f:110, f2:38, dur:0.22, vol:boss?0.32:0.26, bus:B, delay:at});
       if(st===4||st===12) noise({f:1800, filter:'bandpass', q:0.7, dur:0.16, vol:0.12, bus:B, delay:at, rev:0.25});
       if(st%2===1) noise({f:7000, filter:'highpass', dur:0.04, vol:0.04, bus:B, delay:at});
@@ -167,7 +221,12 @@ const Sound = (() => {
   };
 
   document.addEventListener('visibilitychange', ()=>{ if(!ctx) return; try{ if(document.hidden) ctx.suspend(); else ctx.resume(); }catch(e){} });
-  function setVolume(kind, v){ vol[kind] = v; if(!ctx) return; if(kind==='sfx') sfxBus.gain.value = v; else musicBus.gain.value = v*0.55; }
+  function setVolume(kind, v){
+    vol[kind] = v; if(!ctx) return;
+    if(kind==='sfx') sfxBus.gain.value = v;
+    else if(kind==='amb') ambBus.gain.value = v*0.6;
+    else { musicBus.gain.cancelScheduledValues(ctx.currentTime); musicBus.gain.value = v*0.55; }
+  }
   function vibrate(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
   return {unlock, play, music:(m)=>Music.set(m), setVolume, vibrate, get ready(){ return !!ctx; }};
 })();
