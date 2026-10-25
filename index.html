@@ -55,6 +55,7 @@ p{margin:0}
 .panel,#runbar,.card,.choice,#enemyPanel{background:var(--panel);border:2px solid var(--line);border-radius:16px;box-shadow:0 5px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06)}
 #runbar{display:flex;flex-direction:column;gap:6px;padding:7px 10px;position:sticky;top:calc(6px + env(safe-area-inset-top));z-index:20;background:rgba(26,20,33,.97)}
 html.lock,html.lock body{overflow:hidden;height:100%;overscroll-behavior:none}
+html.lock body{position:fixed;inset:0;width:100%}
 html.lock #app{min-height:0;height:100%;overflow:hidden}
 .rb-top{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:18px}
 .rb-top .floor{color:var(--muted);font-size:14px;white-space:nowrap}
@@ -63,7 +64,7 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .hpbar > i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#ff7a7f,#e5484d 55%,#b8323a);border-radius:8px;transition:width .35s cubic-bezier(.3,1.4,.5,1)}
 .hpbar > i::after{content:'';position:absolute;left:4px;right:4px;top:2px;height:4px;border-radius:3px;background:rgba(255,255,255,.35)}
 .hpbar > span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-family:var(--display);text-shadow:0 1px 0 #000,0 0 3px #000}
-.rb-items{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rb-items{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:0}
 .slots{display:flex;gap:4px}
 .slot,.relic,.iconbtn{width:32px;height:32px;display:grid;place-items:center;background:var(--panel2);border:2px solid var(--line);border-radius:9px;cursor:pointer;padding:0}
 .slot.empty{border-style:dashed;opacity:.4;cursor:default}
@@ -71,7 +72,10 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .relic.used{opacity:.3}
 .iconbtn{background:transparent;border-color:transparent}
 .sep{width:2px;height:22px;background:var(--line);margin:0 2px;border-radius:2px}
-.relics{display:flex;flex-wrap:wrap;gap:4px}
+.relics{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;overflow-y:hidden;flex:1;min-width:0;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:14px}
+.relics::-webkit-scrollbar{display:none}
+.relic,.slot{flex:none}
+#relicCount{flex:none;font-family:var(--display);font-size:13px;color:var(--muted);background:var(--panel2);border:2px solid var(--line);border-radius:9px;padding:4px 7px;cursor:pointer}
 
 /* ---------- screens & buttons ---------- */
 .screen{display:flex;flex-direction:column;gap:12px;animation:fade .3s ease}
@@ -111,7 +115,7 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:13px;margin-top:8px}
 .legend span{display:flex;align-items:center;gap:6px}
 .blk{width:22px;height:22px;flex:none}
-.titlebar{display:flex;justify-content:flex-end}
+.titlebar{display:flex;justify-content:space-between}
 
 /* hero select */
 .hero{align-items:flex-start}
@@ -127,7 +131,9 @@ html.lock #app{min-height:0;height:100%;overflow:hidden}
 .steps i.boss{width:32px;background:#5a2020}
 
 /* ---------- combat ---------- */
-#combat{display:flex;flex-direction:column;gap:8px}
+#app > *{flex-shrink:0}
+#combat{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0}
+#combat > *{flex-shrink:0}
 #enemyPanel{display:flex;gap:10px;align-items:center;padding:8px 12px 8px 8px;overflow:hidden;position:relative}
 #enemyPanel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 90% at 14% 60%, rgba(255,140,60,.12), transparent 70%);pointer-events:none}
 #eArt{width:96px;height:96px;display:grid;place-items:center;position:relative;flex:none}
@@ -263,6 +269,37 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
 .pips i.on{background:#7ff0ff;border-color:#c8fbff;box-shadow:0 0 6px #7ff0ff}
 .choice.locked .ic .stk{filter:brightness(0) opacity(.55)}
 .choice.locked{border-style:dashed}
+@media (max-height:720px){
+  #eArt{width:78px;height:78px}
+  #enemyPanel{padding:6px 10px 6px 6px}
+  .ename{font-size:18px}
+  #intent .val{font-size:17px}
+  #ultBtn{width:48px;height:48px}
+  .rb-top{font-size:16px}
+}
+
+/* update 7 */
+.questcard{display:flex;flex-direction:column;gap:8px}
+.quest{display:flex;align-items:center;gap:10px}
+.quest .qt{flex:1;min-width:0}
+.quest b{font-family:var(--display);font-weight:400;font-size:16px;display:block}
+.quest small{color:var(--muted);font-size:11px}
+.qbar{display:block;height:8px;background:#2a2235;border:1px solid var(--line);border-radius:5px;overflow:hidden;margin-top:3px}
+.qbar i{display:block;height:100%;background:linear-gradient(90deg,#7ff0ff,#3ec8e0);border-radius:4px}
+.qclaim{display:flex;align-items:center;gap:2px;padding:4px 10px 4px 6px;border-radius:10px;border:2px solid #fff;background:linear-gradient(#7ff0ff,#3ec8e0);color:#0a2a33;font-family:var(--display);font-size:16px;cursor:pointer;box-shadow:0 3px 0 #000}
+.qclaim:disabled{background:var(--panel2);border-color:var(--line);color:var(--muted);box-shadow:none;opacity:.7}
+.qdone{font-family:var(--display);color:#86e6a8;font-size:15px}
+.navgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.navb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:16px;border:2px solid var(--line);background:var(--panel);box-shadow:0 5px 0 rgba(0,0,0,.45);cursor:pointer}
+.navb:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.45)}
+.navb b{font-family:var(--display);font-weight:400;font-size:18px}
+.navb small{display:flex;align-items:center;gap:3px;color:var(--muted);font-size:12px}
+.mastery{display:block;margin-top:6px}
+.mastery .mlv{font-family:var(--display);font-size:13px;color:#7ff0ff}
+.mastery small{color:var(--muted);font-size:11px}
+#petChip{padding:1px 9px 1px 2px}
+#petChip:disabled{opacity:.5}
+.tag.phase{background:#b8323a;color:#fff}
 </style>
 </head>
 <body>
@@ -281,6 +318,7 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
       <div class="slots" id="potionBar"></div>
       <div class="sep"></div>
       <div class="relics" id="relicBar"></div>
+      <button id="relicCount" aria-label="All relics"></button>
     </div>
   </header>
 
@@ -301,6 +339,7 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
     <div id="playerPanel">
       <span class="stat" id="shieldStat"><span id="shieldIcon"></span><span id="shieldText">0</span></span>
       <span class="stat" id="comboStat"><span id="flameIcon"></span><span id="streakText">-</span></span>
+      <button class="stat" id="petChip" hidden aria-label="Pet"></button>
       <button id="rerollBtn"><span id="diceIcon"></span><span id="rerollText">1</span></button>
       <button id="ultBtn"><span id="ultIcon"></span><small id="ultText"></small></button>
     </div>

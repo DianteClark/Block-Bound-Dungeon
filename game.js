@@ -102,7 +102,16 @@ const CLASSES = {
     desc:'Never short on supplies. An extra potion slot and a fresh brew after every fight.',
     ult:{name:'Transmute', need:6, spr:'philflask', desc:'Turn every block of the most common type on the grid into Rainbow blocks.'},
     unlock:{text:'Drink 10 potions in total', cost:150, ok:s=>s.potions>=10}},
+  paladin:{name:'Paladin', spr:'paladin', hp:70, gold:25, relic:'holysymbol', potions:['health'],
+    desc:'A holy tank. Hearts also strike the enemy, and overhealing becomes shield.',
+    ult:{name:'Smite', need:8, spr:'holy', desc:'Deal damage equal to your shield plus 15. You keep the shield.'},
+    unlock:{text:'Win a run with any hero', cost:200, ok:s=>s.wins>=1}},
+  ranger:{name:'Ranger', spr:'ranger', hp:60, gold:30, relic:'huntersmark', potions:['fire'],
+    desc:'A precise hunter. Pure lines hit much harder and every cleared line adds damage.',
+    ult:{name:'Volley', need:7, spr:'mark', desc:'Fire 6 arrows that pierce armor, 5 damage each (more on deeper floors).'},
+    unlock:{text:'Clear 15 pure lines in total', cost:180, ok:s=>s.pures>=15}},
 };
+function ULT(){ const u = CLASSES[run.cls].ult; return {...u, need: Math.max(3, u.need - (has('spellbook')?2:0) - (run.ultBonus||0))}; }
 const isUnlocked = id => !CLASSES[id].unlock || !!(store.get('heroes', {})[id]);
 function checkHeroUnlocks(){
   const st = stats(), h = store.get('heroes', {}); let any = null;
@@ -158,6 +167,19 @@ const RELICS = {
   warmcloak:{name:'Warm Cloak', spr:'warmcloak', desc:'Ice shatters completely when cleared instead of leaving rubble.', r:1},
   stoneward:{name:'Stone Ward', spr:'stoneward', desc:'Immune to Petrify: enemies can\'t turn your blocks to stone.', r:2},
   souljar:{name:'Soul Jar', spr:'souljar', desc:'Earn 50% more Soul Shards this run.', r:1},
+  holysymbol:{name:'Holy Symbol', spr:'holy', desc:'Heart blocks also deal 2 damage. Healing past full HP becomes shield.', r:0, starter:true},
+  huntersmark:{name:'Hunter\'s Mark', spr:'mark', desc:'Pure lines give +1 multiplier instead of +0.5. Clears deal +3 damage per line.', r:0, starter:true},
+  glove:{name:'Thief\'s Glove', spr:'glove', desc:'Gain 10 extra gold after every fight. Enemies can\'t steal from you.', r:1},
+  boots:{name:'Iron Boots', spr:'boots', desc:'Cave-ins deal half damage and clear 3 rows instead of 2.', r:1},
+  spellbook:{name:'Spellbook', spr:'spellbook', desc:'Your hero special needs 2 fewer lines to charge.', r:2},
+  bloodgem:{name:'Bloodstone', spr:'bloodgem', desc:'Heal 5 HP after every fight.', r:1},
+  tidecharm:{name:'Tide Charm', spr:'tidecharm', desc:'Gain 3 shield whenever you place a piece without clearing a line.', r:1},
+  ironfist:{name:'Iron Gauntlet', spr:'ironfist', desc:'Your first damaging clear each fight deals +15 damage.', r:1},
+  seerorb:{name:'Seer\'s Orb', spr:'seerorb', desc:'Combo streak bonuses are 50% stronger.', r:2},
+  vampcape:{name:'Vampire Cape', spr:'vampcape', desc:'Whenever an enemy attacks you, it loses 2 HP.', r:2},
+  warhorn:{name:'War Horn', spr:'warhorn', desc:'Elites and bosses start with 15% less HP.', r:2},
+  bluelantern:{name:'Spirit Lantern', spr:'bluelantern', desc:'Earn 2 extra Soul Shards for every room you enter.', r:1},
+  emberheart:{name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
 };
 
 const POTIONS = {
@@ -173,6 +195,9 @@ const POTIONS = {
     sfx('blast'); shake(); damageEnemy(3*set.length, true);
   }},
   venom:{name:'Venom Vial', spr:'potion_venom', desc:'Poison the enemy for 8.', use(){ cb.enemy.poison += 8; floatText($('#eArt'), '+8 poison', '#dcb6ff'); sfx('poison'); }},
+  mana:{name:'Mana Potion', spr:'potion_mana', desc:'Fully charge your hero special.', use(){ run.charge = ULT().need; floatText($('#ultBtn'), 'Charged!', '#c8fbff'); sfx('ult'); }},
+  chaos:{name:'Chaos Brew', spr:'potion_chaos', desc:'Turn every piece in your hand into Rainbow blocks.', use(){ cb.hand.forEach(p=>{ if(!p.used) p.type='rainbow'; }); floatText($('#board'), 'Chaos!', '#f0d6ff', true); sfx('ult'); }},
+  luck:{name:'Liquid Luck', spr:'potion_luck', desc:'Your next clear has its multiplier doubled.', use(){ cb.doubleNext = true; floatText($('#board'), 'Lucky!', '#86e6a8', true); sfx('trophy'); }},
 };
 
 const UPGRADES = {
@@ -196,6 +221,7 @@ const ENEMIES = [
       {name:'Vampire Bat', spr:'bat', hp:22, moves:[M('atk',3,2),M('drain',4,3)]},
       {name:'Gloop', spr:'slime', hp:40, moves:[M('curse',3,3),M('atk',6,3)]},
       {name:'Cave Spider', spr:'spider', hp:30, moves:[M('ice',2,2),M('atk',4,2),M('atk',4,2)]},
+      {name:'Kobold Thief', spr:'kobold', hp:26, moves:[M('atk',4,2),M('steal',8,3)]},
     ],
     elite:[
       {name:'Ogre', spr:'ogre', hp:85, moves:[M('armor',10,3),M('atk',15,5)]},
@@ -208,6 +234,8 @@ const ENEMIES = [
       {name:'Goblin', spr:'goblin', hp:48, moves:[M('atk',8,3),M('multi',4,4,3)]},
       {name:'Wisp', spr:'ghost', hp:40, passive:{id:'ethereal'}, moves:[M('atk',7,2),M('curse',3,2)]},
       {name:'Shambler', spr:'zombie', hp:62, moves:[M('atk',9,3),M('rage',2,2),M('atk',9,3)]},
+      {name:'Banshee', spr:'banshee', hp:46, passive:{id:'ethereal'}, moves:[M('sap',2,2),M('atk',9,2),M('shuffle',0,3)]},
+      {name:'Bone Archer', spr:'bonearcher', hp:50, moves:[M('multi',3,3,3),M('armor',6,2)]},
     ],
     elite:[
       {name:'Warlock', spr:'warlock', hp:115, moves:[M('curse',5,3),M('atk',12,2),M('heal',15,3)]},
@@ -220,6 +248,7 @@ const ENEMIES = [
       {name:'Cultist', spr:'cultist', hp:68, moves:[M('rage',3,2),M('atk',12,3),M('drain',8,3)]},
       {name:'Wyrmling', spr:'wyrm', hp:78, moves:[M('atk',15,3),M('ice',4,3)]},
       {name:'Gargoyle', spr:'gargoyle', hp:72, passive:{id:'armor',v:15}, moves:[M('armor',10,3),M('atk',13,3)]},
+      {name:'Lava Golem', spr:'lavagolem', hp:85, passive:{id:'thorns',v:2}, moves:[M('atk',14,3),M('curse',3,2)]},
     ],
     elite:[
       {name:'Stone Golem', spr:'golem', hp:165, passive:{id:'armor',v:20}, moves:[M('armor',15,3),M('atk',17,3),M('curse',5,3)]},
@@ -232,6 +261,7 @@ const ENEMIES = [
       {name:'Ice Spider', spr:'icespider', hp:76, moves:[M('ice',3,2),M('atk',10,2),M('atk',10,2)]},
       {name:'Snow Yeti', spr:'yeti', hp:96, moves:[M('atk',16,3),M('rage',3,2),M('atk',16,3)]},
       {name:'Frozen Skeleton', spr:'frostskel', hp:82, moves:[M('armor',12,2),M('petrify',3,3),M('atk',15,3)]},
+      {name:'Frost Troll', spr:'frosttroll', hp:105, passive:{id:'regen',v:4}, moves:[M('atk',17,3),M('ice',3,2)]},
     ],
     elite:[
       {name:'Frost Golem', spr:'frostgolem', hp:190, passive:{id:'armor',v:25}, moves:[M('armor',18,3),M('ice',5,3),M('atk',20,3)]},
@@ -244,6 +274,7 @@ const ENEMIES = [
       {name:'Abyssal Ooze', spr:'voidslime', hp:112, moves:[M('curse',5,3),M('petrify',3,3),M('atk',14,3)]},
       {name:'Void Eye', spr:'voideye', hp:96, passive:{id:'thorns',v:3}, moves:[M('sap',3,2),M('atk',16,3),M('drain',12,3)]},
       {name:'Shade', spr:'shade', hp:82, passive:{id:'ethereal'}, moves:[M('atk',13,2),M('shuffle',0,2),M('drain',10,3)]},
+      {name:'Void Spider', spr:'voidspider', hp:92, moves:[M('petrify',3,2),M('atk',15,2),M('steal',15,3)]},
     ],
     elite:[
       {name:'Abyssal Knight', spr:'abyssknight', hp:220, passive:{id:'thorns',v:4}, moves:[M('atk',26,4),M('armor',18,2),M('multi',9,3,3)]},
@@ -253,6 +284,10 @@ const ENEMIES = [
   },
 ];
 const FS = arr => arr[Math.min(run.floor, arr.length)-1];
+const floorIdx = () => run.floor<=5 ? run.floor-1 : 2 + ((run.floor-6) % 3);
+const floorPool = () => ENEMIES[floorIdx()];
+const endlessMul = () => run.floor>5 ? 1 + 0.3*(run.floor-5) : 1;
+const floorName = () => run.floor<=5 ? FLOOR_NAMES[run.floor-1] : `Endless Depth ${run.floor-5}`;
 const GOBLIN = {name:'Treasure Goblin', spr:'goldgoblin', hp:34, rare:true, moves:[M('flee',0,7)]};
 const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), {...f.boss,floor:i+1,boss:true}]), {...GOBLIN, floor:0}];
 const PASSIVES = {
@@ -271,8 +306,71 @@ const ROOMS = {
   treasure:{spr:'r_treasure', name:'Treasure', desc:'A free relic, no strings.'},
   event:{spr:'r_event', name:'Mystery', desc:'Something strange lies ahead.'},
   boss:{spr:'r_boss', name:'Boss', desc:'The floor guardian.'},
+  den:{spr:'r_den', name:'Beast Den', desc:'Adopt a pet companion.'},
+  forge:{spr:'anvil', name:'Forge', desc:'Temper your blocks or reforge a relic.'},
 };
 const FLOORS = 5, STEPS = 8;
+
+/* ================= pets ================= */
+const PETS = {
+  bat:{name:'Bat Familiar', spr:'bat', every:4, desc:'Every 4 moves, bites the enemy for 6 (more on deeper floors).', act(){ damageEnemy(6 + 2*(Math.min(run.floor,8)-1), true); }},
+  slime:{name:'Pet Slime', spr:'slime', every:5, desc:'Every 5 moves, heals you for 7.', act(){ const b = run.hp; heal(7); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }},
+  turtle:{name:'Shell Buddy', spr:'turtle', every:4, desc:'Every 4 moves, gives you 8 shield.', act(){ cb.shield += 8; floatText($('#shieldStat'), '+8', '#a8ceff'); }},
+  wisp:{name:'Friendly Wisp', spr:'ghost', every:5, desc:'Every 5 moves, adds 2 charge to your special.', act(){ run.charge = Math.min(ULT().need, run.charge+2); floatText($('#ultBtn'), '+2', '#c8fbff'); }},
+  rat:{name:'Lucky Rat', spr:'rat', every:5, desc:'Every 5 moves, sniffs out 6 gold.', act(){ run.gold += 6; floatText($('#goldWrap'), '+6', '#ffe58a'); questAdd('gold', 6); }},
+  spider:{name:'Weaver', spr:'spider', every:4, desc:'Every 4 moves, poisons the enemy for 4.', act(){ cb.enemy.poison += 4; floatText($('#eArt'), '+4 poison', '#dcb6ff'); }},
+  imp:{name:'Ember Imp', spr:'imp', every:6, desc:'Every 6 moves, burns away all rubble and ice for 2 damage each.', act(){
+    const now = performance.now(); let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,5); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; n++; } });
+    if(n) damageEnemy(2*n, true); else floatText($('#board'), 'Nothing to burn', '#ffb07a'); }},
+};
+function petTick(){
+  if(!run.pet || !PETS[run.pet] || cb.over) return;
+  const P = PETS[run.pet]; cb.petT = (cb.petT||0) + 1;
+  if(cb.petT >= P.every){ cb.petT = 0; sfx('pick'); bump($('#petChip'),'hitflash'); P.act(); }
+}
+
+/* ================= daily quests ================= */
+const QUESTS = {
+  lines:{text:'Clear 25 lines', goal:25, spr:'r_combat'},
+  kills:{text:'Defeat 8 enemies', goal:8, spr:'sword'},
+  elites:{text:'Defeat 2 elites', goal:2, spr:'r_elite'},
+  pures:{text:'Clear 3 pure lines', goal:3, spr:'gem'},
+  ults:{text:'Use your special 3 times', goal:3, spr:'flame'},
+  gold:{text:'Collect 150 gold', goal:150, spr:'coin'},
+  potions:{text:'Drink 3 potions', goal:3, spr:'potion_health'},
+  floor:{text:'Reach floor 3', goal:3, spr:'r_rest', max:true},
+  bosses:{text:'Defeat a boss', goal:1, spr:'r_boss'},
+  triples:{text:'Clear 3+ lines with one piece', goal:2, spr:'bomb'},
+  rooms:{text:'Enter 12 rooms', goal:12, spr:'r_event'},
+  pets:{text:'Have your pet act 6 times', goal:6, spr:'r_den'},
+};
+function todayKey(){ const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+function quests(){
+  let q = store.get('quests', null);
+  if(!q || q.date !== todayKey()){
+    let h = 0; for(const ch of todayKey()) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+    const ids = Object.keys(QUESTS), pickd = [];
+    while(pickd.length<3){ h = (h*1103515245 + 12345) >>> 0; const id = ids[h % ids.length]; if(!pickd.includes(id)) pickd.push(id); }
+    q = {date: todayKey(), ids: pickd, prog:{}, claimed:{}, bonus:false};
+    store.set('quests', q);
+  }
+  return q;
+}
+function questAdd(key, n){
+  if(!n) return;
+  const q = quests(); if(!q.ids.includes(key)) return;
+  const Q = QUESTS[key], before = q.prog[key]||0;
+  q.prog[key] = Q.max ? Math.max(before, n) : before + n;
+  store.set('quests', q);
+  if(before < Q.goal && q.prog[key] >= Q.goal) setTimeout(()=>{ sfx('trophy'); toast(`<b>Quest complete!</b><br>${Q.text}. Claim your reward on the title screen.`, 'scroll', 3000); }, 400);
+}
+const QUEST_REWARD = 25, QUEST_BONUS = 30;
+
+/* ================= hero mastery ================= */
+const MASTERY = [0, 60, 160, 320, 560];
+const MASTERY_PERKS = ['', '+5 max HP', 'Start with an extra random potion', 'Start with a random common relic', 'Your special starts fully charged in the first fight'];
+function masteryXp(cls){ return +(store.get('mastery', {})[cls] || 0); }
+function masteryLevel(cls){ const x = masteryXp(cls); let l = 1; MASTERY.forEach((t,i)=>{ if(x>=t) l = i+1; }); return l; }
 
 /* ================= trophies ================= */
 const ACH = {
@@ -293,6 +391,12 @@ const ACH = {
   bighit:{name:'Overkill', desc:'Deal 100 damage in a single hit.', spr:'bomb'},
   rich:{name:'Hoarder', desc:'Hold 200 gold at once.', spr:'coin'},
   relics10:{name:'Collector', desc:'Hold 10 relics in one run.', spr:'r_treasure'},
+  relics15:{name:'Hoard of Wonders', desc:'Hold 15 relics in one run.', spr:'holy'},
+  endless:{name:'Bottomless', desc:'Reach Endless Depth 3.', spr:'voideye'},
+  petpal:{name:'Best Friends', desc:'Adopt a pet companion.', spr:'r_den'},
+  questor:{name:'Daily Grind', desc:'Complete all three daily quests in one day.', spr:'scroll'},
+  master:{name:'Master Adventurer', desc:'Reach Mastery 5 with any hero.', spr:'paladin'},
+  thief:{name:'Sticky Fingers', desc:'Defeat a Kobold Thief or Void Spider.', spr:'glove'},
   flawless:{name:'Untouchable', desc:'Beat a boss without losing HP in that fight.', spr:'mirror'},
   goblin:{name:'Finders Keepers', desc:'Catch a Treasure Goblin.', spr:'goldgoblin'},
 };
@@ -323,8 +427,24 @@ let run = null, cb = null, drag = null, press = null, selPotion = -1, screenName
 const has = id => !!run && run.relics.includes(id);
 const hpEl = () => $('#hpFill').parentElement;
 function heal(n){ run.hp = Math.min(run.maxHp, run.hp + n); }
-function saveRun(){ if(run) store.set('save', run); }
-function stats(){ return Object.assign({runs:0, wins:0, kills:0, bestFloor:0, bestLines:0, bestHit:0, winsBy:{}, potions:0, shards:0}, store.get('stats', {})); }
+/* The save always describes exactly where you are:
+   run.room = the room you're inside (null on the map), with its contents locked in,
+   run.room.fight = a full snapshot of an in-progress fight, run.room.reward = a pending reward screen. */
+function snapFight(){
+  if(!cb || cb.over) return null;
+  return {kind:cb.kind, board:cb.board.slice(), hand:cb.hand.map(p=>({cells:p.cells, h:p.h, w:p.w, type:p.type, used:!!p.used})),
+    shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
+    tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, enraged:cb.enraged, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
+    enemy:JSON.parse(JSON.stringify(cb.enemy))};
+}
+function saveRun(){
+  if(!run) return;
+  if(run.room && cb && !cb.over && screenName==='combat') run.room.fight = snapFight();
+  store.set('save', run);
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) saveRun(); });
+addEventListener('pagehide', ()=>saveRun());
+function stats(){ return Object.assign({runs:0, wins:0, kills:0, bestFloor:0, bestLines:0, bestHit:0, winsBy:{}, potions:0, shards:0, pures:0}, store.get('stats', {})); }
 function bumpStats(fn){ const s = stats(); fn(s); store.set('stats', s); }
 function seen(){ return Object.assign({e:{}, r:{}}, store.get('seen', {})); }
 function markSeen(kind, key){ const s = seen(); if(kind==='e'){ s.e[key] = s.e[key] || {seen:1, kills:0}; } else s.r[key] = 1; store.set('seen', s); }
@@ -334,9 +454,13 @@ function newRun(cls){
   const C = CLASSES[cls], heat = clamp(+(store.get('heatSel',0)), 0, store.get('heat',0));
   const hp = C.hp - (heat>=3 ? 10 : 0) + 5*skill('vit');
   run = {cls, heat, hp, maxHp:hp, gold:C.gold + 15*skill('purse'), relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
-    lvl:{sword:skill('whet'),shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, bosses:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
+    jid:Date.now(), lvl:{sword:skill('whet'),shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, bosses:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
   if(RELICS[C.relic].onGet) RELICS[C.relic].onGet();
   for(let i=0;i<skill('belt');i++) givePotion();
+  const ml = masteryLevel(cls);
+  if(ml>=2){ run.maxHp += 5; run.hp += 5; }
+  if(ml>=3) givePotion();
+  if(ml>=4){ const [id] = relicOffers(1); if(id){ run.relics.push(id); markSeen('r', id); } }
   run.map = genMap();
   bumpStats(s=>s.runs++);
   markSeen('r', C.relic);
@@ -344,16 +468,28 @@ function newRun(cls){
   banner('Floor 1', FLOOR_NAMES[0]);
   goMap();
 }
+function validSave(s){
+  return !!(s && typeof s==='object' && CLASSES[s.cls] && Array.isArray(s.relics) && Number.isFinite(s.hp) && Number.isFinite(s.floor) && s.floor>=1);
+}
 function migrate(r){
-  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
+  if(!validSave(r)) throw new Error('bad save');
+  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
   delete r.choices;
+  r.relics = r.relics.filter(id=>RELICS[id]);
+  r.potions = (r.potions||[]).filter(id=>POTIONS[id]);
+  if(!Array.isArray(r.map) || r.map.length!==STEPS){ r.map = genMap(); r.path = []; r.room = null; }
+  if(r.room && !r.room.t) r.room = null;
+  const f = r.room && r.room.fight;
+  if(f && !(Array.isArray(f.board) && f.board.length===N*N && Array.isArray(f.hand) && f.hand.length && f.enemy && Array.isArray(f.enemy.moves) && f.enemy.moves.length)) delete r.room.fight;
+  if(r.room && r.room.tpl && !(Array.isArray(r.room.tpl.moves) && r.room.tpl.moves.length)) { delete r.room.tpl; delete r.room.maxHp; }
   return r;
 }
 function gainRelic(id){
   run.relics.push(id); const R = RELICS[id]; if(R.onGet) R.onGet();
   markSeen('r', id);
   if(run.relics.length>=10) unlock('relics10');
+  if(run.relics.length>=15) unlock('relics15');
   renderRunbar(); toast(`<b>${R.name}</b><br>${R.desc}`, R.spr); sfx('buy');
 }
 function relicOffers(n, minR=1){
@@ -384,13 +520,13 @@ function show(which){
   $('#combat').hidden = which!=='combat';
   $('#view').hidden = which==='combat';
   if(which==='combat'){ $('#view').innerHTML = ''; bump($('#combat'),'enter'); }
-  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills'].includes(which);
+  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills','journal'].includes(which);
   selPotion = -1;
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   document.documentElement.classList.toggle('lock', which==='combat');
   if(run) renderRunbar();
   updateDanger();
-  Sound.music(['title','heroes','codex','trophies','skills'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':'combat') : 'map');
+  Sound.music(['title','heroes','codex','trophies','skills','journal'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':'combat') : 'map');
   window.scrollTo(0,0);
 }
 function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
@@ -412,6 +548,7 @@ function renderRunbar(){
     if(id){ b.innerHTML = img(POTIONS[id].spr, 26); b.onclick = ()=>potionTap(i); }
     pb.appendChild(b);
   }
+  const rc = $('#relicCount'); rc.textContent = `${run.relics.length}`; rc.onclick = openRelics;
   const bar = $('#relicBar'); bar.innerHTML = '';
   run.relics.forEach(id=>{
     const R = RELICS[id]; const b = document.createElement('button');
@@ -422,17 +559,28 @@ function renderRunbar(){
   });
   updateDanger();
 }
+function openRelics(){
+  if(!run) return; sfx('click');
+  const m = $('#modal'); m.hidden = false;
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Relics" style="max-height:80vh;overflow:auto">
+    <div class="row"><h2 class="title" style="font-size:24px">Relics (${run.relics.length})</h2>${img('r_treasure',34)}</div>
+    ${run.relics.map(id=>{ const R = RELICS[id]; return `<div class="troph">${img(R.spr,40)}<div><b>${R.name}</b><small>${R.desc}</small></div></div>`; }).join('')}
+    <div class="troph">${img(ULT().spr,40)}<div><b>Special: ${ULT().name}</b><small>${ULT().desc} Needs ${ULT().need} lines.</small></div></div>
+    ${run.pet&&PETS[run.pet]?`<div class="troph">${img(PETS[run.pet].spr,40)}<div><b>Pet: ${PETS[run.pet].name}</b><small>${PETS[run.pet].desc}</small></div></div>`:''}
+    <button class="btn" id="closeBtn">Close</button></div>`;
+  $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
+}
 function potionTap(i){
   const id = run.potions[i], P = POTIONS[id]; if(!P) return;
   const inFight = cb && !cb.over && !$('#combat').hidden;
   if(!inFight && !P.any){ toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Use it during a fight.</span>`, P.spr); return; }
   if(selPotion !== i){ selPotion = i; renderRunbar(); toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Tap again to drink.</span>`, P.spr); return; }
   selPotion = -1; run.potions.splice(i,1);
-  bumpStats(s=>s.potions++);
+  bumpStats(s=>s.potions++); questAdd('potions', 1);
   sfx('potion'); P.use();
   renderRunbar();
   if(inFight){ if(!checkEnd()){ checkStuck(); renderHUD(); } }
-  else saveRun();
+  saveRun();
 }
 function view(html){ const v=$('#view'); v.innerHTML = `<div class="screen">${html}</div>`; return v; }
 function choiceBtn({id,spr,name,desc,price,disabled,r,size}){
@@ -492,11 +640,11 @@ function openSettings(){
     const k = t.dataset.k; settings[k] = !settings[k]; t.classList.toggle('on', settings[k]); store.set('settings', settings); sfx('click');
     if(k==='shake' && settings.shake) shake(); if(k==='vibrate' && settings.vibrate) buzz(40); if(k==='flash' && settings.flash) flash('rgba(255,255,255,.3)');
   });
-  $('#tutBtn').onclick = ()=>{ store.set('tut', null); toast('Tips will show again in your next fight.', 'book'); };
+  $('#tutBtn').onclick = ()=>{ store.set('tut', null); store.set('rotated', null); toast('Tips will show again in your next fight.', 'book'); };
   let armed = false, armT;
   $('#resetBtn').onclick = ()=>{
     if(!armed){ armed = true; $('#resetBtn').textContent = 'Tap again to erase everything'; sfx('warn'); clearTimeout(armT); armT = setTimeout(()=>{ armed=false; const b=$('#resetBtn'); if(b) b.textContent='Reset all data'; }, 3000); return; }
-    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes'].forEach(k=>store.set(k,null));
+    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated'].forEach(k=>store.set(k,null));
     sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex, trophies, skills and heroes were erased.', 'bones');
   };
   const ab = $('#abandonBtn');
@@ -508,53 +656,110 @@ function closeSettings(){ $('#modal').hidden = true; $('#modal').innerHTML=''; s
 $('#gearBtn').onclick = openSettings;
 
 /* ================= title, hero select, codex, trophies ================= */
+function howToHTML(){
+  return `<ul class="how">
+      <li>Drag pieces onto the grid. <b>Tap a piece to rotate it.</b> Fill a full row or column to clear it.</li>
+      <li>Every cleared block fires its effect:</li>
+    </ul>
+    <div class="legend">
+      <span>${blockChip('sword')} Sword: damage</span>
+      <span>${blockChip('shield')} Shield: block</span>
+      <span>${blockChip('heal')} Heart: heal</span>
+      <span>${blockChip('coin')} Coin: gold</span>
+      <span>${blockChip('stone')} Rubble: junk</span>
+      <span>${blockChip('ice')} Ice: cracks to rubble</span>
+    </div>
+    <ul class="how" style="margin-top:8px">
+      <li>Clear several lines at once or back-to-back for a <b>combo multiplier</b>. Lines of a single block type are <b>Pure</b>. Empty the grid for a <b>Perfect</b> clear.</li>
+      <li>Clearing lines charges your hero's <b>special move</b>. Pets act on their own every few moves.</li>
+      <li>Each piece you place is a turn. Watch the enemy's countdown.</li>
+      <li>Your run saves automatically, even mid-fight.</li>
+    </ul>`;
+}
+function openHowTo(){
+  sfx('click'); const m = $('#modal'); m.hidden = false;
+  m.innerHTML = `<div class="card" role="dialog" aria-label="How to play" style="max-height:82vh;overflow:auto"><div class="row"><h2 class="title" style="font-size:24px">How to Play</h2>${img('book',34)}</div>${howToHTML()}<button class="btn" id="closeBtn">Got it</button></div>`;
+  $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
+}
+function questCard(){
+  const q = quests(), done = id => (q.prog[id]||0) >= QUESTS[id].goal;
+  const allClaimed = q.ids.every(id=>q.claimed[id]);
+  return `<div class="card questcard"><div class="row"><h3 class="title" style="font-size:20px">Daily Quests</h3><span class="muted" style="font-size:12px">New quests every day</span></div>
+    ${q.ids.map(id=>{ const Q = QUESTS[id], p = Math.min(Q.goal, q.prog[id]||0);
+      return `<div class="quest">${img(Q.spr,34)}<div class="qt"><b>${Q.text}</b><div class="qbar"><i style="width:${100*p/Q.goal}%"></i></div><small>${p} / ${Q.goal}</small></div>
+        ${q.claimed[id] ? '<span class="qdone">Done</span>' : `<button class="qclaim" data-q="${id}" ${done(id)?'':'disabled'}>${img('shard',18)}${QUEST_REWARD}</button>`}</div>`; }).join('')}
+    ${allClaimed && !q.bonus ? `<button class="btn" id="qbonus" style="font-size:17px;margin-top:6px">Claim bonus: ${QUEST_BONUS} Soul Shards</button>` : ''}
+  </div>`;
+}
 function titleScreen(){
   run = null; cb = null; show('title');
-  const save = store.get('save', null), st = stats(), ach = store.get('ach', {});
+  let save = store.get('save', null);
+  if(save && !validSave(save)){ store.set('save', null); save = null; }
+  const st = stats(), ach = store.get('ach', {});
+  const heroes = Object.keys(CLASSES).filter(isUnlocked);
   view(`
-    <div class="titlebar"><button class="iconbtn" id="gear2" aria-label="Settings">${img('gear',28)}</button></div>
+    <div class="titlebar"><button class="iconbtn" id="howBtn" aria-label="How to play">${img('book',28)}</button><button class="iconbtn" id="gear2" aria-label="Settings">${img('gear',28)}</button></div>
     <h1 class="logo"><span>BLOCK BOUND</span><span>DUNGEON</span></h1>
-    <div class="heroes">${img('knight',76)}${img('rogue',76)}${img('mage',76)}</div>
-    ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, Floor ${save.floor}</button>`:''}
+    <div class="heroes">${heroes.slice(0,5).map(k=>img(CLASSES[k].spr, heroes.length>3?60:76)).join('')}</div>
+    ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, ${save.floor>FLOORS?`Depth ${save.floor-FLOORS}`:`Floor ${save.floor}`}</button>`:''}
     <button class="btn ${save?'ghost':''}" id="startBtn">${save?'New Run':'Enter the Dungeon'}</button>
-    <button class="btn ghost" id="skillBtn"><span class="inline" style="justify-content:center">${img('rune',28)} Skill Tree <span class="muted" style="font-size:15px;margin-left:8px;display:inline-flex;align-items:center;gap:2px">${img('shard',22)}${soulShards()}</span></span></button>
-    <div class="row2">
-      <button class="btn ghost" id="codexBtn"><span class="inline" style="justify-content:center">${img('book',26)} Codex</span></button>
-      <button class="btn ghost" id="trophyBtn"><span class="inline" style="justify-content:center">${img('trophy',26)} ${Object.keys(ach).length}/${Object.keys(ACH).length}</span></button>
+    ${questCard()}
+    <div class="navgrid">
+      <button class="navb" id="skillBtn">${img('rune',36)}<b>Skill Tree</b><small>${img('shard',14)} ${soulShards()}</small></button>
+      <button class="navb" id="codexBtn">${img('book',36)}<b>Codex</b><small>Monsters &amp; relics</small></button>
+      <button class="navb" id="trophyBtn">${img('trophy',36)}<b>Trophies</b><small>${Object.keys(ach).length} / ${Object.keys(ACH).length}</small></button>
+      <button class="navb" id="journalBtn">${img('scroll',36)}<b>Journal</b><small>${st.runs} runs</small></button>
     </div>
-    <div class="card">
-      <ul class="how">
-        <li>Drag pieces onto the grid. <b>Tap a piece to rotate it.</b> Fill a full row or column to clear it.</li>
-        <li>Every cleared block fires its effect:</li>
-      </ul>
-      <div class="legend">
-        <span>${blockChip('sword')} Sword: damage</span>
-        <span>${blockChip('shield')} Shield: block</span>
-        <span>${blockChip('heal')} Heart: heal</span>
-        <span>${blockChip('coin')} Coin: gold</span>
-        <span>${blockChip('stone')} Rubble: junk</span>
-        <span>${blockChip('ice')} Ice: cracks to rubble</span>
-      </div>
-      <ul class="how" style="margin-top:8px">
-        <li>Clear several lines at once or back-to-back for a <b>combo multiplier</b>. Lines of a single block type are <b>Pure</b>. Empty the grid for a <b>Perfect</b> clear.</li>
-        <li>Clearing lines charges your hero's <b>special move</b>.</li>
-        <li>Each piece you place is a turn. Watch the enemy's countdown.</li>
-      </ul>
-    </div>
-    ${st.runs?`<p class="center muted" style="font-size:13px">${st.wins} wins in ${st.runs} runs · deepest floor ${st.bestFloor||1}</p>`:''}
+    ${st.runs ? '' : `<div class="card">${howToHTML()}</div>`}
   `);
-  $('#startBtn').onclick = ()=>{ sfx('click'); if(save) store.set('save', null); heroScreen(); };
-  if(save) $('#contBtn').onclick = ()=>{ sfx('door'); run = migrate(save); goMap(); };
+  $('#startBtn').onclick = ()=>{ sfx('click'); heroScreen(); };
+  if(save) $('#contBtn').onclick = ()=>{ sfx('door'); resumeRun(save); };
   $('#gear2').onclick = openSettings;
+  $('#howBtn').onclick = openHowTo;
   $('#codexBtn').onclick = ()=>{ sfx('click'); codexScreen('e'); };
   $('#skillBtn').onclick = ()=>{ sfx('click'); skillScreen(); };
-  checkHeroUnlocks();
   $('#trophyBtn').onclick = ()=>{ sfx('click'); trophyScreen(); };
+  $('#journalBtn').onclick = ()=>{ sfx('click'); journalScreen(); };
+  $('#view').querySelectorAll('.qclaim').forEach(b=>b.onclick=()=>{
+    const q = quests(), id = b.dataset.q; if(q.claimed[id] || (q.prog[id]||0) < QUESTS[id].goal) return;
+    q.claimed[id] = 1; store.set('quests', q); store.set('shards', soulShards()+QUEST_REWARD);
+    sfx('buy'); burstAt(b, ['#7ff0ff','#c8fbff','#fff'], 20); setTimeout(titleScreen, 250);
+  });
+  const qb = $('#qbonus'); if(qb) qb.onclick = ()=>{ const q = quests(); if(q.bonus) return; q.bonus = true; store.set('quests', q); store.set('shards', soulShards()+QUEST_BONUS); unlock('questor'); sfx('trophy'); confetti(50); setTimeout(titleScreen, 300); };
+  checkHeroUnlocks();
+}
+function journalScreen(){
+  show('journal');
+  const st = stats(), jr = store.get('journal', []);
+  const ago = t => { const m = Math.round((Date.now()-t)/60000); return m<60?`${m}m ago`:m<1440?`${Math.round(m/60)}h ago`:`${Math.round(m/1440)}d ago`; };
+  view(`<div class="center"><h2 class="title">Journal</h2></div>
+    <div class="card"><div class="records">
+      <div>Runs<br><b>${st.runs}</b></div><div>Wins<br><b>${st.wins}</b></div>
+      <div>Foes slain<br><b>${st.kills}</b></div><div>Deepest floor<br><b>${st.bestFloor||'-'}</b></div>
+      <div>Endless depth<br><b>${st.bestDepth||'-'}</b></div><div>Biggest hit<br><b>${st.bestHit}</b></div>
+      <div>Pure lines<br><b>${st.pures||0}</b></div><div>Potions drunk<br><b>${st.potions||0}</b></div>
+    </div></div>
+    <h3 class="title" style="font-size:20px">Recent runs</h3>
+    ${jr.length ? jr.map(e=>`<div class="troph">${img(CLASSES[e.cls]?CLASSES[e.cls].spr:'bones',44)}<div style="flex:1"><b>${CLASSES[e.cls]?CLASSES[e.cls].name:'Hero'} <span class="rar ${e.won?'rar3':'rar1'}">${e.won?(e.depth?`Victory, depth ${e.depth}`:'Victory'):`Fell on floor ${e.floor}`}</span></b><small>${e.kills} foes · +${e.shards} shards${e.heat?` · Heat ${e.heat}`:''}${e.pet&&PETS[e.pet]?` · ${PETS[e.pet].name}`:''} · ${ago(e.date)}</small></div></div>`).join('') : '<p class="center muted">No runs yet. Your adventures will be recorded here.</p>'}
+    <button class="btn ghost" id="backBtn">Back</button>`);
+  $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
+}
+function resumeRun(save){
+  try{
+    run = migrate(JSON.parse(JSON.stringify(save)));
+    if(run.room) openRoom(); else goMap();
+  }catch(err){
+    console.error(err);
+    store.set('save', null); run = null; cb = null;
+    titleScreen();
+    toast('<b>Save could not be loaded</b><br>It was damaged, so it was cleared. Sorry about that!', 'bones', 4200);
+  }
 }
 function heroScreen(){
   show('heroes');
   const maxHeat = store.get('heat', 0); let heat = clamp(+store.get('heatSel', 0), 0, maxHeat);
-  view(`<div class="center"><h2 class="title">Choose your hero</h2></div>
+  const hasSave = !!store.get('save', null);
+  view(`<div class="center"><h2 class="title">Choose your hero</h2>${hasSave?'<p class="muted" style="font-size:13px;color:#ffb07a">Starting a new run will replace your saved run.</p>':''}</div>
     ${maxHeat ? `<div class="card heatsel"><button id="hm" aria-label="Less heat">-</button><div class="mid"><b id="hn"></b><small id="hd"></small></div><button id="hp" aria-label="More heat">+</button></div>` : ''}
     ${Object.entries(CLASSES).map(([id,C])=>{
       const R = RELICS[C.relic], wins = (stats().winsBy||{})[id]||0;
@@ -565,6 +770,7 @@ function heroScreen(){
         <b>${C.name}${wins?` <span class="rar rar3">${wins} win${wins>1?'s':''}</span>`:''}</b><small>${C.desc}</small>
         <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
         <span class="ult">Special: <b style="font-size:13px;display:inline">${C.ult.name}</b> - ${C.ult.desc}</span>
+        ${(()=>{ const lv = masteryLevel(id), x = masteryXp(id), nx = MASTERY[lv]; return `<span class="mastery"><span class="mlv">Mastery ${lv}</span><span class="qbar"><i style="width:${nx?Math.min(100,100*(x-MASTERY[lv-1])/(nx-MASTERY[lv-1])):100}%"></i></span><small>${nx?`Next: ${MASTERY_PERKS[lv]}`:'Max mastery'}</small></span>`; })()}
       </span></button>`; }).join('')}
     <button class="btn ghost" id="backBtn">Back</button>`);
   const paint = ()=>{ if(!maxHeat) return; $('#hn').textContent = HEAT[heat].name; $('#hd').textContent = HEAT[heat].desc; $('#hm').disabled = heat<=0; $('#hp').disabled = heat>=maxHeat; store.set('heatSel', heat); };
@@ -589,14 +795,16 @@ function codexScreen(tab){
   if(tab==='e'){
     const n = ALL_ENEMIES.filter(e=>s.e[e.name]).length;
     body = `<p class="center muted">${n} / ${ALL_ENEMIES.length} discovered</p><div class="grid">${ALL_ENEMIES.map((e,i)=>{ const k = s.e[e.name]; return `<div class="cell ${k?'':'unk'}" data-i="${i}">${img(e.spr,58)}${k?e.name:'???'}</div>`; }).join('')}</div>`;
+  } else if(tab==='p'){
+    body = `<p class="center muted">Find pets in Beast Dens and some events.</p>${Object.entries(PETS).map(([k,P])=>`<div class="troph">${img(P.spr,44)}<div><b>${P.name}</b><small>${P.desc}</small></div></div>`).join('')}`;
   } else {
     const ids = Object.keys(RELICS), n = ids.filter(id=>s.r[id]).length;
     body = `<p class="center muted">${n} / ${ids.length} discovered</p><div class="grid">${ids.map(id=>{ const k = s.r[id]; return `<div class="cell ${k?'':'unk'}" data-r="${id}">${img(RELICS[id].spr,50)}${k?RELICS[id].name:'???'}</div>`; }).join('')}</div>`;
   }
   view(`<div class="center"><h2 class="title">Codex</h2></div>
-    <div class="tabs"><button class="${tab==='e'?'on':''}" id="tE">Bestiary</button><button class="${tab==='r'?'on':''}" id="tR">Relics</button></div>
+    <div class="tabs"><button class="${tab==='e'?'on':''}" id="tE">Bestiary</button><button class="${tab==='r'?'on':''}" id="tR">Relics</button><button class="${tab==='p'?'on':''}" id="tP">Pets</button></div>
     ${body}<button class="btn ghost" id="backBtn">Back</button>`);
-  $('#tE').onclick = ()=>{ sfx('click'); codexScreen('e'); }; $('#tR').onclick = ()=>{ sfx('click'); codexScreen('r'); };
+  $('#tE').onclick = ()=>{ sfx('click'); codexScreen('e'); }; $('#tR').onclick = ()=>{ sfx('click'); codexScreen('r'); }; $('#tP').onclick = ()=>{ sfx('click'); codexScreen('p'); };
   $('#view').querySelectorAll('.cell').forEach(c=>c.onclick=()=>{
     sfx('click');
     if(c.dataset.i!=null){
@@ -647,7 +855,7 @@ function genMap(){
   const rows = [];
   for(let r=0;r<STEPS;r++){
     const n = r===STEPS-1 ? 1 : r===0 ? rand(2,3) : rand(2,4);
-    const w = [['combat',40],['elite',r>=2?14:0],['rest',r>=3?9:0],['shop',r>=2?11:0],['treasure',7],['event',16]].filter(e=>e[1]>0);
+    const w = [['combat',40],['elite',r>=2?14:0],['rest',r>=3?9:0],['shop',r>=2?11:0],['treasure',7],['event',16],['den',r>=1&&r<=5?5:0],['forge',r>=3?6:0]].filter(e=>e[1]>0);
     const nodes = [];
     for(let i=0;i<n;i++){
       let t;
@@ -680,6 +888,8 @@ function availableNodes(){
 }
 function goMap(){
   cb = null;
+  run.room = null;
+  if(run.path.length && !availableNodes().length){ const last = run.path[run.path.length-1]; if(last[0]===STEPS-1) return advance(); run.path = []; }
   run.step = run.path.length;
   saveRun();
   show('map');
@@ -700,11 +910,11 @@ function goMap(){
     nodesHtml += `<button class="${cls}" style="left:${p.x}%;top:${p.y}px" data-r="${r}" data-i="${i}" aria-label="${ROOMS[n.t].name}" ${isAvail?'':'tabindex="-1"'}>${img(ROOMS[n.t].spr, n.t==='boss'?54:40)}</button>`;
   }));
   view(`
-    <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${FLOOR_NAMES[run.floor-1]}</div></div>
+    <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${floorName()}</div></div>
       ${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}</div>
     <p class="muted center" style="font-size:13px">Descend toward the boss. Tap a glowing room.</p>
     <div class="map" style="height:${H}px"><svg viewBox="0 0 100 ${H}" preserveAspectRatio="none">${lines}</svg>${nodesHtml}</div>
-    <div class="legend2">${['combat','elite','rest','shop','treasure','event'].map(k=>`<span>${img(ROOMS[k].spr,20)}${ROOMS[k].name}</span>`).join('')}</div>
+    <div class="legend2">${['combat','elite','rest','shop','treasure','event','den','forge'].map(k=>`<span>${img(ROOMS[k].spr,20)}${ROOMS[k].name}</span>`).join('')}</div>
   `);
   let used = false;
   $('#view').querySelectorAll('.mnode.avail').forEach(b=>b.onclick=()=>{ if(used) return; used = true; sfx('map'); enterRoom(+b.dataset.r, +b.dataset.i); });
@@ -714,25 +924,39 @@ function goMap(){
 }
 function enterRoom(r, i){
   run.path.push([r,i]); run.step = run.path.length - 1;
-  const k = run.map[r][i].t;
+  let t = run.map[r][i].t;
+  if(t==='combat' && Math.random()<0.1) t = 'goblin';
+  run.room = {r, i, t};
+  run.rooms = (run.rooms||0) + 1; questAdd('rooms', 1);
   sfx('door');
-  if(k==='combat') startCombat(Math.random()<0.1 ? 'goblin' : 'combat');
-  else if(k==='elite'||k==='boss') startCombat(k);
-  else if(k==='rest') restScreen();
-  else if(k==='shop') shopScreen();
-  else if(k==='treasure') treasureScreen();
+  saveRun();
+  openRoom();
+}
+function openRoom(){
+  const R = run.room;
+  if(R.reward) return rewardScreen(R.reward.kind);
+  const t = R.t;
+  if(t==='combat'||t==='goblin'||t==='elite'||t==='boss') startCombat(t);
+  else if(t==='rest') restScreen();
+  else if(t==='shop') shopScreen();
+  else if(t==='treasure') treasureScreen();
+  else if(t==='den') denScreen();
+  else if(t==='forge') forgeScreen();
   else eventScreen();
 }
 function advance(){
+  run.room = null;
   const last = run.path[run.path.length-1];
   if(last && last[0]===STEPS-1){
     run.floor++;
     bumpStats(s=>s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)));
-    if(run.floor>FLOORS) return endScreen(true);
+    if(run.floor===FLOORS+1 && !run.won) return endScreen(true);
+    questAdd('floor', run.floor);
+    if(run.floor>=FLOORS+3) unlock('endless');
     if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3'); if(run.floor===4) unlock('floor4'); if(run.floor===5) unlock('floor5');
     run.map = genMap(); run.path = [];
     heal(Math.round(run.maxHp*0.3));
-    banner(`Floor ${run.floor}`, FLOOR_NAMES[run.floor-1], 2200);
+    banner(`Floor ${run.floor}`, floorName(), 2200);
     setTimeout(()=>toast('You descend deeper and catch your breath. <b>+30% HP</b>', 'r_rest'), 600);
   }
   goMap();
@@ -742,7 +966,8 @@ function advance(){
 function restScreen(){
   show('rest');
   const amt = Math.round(run.maxHp*0.35*(has('hearth')?1.5:1));
-  const up = pick(Object.keys(UPGRADES)); const U = UPGRADES[up], C = CLASSES[run.cls].ult;
+  const R = run.room; if(!R.up){ R.up = pick(Object.keys(UPGRADES)); saveRun(); }
+  const up = R.up; const U = UPGRADES[up], C = ULT();
   view(`${scene('r_rest','Campfire','The fire crackles. You have time for one thing.')}
     ${choiceBtn({id:'heal',spr:'heal_icon',name:'Rest',desc:`Heal ${amt} HP.${has('hearth')?' +4 max HP.':''}`})}
     ${choiceBtn({id:'train',spr:'heart',name:'Train',desc:'+8 max HP.'})}
@@ -758,7 +983,8 @@ function restScreen(){
 }
 function treasureScreen(){
   show('treasure');
-  const [id] = relicOffers(1); const g = rand(10,20);
+  const R = run.room; if(!R.loot){ R.loot = {id: relicOffers(1)[0]||null, g: rand(10,20)}; saveRun(); }
+  const id = R.loot.id, g = R.loot.g;
   view(`${scene('r_treasure','Treasure!',`Inside the chest: ${g} gold and...`)}
     ${id?choiceBtn({id, ...RELICS[id]}):''}
     <button class="btn" id="takeBtn">Take it</button>`);
@@ -769,28 +995,62 @@ function treasureScreen(){
 function shopScreen(){
   show('shop');
   const disc = has('clover') ? 0.8 : 1, P = x => Math.round(x*disc);
-  const stock = relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false}));
-  const pots = shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false}));
-  const up = pick(Object.keys(UPGRADES)); const upPrice = P(50), packPrice = P(70); let upSold=false, packSold=false;
+  const R = run.room;
+  if(!R.shop){ R.shop = {
+    stock: relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false})),
+    pots: shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})),
+    up: pick(Object.keys(UPGRADES)), upSold:false, packSold:false, removeSold:false }; saveRun(); }
+  const S = R.shop, stock = S.stock, pots = S.pots, up = S.up, upPrice = P(50), packPrice = P(70);
   const render = ()=>{
     const full = run.potions.length>=run.potionSlots;
     view(`${scene('r_shop','The Merchant', has('clover')?'"Lucky you. Everything is marked down."':'"Gold for goods, friend."')}
       ${stock.map(s=>s.sold?'':choiceBtn({id:'r:'+s.id,...RELICS[s.id],price:s.price,disabled:run.gold<s.price})).join('')}
       ${pots.map(s=>s.sold?'':choiceBtn({id:'p:'+s.id,spr:POTIONS[s.id].spr,name:POTIONS[s.id].name,desc:POTIONS[s.id].desc+(full?' (potion slots full)':''),price:s.price,disabled:run.gold<s.price||full})).join('')}
-      ${upSold?'':choiceBtn({id:'u:'+up,spr:UPGRADES[up].spr,name:UPGRADES[up].name,desc:UPGRADES[up].desc+' (permanent)',price:upPrice,disabled:run.gold<upPrice})}
-      ${packSold||run.potionSlots>=5?'':choiceBtn({id:'b:pack',spr:'satchel',name:'Bigger Pack',desc:'+1 potion slot.',price:packPrice,disabled:run.gold<packPrice})}
+      ${S.upSold?'':choiceBtn({id:'u:'+up,spr:UPGRADES[up].spr,name:UPGRADES[up].name,desc:UPGRADES[up].desc+' (permanent)',price:upPrice,disabled:run.gold<upPrice})}
+      ${S.packSold||run.potionSlots>=5?'':choiceBtn({id:'b:pack',spr:'satchel',name:'Bigger Pack',desc:'+1 potion slot.',price:packPrice,disabled:run.gold<packPrice})}
+      ${S.healSold?'':choiceBtn({id:'h:heal',spr:'heal_icon',name:'Bandages',desc:'Heal 30% of your max HP.',price:P(35),disabled:run.gold<P(35)||run.hp>=run.maxHp})}
       <button class="btn ghost" id="leaveBtn">Leave</button>`);
     $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
       const [kind,id] = b.dataset.id.split(':');
       if(kind==='r'){ const s=stock.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; gainRelic(id); }
       else if(kind==='p'){ const s=pots.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; givePotion(id); sfx('buy'); }
-      else if(kind==='u'){ if(run.gold<upPrice||upSold) return; run.gold-=upPrice; upSold=true; run.lvl[id]++; sfx('buy'); toast(`<b>${UPGRADES[id].name}</b><br>${UPGRADES[id].desc}`, UPGRADES[id].spr); }
-      else { if(run.gold<packPrice||packSold) return; run.gold-=packPrice; packSold=true; run.potionSlots++; sfx('buy'); }
+      else if(kind==='u'){ if(run.gold<upPrice||S.upSold) return; run.gold-=upPrice; S.upSold=true; run.lvl[id]++; sfx('buy'); toast(`<b>${UPGRADES[id].name}</b><br>${UPGRADES[id].desc}`, UPGRADES[id].spr); }
+      else if(kind==='h'){ if(run.gold<P(35)||S.healSold) return; run.gold-=P(35); S.healSold=true; heal(Math.round(run.maxHp*0.3)); sfx('heal'); }
+      else { if(run.gold<packPrice||S.packSold) return; run.gold-=packPrice; S.packSold=true; run.potionSlots++; sfx('buy'); }
+      questAdd('gold', 0);
       renderRunbar(); render(); saveRun();
     }; });
     $('#leaveBtn').onclick = ()=>{ sfx('click'); advance(); };
   };
   render();
+}
+function denScreen(){
+  show('den');
+  const R = run.room; if(!R.pets){ R.pets = shuffle(Object.keys(PETS).filter(k=>k!==run.pet)).slice(0,2); saveRun(); }
+  const cur = run.pet && PETS[run.pet];
+  view(`${scene('r_den','Beast Den', cur?`Your ${cur.name} sniffs at the newcomers. You can only keep one companion.`:'Creatures peek out from the straw. One of them could join you.')}
+    ${R.pets.map(k=>choiceBtn({id:k, spr:PETS[k].spr, name:PETS[k].name, desc:PETS[k].desc})).join('')}
+    <button class="btn ghost" id="leaveBtn">${cur?`Keep ${cur.name}`:'Leave'}</button>`);
+  bindChoices(k=>{ run.pet = k; unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[k].name}</b> joins you!`, PETS[k].spr); advance(); });
+  $('#leaveBtn').onclick = ()=>{ sfx('click'); advance(); };
+}
+function forgeScreen(){
+  show('forge');
+  const R = run.room; if(!R.forge){ R.forge = {ups: shuffle(Object.keys(UPGRADES)).slice(0,2)}; saveRun(); }
+  const mine = run.relics.filter(id=>!RELICS[id].starter), low = mine.slice().sort((a,b)=>RELICS[a].r-RELICS[b].r)[0];
+  view(`${scene('anvil','The Forge','The anvil glows white-hot. Choose what to forge.')}
+    ${R.forge.ups.map(k=>choiceBtn({id:'t:'+k, spr:UPGRADES[k].spr, name:'Temper: '+UPGRADES[k].name, desc:UPGRADES[k].desc.replace('+1','+2')+' (permanent)'})).join('')}
+    ${choiceBtn({id:'r:'+(low||''), spr:low?RELICS[low].spr:'r_treasure', name:'Reforge', desc: low ? `Melt down your ${RELICS[low].name} and forge a relic of higher rarity.` : 'You have no relic to reforge.', disabled:!low})}
+    ${choiceBtn({id:'s:'+(low||''), spr:'coin', name:'Smelt', desc: low ? `Melt down your ${RELICS[low].name} for ${30+25*RELICS[low].r} gold.` : 'You have no relic to smelt.', disabled:!low})}
+    <button class="btn ghost" id="leaveBtn">Leave</button>`);
+  bindChoices(key=>{
+    const [k,id] = key.split(':');
+    if(k==='t'){ run.lvl[id] += 2; sfx('armor'); toast(`<b>${UPGRADES[id].name} x2</b><br>${UPGRADES[id].desc.replace('+1','+2')}`, UPGRADES[id].spr); }
+    else if(k==='r' && id){ const rr = RELICS[id].r; run.relics = run.relics.filter(x=>x!==id); const [nid] = relicOffers(1, Math.min(3, rr+1)); if(nid) gainRelic(nid); sfx('blast'); }
+    else if(k==='s' && id){ run.gold += 30+25*RELICS[id].r; run.relics = run.relics.filter(x=>x!==id); sfx('coin'); }
+    advance();
+  });
+  $('#leaveBtn').onclick = ()=>{ sfx('click'); advance(); };
 }
 const EVENTS = [
   ()=>({spr:'shrine', title:'Ancient Shrine', text:'A blood-stained altar hums with old power.', opts:[
@@ -832,6 +1092,26 @@ const EVENTS = [
     {name:'Take it', spr:'idol', desc:'Gain a rare relic. Lose 8 max HP.', ok:()=>run.maxHp>20, go(){ run.maxHp-=8; run.hp=Math.min(run.hp,run.maxHp); const [id]=relicOffers(1,3); if(id) gainRelic(id); sfx('rage'); }},
     {name:'Leave it', spr:'r_event', desc:'Some things are better left alone.', go(){} },
   ]}),
+  ()=>({spr:'pool', title:'Fountain of Youth', text:'Crystal water bubbles up from the stone. It smells of flowers.', opts:[
+    {name:'Drink deeply', spr:'heal_icon', desc:'Heal to full HP.', ok:()=>run.hp<run.maxHp, go(){ run.hp = run.maxHp; sfx('heal'); }},
+    {name:'Fill a flask', spr:'potion_health', desc:'Gain a Health Potion.', ok:()=>run.potions.length<run.potionSlots, go(){ givePotion('health'); sfx('potion'); }},
+  ]}),
+  ()=>({spr:'mage', title:'Hermit Sage', text:'"I can teach you to focus your power... for a price."', opts:[
+    {name:'Study', spr:'spellbook', desc:'Pay 45 gold: your special needs 1 fewer line this run.', ok:()=>run.gold>=45, go(){ run.gold-=45; run.ultBonus = (run.ultBonus||0)+1; sfx('ult'); }},
+    {name:'Meditate together', spr:'flame', desc:'Fully charge your special.', go(){ run.charge = ULT().need; sfx('ult'); }},
+  ]}),
+  ()=>({spr:'skeleton', title:'Bone Dice', text:'A skeleton rattles a pair of bone dice. "Roll with me, mortal."', opts:[
+    {name:'Roll', spr:'dice', desc:'1 in 3: a relic. 1 in 3: 35 gold. 1 in 3: lose 10 HP.', ok:()=>run.hp>10, go(){ const r = Math.random(); if(r<1/3){ const [id]=relicOffers(1); if(id) gainRelic(id); } else if(r<2/3){ run.gold+=35; sfx('coin'); toast('Lucky roll! <b>+35 gold</b>','coin'); } else { run.hp-=10; sfx('hurt'); toast('Snake eyes. <b>-10 HP</b>','skeleton'); } }},
+    {name:'Walk away', spr:'r_event', desc:'Move on.', go(){} },
+  ]}),
+  ()=>({spr:'r_den', title:'Stray Companion', text:'A small creature follows you out of the shadows, looking hopeful.', opts:[
+    {name:'Adopt it', spr:'r_den', desc:'Gain a random pet companion (replaces your current one).', go(){ const k = pick(Object.keys(PETS).filter(k=>k!==run.pet)); run.pet = k; sfx('heal'); toast(`<b>${PETS[k].name}</b> joins you!<br>${PETS[k].desc}`, PETS[k].spr, 3200); }},
+    {name:'Shoo it away', spr:'r_event', desc:'Move on.', go(){} },
+  ]}),
+  ()=>({spr:'rock', title:'Collapsing Bridge', text:'The bridge ahead groans. Gold glints in the rubble below.', opts:[
+    {name:'Climb down', spr:'coin', desc:'Lose 8 HP. Gain 40 gold.', ok:()=>run.hp>8, go(){ run.hp-=8; run.gold+=40; sfx('rubble'); }},
+    {name:'Cross carefully', spr:'r_event', desc:'Move on safely.', go(){} },
+  ]}),
   ()=>({spr:'knight', title:'Wounded Adventurer', text:'A knight slumps against the wall, clutching a wound.', opts:[
     {name:'Share a potion', spr:'potion_health', desc:'Give your first potion. Gain 20 gold and a random upgrade.', ok:()=>run.potions.length>0, go(){ run.potions.shift(); run.gold+=20; const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; sfx('heal'); toast(`"Thank you, friend."<br><b>${UPGRADES[k].name}</b>: ${UPGRADES[k].desc}`, UPGRADES[k].spr, 3000); }},
     {name:'Bandage them', spr:'heal_icon', desc:'Lose 5 HP. Gain 15 gold.', ok:()=>run.hp>5, go(){ run.hp-=5; run.gold+=15; sfx('coin'); }},
@@ -840,14 +1120,15 @@ const EVENTS = [
 ];
 function eventScreen(){
   show('event');
-  const ev = pick(EVENTS)();
+  const R = run.room; if(R.ev==null || !EVENTS[R.ev]){ R.ev = rand(0, EVENTS.length-1); saveRun(); }
+  const ev = EVENTS[R.ev]();
   view(`${scene(ev.spr, ev.title, ev.text)}
     ${ev.opts.map((o,i)=>choiceBtn({id:i,spr:o.spr,name:o.name,desc:o.desc,disabled:o.ok&&!o.ok()})).join('')}`);
   bindChoices(i=>{
     const res = ev.opts[i].go();
     renderRunbar();
     if(checkDeath()) return endScreen(false);
-    if(res==='mimic'){ const mm = ENEMIES[1].elite[1]; return startCombat('elite', {...mm, hp: Math.round(mm.hp*FS([0.6,1,1.35,1.6,1.9]))}); }
+    if(res==='mimic'){ const mm = ENEMIES[1].elite[1]; run.room = {r:R.r, i:R.i, t:'elite'}; return startCombat('elite', {...mm, hp: Math.round(mm.hp*FS([0.6,1,1.35,1.6,1.9]))}); }
     advance();
   });
 }
@@ -855,52 +1136,71 @@ function eventScreen(){
 /* ================= rewards & end ================= */
 function rewardScreen(kind){
   show('reward');
-  let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*run.floor:rand(10,18);
+  if(!run.room) run.room = {t:kind};
+  const RW = run.room.reward = run.room.reward || {kind};
+  if(!RW.offers) rollReward(RW, kind);
+  const fresh = !RW.shown; RW.shown = true; saveRun();
+  if(fresh){ setTimeout(()=>burstAt($('#goldWrap'), ['#f7c936','#ffe58a','#fff'], 22), 150); if(kind==='boss') setTimeout(()=>confetti(80), 100); }
+  const offers = RW.offers.map(o=> o.boon ? {...BOONS.find(b=>b.id===o.id)} : {id:o.id, ...RELICS[o.id]}).filter(o=>o.name);
+  const title = kind==='boss'?'Boss defeated!':kind==='goblin'?'Caught it!':'Victory!';
+  view(`${scene(kind==='boss'?'r_boss':kind==='goblin'?'goldgoblin':'r_treasure', title, `+${RW.g} gold.${RW.extra} Choose a reward:`)}
+    ${offers.map(o=>choiceBtn(o)).join('')}
+    <button class="btn ghost" id="skipBtn">Skip</button>`);
+  bindChoices(id=>{ const b = BOONS.find(x=>x.id===id); if(b){ b.apply(); sfx('heal'); } else gainRelic(id); advance(); });
+  $('#skipBtn').onclick = ()=>{ sfx('click'); advance(); };
+}
+function rollReward(RW, kind){
+  let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*Math.min(run.floor,FLOORS):rand(10,18);
   if(has('magnet')) g = Math.round(g*1.4);
+  if(has('glove')) g += 10;
   run.gold += g;
   let extra = '';
   if(has('crown')){ const i = Math.min(15, Math.floor(run.gold/10)); run.gold += i; extra += ` +${i} interest.`; }
   if(Math.random() < (kind==='combat'?0.35:0.5)){ const p = givePotion(); if(p) extra += ` Found a ${POTIONS[p].name}!`; }
   if(has('philflask')){ const p = givePotion(); if(p) extra += ` Brewed a ${POTIONS[p].name}.`; }
   if(skill('mend')){ const h = Math.round(run.maxHp*0.05*skill('mend')); heal(h); extra += ` Recovered ${h} HP.`; }
-  renderRunbar(); saveRun();
-  setTimeout(()=>burstAt($('#goldWrap'), ['#f7c936','#ffe58a','#fff'], 22), 150);
-  if(kind==='boss') setTimeout(()=>confetti(80), 100);
-  let offers;
-  if(kind==='combat'){
+  if(has('bloodgem')){ heal(5); extra += ' Bloodstone heals 5.'; }
+  questAdd('gold', g);
+  let offers = [];
+  if(kind==='combat' || kind==='goblin'){
     const pool = BOONS.filter(b=>!b.ok||b.ok());
-    offers = [];
-    while(offers.length<3){ const b = weighted(pool.map(x=>[x,x.w])); if(!offers.includes(b)) offers.push(b); }
-    if(Math.random()<0.3){ const [id]=relicOffers(1); if(id) offers[2] = {id,...RELICS[id]}; }
+    let guard = 0;
+    while(offers.length<3 && guard++<50){ const b = weighted(pool.map(x=>[x,x.w])); if(!offers.some(o=>o.id===b.id)) offers.push({id:b.id, boon:true}); }
+    if(Math.random()<(kind==='goblin'?1:0.3)){ const [id]=relicOffers(1); if(id) offers[2] = {id}; }
   } else {
-    offers = relicOffers(3+(skill('sense')?1:0), kind==='boss'?2:1).map(id=>({id,...RELICS[id]}));
+    offers = relicOffers(3+(skill('sense')?1:0), kind==='boss'?2:1).map(id=>({id}));
   }
-  const title = kind==='boss'?'Boss defeated!':kind==='goblin'?'Caught it!':'Victory!';
-  view(`${scene(kind==='boss'?'r_boss':kind==='goblin'?'goldgoblin':'r_treasure', title, `+${g} gold.${extra} Choose a reward:`)}
-    ${offers.map(o=>choiceBtn(o)).join('')}
-    <button class="btn ghost" id="skipBtn">Skip</button>`);
-  bindChoices(id=>{ const b = BOONS.find(x=>x.id===id); if(b){ b.apply(); sfx('heal'); } else gainRelic(id); advance(); });
-  $('#skipBtn').onclick = ()=>{ sfx('click'); advance(); };
+  Object.assign(RW, {g, extra, offers});
+  renderRunbar();
 }
 function endScreen(won){
   cb = null; store.set('save', null);
+  const wasEndless = run.floor>FLOORS+1 || run.won;
+  if(run.won) won = false;
   let heatMsg = '';
-  bumpStats(s=>{ if(won){ s.wins++; s.winsBy = s.winsBy||{}; s.winsBy[run.cls] = (s.winsBy[run.cls]||0)+1; } s.kills+=run.kills; s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)); s.bestLines=Math.max(s.bestLines, run.bestLines); s.bestHit=Math.max(s.bestHit, run.bestHit); });
+  bumpStats(s=>{ if(run.floor>FLOORS) s.bestDepth = Math.max(s.bestDepth||0, run.floor-FLOORS); if(won){ s.wins++; s.winsBy = s.winsBy||{}; s.winsBy[run.cls] = (s.winsBy[run.cls]||0)+1; } s.kills+=run.kills-(run.killsCounted||0); s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)); s.bestLines=Math.max(s.bestLines, run.bestLines); s.bestHit=Math.max(s.bestHit, run.bestHit); });
   if(won){
     unlock('win'); if(run.heat>=1) unlock('heat');
     const wb = stats().winsBy; if(['knight','rogue','mage'].every(k=>wb[k])) unlock('allheroes');
     const mh = store.get('heat',0);
     if(run.heat>=mh && mh<HEAT.length-1){ store.set('heat', mh+1); heatMsg = `<p class="center" style="color:#ff8a80;font-family:var(--display);font-size:18px">${HEAT[mh+1].name} unlocked!</p>`; }
   }
-  let earned = run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0);
+  let earned = run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0) + Math.max(0, run.floor-FLOORS-1)*20 + (has('bluelantern')?2*(run.rooms||0):0);
   earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?1.5:1));
+  earned = Math.max(0, earned - (run.awarded||0)); run.awarded = (run.awarded||0) + earned; run.killsCounted = run.kills;
+  const mBefore = masteryLevel(run.cls); const mm = store.get('mastery', {}); mm[run.cls] = (mm[run.cls]||0) + earned; store.set('mastery', mm);
+  const mAfter = masteryLevel(run.cls);
+  if(mAfter>=5) unlock('master');
+  const jr = store.get('journal', []); if(jr[0] && run.jid && jr[0].jid===run.jid) jr.shift(); jr.unshift({jid:run.jid, cls:run.cls, floor:Math.min(run.floor,FLOORS), depth:Math.max(0,run.floor-FLOORS-1), won: won||wasEndless, kills:run.kills, heat:run.heat||0, date:Date.now(), shards:earned, pet:run.pet||null}); store.set('journal', jr.slice(0,20));
   store.set('shards', soulShards() + earned); bumpStats(s=>s.shards += earned);
   checkHeroUnlocks();
   show('end'); Sound.music(won?'map':'menu');
   sfx(won?'victory':'defeat');
   if(won){ confetti(160); banner('VICTORY', 'The dungeon is conquered', 2600); }
-  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':'You have fallen...', won?'The Demon Lord is banished. Legends will be told.':`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
+  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':wasEndless?'The depths claim you...':'You have fallen...', won?'The Demon Lord is banished. Legends will be told.':wasEndless?`${CLASSES[run.cls].name} reached Endless Depth ${run.floor-FLOORS}.`:`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
     ${heatMsg}
+    ${mAfter>mBefore?`<div class="card center" style="color:#ffcf7a;font-family:var(--display);font-size:18px">${CLASSES[run.cls].name} reached Mastery ${mAfter}!<div class="muted" style="font-family:var(--body);font-size:13px">${MASTERY_PERKS[mAfter-1]}</div></div>`:''}
+    ${won && !wasEndless ? `<button class="btn" id="endlessBtn" style="background:linear-gradient(#c77dff,#8a3fd1);color:#fff;text-shadow:0 1px 0 #000">Descend into Endless Depths</button>` : ''}
     <div class="card center" style="display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--display);font-size:22px">${img('shard',34)}+${earned} Soul Shards<span class="muted" style="font-size:14px;font-family:var(--body)">(${soulShards()} total)</span></div>
     <div class="card"><div class="stats3">
       <div>${run.kills}<small>foes slain</small></div>
@@ -912,6 +1212,8 @@ function endScreen(won){
     <button class="btn" id="againBtn">New Run</button>
     <button class="btn ghost" id="titleBtn">Title</button>`);
   $('#againBtn').onclick = ()=>{ sfx('click'); heroScreen(); }; $('#titleBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
+  const eb = $('#endlessBtn');
+  if(eb) eb.onclick = ()=>{ sfx('door'); run.won = true; run.floor = FLOORS+1; run.map = genMap(); run.path = []; run.room = null; heal(Math.round(run.maxHp*0.5)); banner('ENDLESS', floorName(), 2200); goMap(); };
 }
 
 /* ================= combat ================= */
@@ -944,7 +1246,7 @@ function rotatePiece(i){
   const p = cb.hand[i]; const r = rotated(p);
   p.cells = r.cells; p.h = r.h; p.w = r.w; p.rotT = performance.now();
   sfx('rotate');
-  const h = $('#hint'); if(h) h.style.opacity = 0;
+  if(!store.get('rotated', false)){ store.set('rotated', true); const h = $('#hint'); if(h){ h.style.display = 'none'; layout(); } }
 }
 function dealHand(){
   let hand;
@@ -952,43 +1254,61 @@ function dealHand(){
   cb.hand = hand;
 }
 function startCombat(kind, forced){
-  if(!run || run.floor>FLOORS) return;
-  const F = ENEMIES[run.floor-1];
-  let tpl = forced || (kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal));
+  if(!run) return;
+  if(!run.room) run.room = {t:kind};
+  const RM = run.room;
+  if(RM.fight) return resumeFight(RM.fight);
+  const F = floorPool();
+  let tpl = forced || RM.tpl || (kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal));
   const heat = run.heat||0;
   let hpMul = FS([1.15,1.4,1.55,1.6,1.7]) * (kind==='boss'?1.1:(0.92+Math.random()*0.16));
   if(heat>=1) hpMul *= 1.15;
   if(heat>=5 && kind==='boss') hpMul *= 1.25;
   if(kind==='goblin') hpMul = FS([1,1.7,2.4,3.1,3.8]);
   if(heat>=4 && kind==='elite' && !tpl.passive){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; }
-  const maxHp = Math.round(tpl.hp * hpMul);
+  if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= 0.85;
+  hpMul *= endlessMul();
+  const maxHp = RM.maxHp || Math.round(tpl.hp * hpMul);
+  RM.tpl = tpl; RM.maxHp = maxHp; RM.t = kind;
   const pas = tpl.passive || null;
   cb = {
-    kind, board:Array(N*N).fill(null), hand:[], fx:[], parts:[], over:false, firstClear:true, doubleNext:false,
+    kind, board:Array(N*N).fill(null), hand:[], fx:[], parts:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
     streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0, enraged:false,
     shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort'),
     rerolls: 1+(has('dice')?1:0)+skill('hands'),
     enemy:{...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null},
   };
   markSeen('e', tpl.name);
-  run.charge = Math.min(CLASSES[run.cls].ult.need, run.charge + skill('focus'));
+  run.charge = Math.min(ULT().need, run.charge + skill('focus'));
   if(run.floor>1 && kind!=='goblin') addBlocks('stone', Math.min(6,(run.floor-1)*2), true);
   nextIntent(); dealHand();
   lastEnemySpr = null;
+  $('#hint').style.display = store.get('rotated', false) ? 'none' : '';
   show('combat'); layout(); renderHUD();
   $('#eArt').className = '';
-  if(kind==='boss'){ flash('rgba(160,20,30,.5)'); sfx('rage'); banner(tpl.name, `Guardian of ${FLOOR_NAMES[run.floor-1]}`, 1800); }
+  if(kind==='boss'){ flash('rgba(160,20,30,.5)'); sfx('rage'); banner(tpl.name, `Guardian of ${floorName()}`, 1800); }
   if(kind==='goblin'){ sfx('flee'); toast('<b>A Treasure Goblin!</b><br>Catch it before it escapes with its loot.', 'goldgoblin', 2600); }
-  if(run.charge >= CLASSES[run.cls].ult.need) setTimeout(()=>coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true), 900);
+  if(!run.masteryUsed && masteryLevel(run.cls)>=5){ run.masteryUsed = true; run.charge = ULT().need; }
+  saveRun();
+  if(run.charge >= ULT().need) setTimeout(()=>coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true), 900);
   setTimeout(()=>{ const b = cv.getBoundingClientRect(); coach('drag', 'How to play', 'Drag a piece from the tray onto the grid. Tap a piece to rotate it first.', {left:b.left, width:b.width, top:b.top+L.ty, bottom:b.top+L.ty+L.trayH}, true); }, 400);
 }
-const streakStep = () => has('daggers') ? 0.5 : 0.25;
+function resumeFight(f){
+  $('#hint').style.display = store.get('rotated', false) ? 'none' : '';
+  cb = {...f, fx:[], parts:[], over:false, fled:false, hand:f.hand.map(p=>({...p, rotT:0}))};
+  if(!cb.enemy.intent) nextIntent();
+  lastEnemySpr = null;
+  show('combat'); layout(); renderHUD();
+  $('#eArt').className = '';
+  toast('<b>Fight resumed</b><br>Right where you left off.', cb.enemy.spr, 2000);
+}
+const streakStep = () => (has('daggers') ? 0.5 : 0.25) * (has('seerorb') ? 1.5 : 1);
 function nextIntent(){
   const e = cb.enemy, m = e.moves[e.mi % e.moves.length]; e.mi++;
   e.intent = {...m, left: m.t + (has('hourglass')&&m.k!=='flee'?1:0)};
 }
 function peekIntent(){ const e = cb.enemy; return e.moves[e.mi % e.moves.length]; }
-function intentDamage(it){ return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)) + cb.enemy.rage; }
+function intentDamage(it){ return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)) + cb.enemy.rage; }
 function addBlocks(type, n, silent){
   const empty = []; cb.board.forEach((v,i)=>{ if(!v) empty.push(i); });
   shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]=type; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type}); });
@@ -1001,15 +1321,18 @@ function place(idx, r, c){
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   resolveClears();
   if(checkEnd()) return;
+  if(run.pet){ petTick(); if(cb.petT===0) questAdd('pets', 1); if(checkEnd()) return; }
+  if(!cb.lastCleared && has('tidecharm')){ cb.shield += 3; floatText($('#shieldStat'), '+3', '#a8ceff'); }
   enemyTick();
   if(checkEnd()) return;
   if(cb.hand.every(x=>x.used)) dealHand();
   checkStuck();
   if(checkEnd()) return;
   renderHUD();
+  saveRun();
   if(cb.moves===1) setTimeout(()=>{ const b = cv.getBoundingClientRect(); coach('clear', 'Clear lines', 'Fill a whole row or column. Every block in it fires: swords hit, shields block, hearts heal, coins pay. Drag over the grid to preview the result.', {left:b.left, width:b.width, top:b.top+L.ty, bottom:b.top+L.ty+L.trayH}, true); }, 350);
   else if(cb.moves===2) setTimeout(()=>coach('intent', 'Enemy intent', 'This is what the enemy does next, and how many of your moves until it happens.', $('#intent'), false), 350);
-  if(run.charge >= CLASSES[run.cls].ult.need) coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true);
+  if(run.charge >= ULT().need) coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true);
 }
 function fullLines(board){
   const rows=[], cols=[];
@@ -1049,7 +1372,7 @@ function planClear(board){
   let pure = 0;
   rows.forEach(r=>{ if(isPure(board, [...Array(N).keys()].map(c=>r*N+c))) pure++; });
   cols.forEach(c=>{ if(isPure(board, [...Array(N).keys()].map(r=>r*N+c))) pure++; });
-  let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*(has('purist')?1:0.5);
+  let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*((has('purist')||has('huntersmark'))?1:0.5);
   if(cb.firstClear && has('ring')) mult *= 2;
   if(cb.doubleNext) mult *= 2;
   const set = lineCells(rows, cols);
@@ -1075,6 +1398,8 @@ function computeEffects(board, set, o){
   if(lines>=3){ if(has('powder')) dmg += 12; if(has('orb')) dmg += 8; }
   if(has('crossed') && o.rows && o.cols) dmg += 8;
   if(has('fang')) hp += 2*lines;
+  if(has('huntersmark')) dmg += 3*lines;
+  if(has('holysymbol')) dmg += Math.round(cnt.heal*2*mult);
   let perfect = true;
   for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak')))){ perfect = false; break; } }
   if(perfect) dmg += 20 + 10*(run.floor-1);
@@ -1085,6 +1410,7 @@ function computeEffects(board, set, o){
 }
 function resolveClears(){
   const plan = planClear(cb.board);
+  cb.lastCleared = !!plan;
   if(!plan){ cb.streak = has('drum') ? 2 : 0; return; }
   cb.doubleNext = false; cb.firstClear = false;
   fireCells(plan.set, plan);
@@ -1102,10 +1428,11 @@ function fireCells(set, o){
   });
   const lines = o.lines, mult = o.mult;
   run.bestLines = Math.max(run.bestLines, lines);
+  questAdd('lines', lines); if(lines>=3) questAdd('triples', 1);
   if(lines>=4) unlock('quad');
-  if(o.pure) unlock('pure');
+  if(o.pure){ unlock('pure'); bumpStats(s=>s.pures=(s.pures||0)+o.pure); questAdd('pures', o.pure); }
   if(fx.perfect) unlock('perfect');
-  const C = CLASSES[run.cls].ult;
+  const C = ULT();
   if(!o.noCharge) run.charge = Math.min(C.need, run.charge + lines*(has('battery')?1.5:1));
 
   const boardEl = $('#board');
@@ -1119,16 +1446,25 @@ function fireCells(set, o){
   }
   if(o.pure) sfx('pure');
   if(lines>=3 || mult>=3){ shake(); flash('rgba(255,180,80,.35)'); }
+  if(cb.firstHit && has('ironfist') && fx.dmg>0){ fx.dmg += 15; }
+  if(fx.dmg>0) cb.firstHit = false;
+  if(lines>=2 && has('emberheart')){ cb.enemy.poison += 3; }
   if(fx.dmg>0){ damageEnemy(fx.dmg); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
   if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText($('#eArt'), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
   if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
-  if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); } }
+  if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); }
+    const over = fx.hp - got; if(over>0 && has('holysymbol')){ cb.shield += over; floatText($('#shieldStat'), `+${over}`, '#a8ceff'); } }
   if(fx.gold>0){ run.gold += fx.gold; floatText($('#goldWrap'), `+${fx.gold}`, '#ffe58a'); sfx('coin'); burstAt($('#goldWrap'), ['#f7c936','#ffe58a'], 6); }
 }
-function damageEnemy(n, noThorns){
+function damageEnemy(n, noThorns, pierce){
   const e = cb.enemy; let d = n;
-  if(e.armor>0){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
+  if(e.armor>0 && !pierce){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
   e.hp = Math.max(0, e.hp - d); run.dmg += d; run.bestHit = Math.max(run.bestHit, d);
+  if(cb.kind==='boss' && !cb.phase && e.hp>0 && e.hp<e.maxHp/2){
+    cb.phase = 1; e.moves = e.moves.map(m=>({...m, v: m.k==='shuffle'||m.k==='flee' ? m.v : Math.round(m.v*1.2), t: Math.max(2, m.t-1)}));
+    e.armor += Math.round(e.maxHp*0.08);
+    setTimeout(()=>{ banner('PHASE 2', `${e.name} grows furious`, 1600); flash('rgba(200,20,40,.45)'); sfx('rage'); shake(); renderHUD(); }, 300);
+  }
   if(e.passive && e.passive.id==='enrage' && !cb.enraged && e.hp>0 && e.hp<e.maxHp/2){ cb.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ floatText($('#eArt'), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
   if(d>=100) unlock('bighit');
   const el = $('#eArt');
@@ -1140,6 +1476,7 @@ function damageEnemy(n, noThorns){
 }
 function hitPlayer(n, small){
   if(cb.mirror && !small){ cb.mirror = false; floatText(hpEl(), 'Reflected!', '#a8ceff'); sfx('block'); return; }
+  if(has('vampcape') && !small && cb.enemy.hp>0){ cb.enemy.hp = Math.max(1, cb.enemy.hp-2); }
   let v = n; if(has('thickskin')) v = Math.max(0, v-1);
   const absorbed = Math.min(cb.shield, v); cb.shield -= absorbed; v -= absorbed;
   if(absorbed>0 && has('spikes')) damageEnemy(5, true);
@@ -1179,6 +1516,9 @@ function enemyTick(){
       floatText($('#board'), `Petrify x${it.v}`, '#c9c2d4'); sfx('rubble'); break; }
     case 'sap': { const lost = Math.min(run.charge, it.v); run.charge -= lost; floatText($('#ultBtn'), `-${lost} charge`, '#c77dff'); sfx('poison'); break; }
     case 'shuffle': cb.hand = cb.hand.map(p=>p.used?p:newPiece()); floatText($('#board'), 'Hand shuffled!', '#c77dff'); sfx('whoosh'); break;
+    case 'steal': {
+      if(has('glove')){ floatText($('#goldWrap'), 'Guarded!', '#ffe58a'); sfx('block'); break; }
+      const took = Math.min(run.gold, it.v); run.gold -= took; floatText($('#goldWrap'), `-${took}`, '#ff8a80'); sfx('flee'); break; }
   }
   nextIntent();
 }
@@ -1187,8 +1527,8 @@ function checkStuck(){
   while(!cb.over && !cb.hand.some(p=>!p.used && fitsAnyRot(p)) && guard++<5){
     toast('<b>Cave-in!</b> No room to move. The ceiling collapses.', 'rock');
     sfx('cavein'); flash('rgba(120,100,90,.5)');
-    hitPlayer(4 + run.floor*2);
-    const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0,2);
+    hitPlayer(Math.round((4 + run.floor*2) * (has('boots')?0.5:1)));
+    const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0, has('boots')?3:2);
     const now = performance.now();
     rows.forEach(([r])=>{ for(let c=0;c<N;c++){ const i=r*N+c; if(cb.board[i]){ shards(i, cb.board[i], 4); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; } } });
     cb.streak = 0;
@@ -1200,23 +1540,26 @@ function checkEnd(){
   if(!cb || cb.over) return true;
   const fight = cb;
   if(cb.enemy.hp<=0){
-    cb.over = true; run.kills++; markKill(cb.enemy.name); unlock('first');
+    cb.over = true; run.kills++; markKill(cb.enemy.name); unlock('first'); questAdd('kills', 1); if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
     if(cb.kind==='goblin') unlock('goblin');
+    if(cb.enemy.moves.some(m=>m.k==='steal')) unlock('thief');
     if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; if(!cb.tookDmg) unlock('flawless'); if(cb.enemy.spr==='dragon') unlock('dragon'); }
     renderHUD();
     $('#eArt').classList.add('dead');
     floatText($('#eArt'), 'Defeated!', '#ffcf7a', true); sfx('kill'); buzz(40); burstAt($('#eArt'), ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30);
     const kind = cb.kind;
+    run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind}; saveRun();
     setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, 1000); return true;
   }
   if(run.hp<=0 && checkDeath()){
-    cb.over = true; renderHUD();
+    cb.over = true; renderHUD(); store.set('save', null);
     setTimeout(()=>{ if(cb===fight) endScreen(false); }, 1000); return true;
   }
   if(cb.fled){
     cb.over = true; renderHUD();
     $('#eArt').classList.add('flee'); sfx('flee');
     toast('The goblin got away with its loot!', 'goldgoblin');
+    run.room = null; saveRun();
     setTimeout(()=>{ if(cb===fight) advance(); }, 1200); return true;
   }
   return false;
@@ -1225,10 +1568,10 @@ function checkEnd(){
 /* ---------- hero specials ---------- */
 function useUlt(){
   if(!cb || cb.over) return;
-  const C = CLASSES[run.cls].ult;
+  const C = ULT();
   if(run.charge < C.need){ toast(`<b>${C.name}</b><br>${C.desc}<br><span class="muted">Charge: ${Math.floor(run.charge)}/${C.need} lines cleared.</span>`, C.spr); return; }
   document.querySelectorAll('.coach').forEach(c=>c.remove());
-  run.charge = 0; sfx('ult'); flash('rgba(255,200,120,.5)'); buzz(60);
+  run.charge = 0; sfx('ult'); flash('rgba(255,200,120,.5)'); buzz(60); questAdd('ults', 1);
   floatText($('#board'), C.name.toUpperCase()+'!', '#ffcf7a', true);
   const now = performance.now();
   if(run.cls==='knight'){
@@ -1236,6 +1579,12 @@ function useUlt(){
     cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,6); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; } });
   } else if(run.cls==='rogue'){
     dealHand(); cb.enemy.intent.left += 1; cb.doubleNext = true;
+  } else if(run.cls==='paladin'){
+    const d = cb.shield + 15 + 5*(run.floor-1); flash('rgba(255,240,170,.55)'); damageEnemy(d, true);
+  } else if(run.cls==='ranger'){
+    const per = 5 + 2*(run.floor-1);
+    const fight = cb;
+    for(let k=0;k<6;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; damageEnemy(per, true, true); renderHUD(); if(cb.enemy.hp<=0 || k===5){ if(!checkEnd()) saveRun(); } }, 90*k);
   } else if(run.cls==='berserker'){
     const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]);
     run.hp = Math.max(1, run.hp-5); floatText(hpEl(), '-5', '#ff6a6f'); shake();
@@ -1249,7 +1598,7 @@ function useUlt(){
     const cnt = {}; cb.board.forEach(t=>{ if(t && !JUNK(t) && t!=='rainbow') cnt[t]=(cnt[t]||0)+1; });
     const top = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
     if(top){ cb.board.forEach((t,i)=>{ if(t===top[0]){ cb.board[i]='rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); } }); floatText($('#board'), `${top[1]} transmuted`, '#f0d6ff'); }
-    else { run.charge = CLASSES[run.cls].ult.need; toast('Nothing to transmute yet. Your charge is kept.', 'philflask'); }
+    else { run.charge = ULT().need; toast('Nothing to transmute yet. Your charge is kept.', 'philflask'); }
   } else {
     let br=0, bc=0, bn=-1, cn=-1;
     for(let r=0;r<N;r++){ const n = cb.board.slice(r*N,r*N+N).filter(Boolean).length; if(n>bn){ bn=n; br=r; } }
@@ -1258,7 +1607,7 @@ function useUlt(){
     const set = lineCells([br],[bc]); const blasted = expandBlast(cb.board, set);
     fireCells(set, {lines:2, rows:1, cols:1, mult:2.5, label:'METEOR!', noCharge:true, blasted});
   }
-  if(!checkEnd()){ checkStuck(); renderHUD(); }
+  if(!checkEnd()){ checkStuck(); renderHUD(); saveRun(); }
 }
 
 /* ---------- HUD ---------- */
@@ -1277,6 +1626,7 @@ function intentInfo(it){
     case 'petrify': return ['rock', `x${it.v}`, `Turns ${it.v} of your blocks on the grid to stone`];
     case 'sap': return ['flame', `-${it.v}`, `Drains ${it.v} charge from your special`];
     case 'shuffle': return ['dice', 'Mix', `Shuffles the pieces in your hand`];
+    case 'steal': return ['coin', `-${it.v}`, `Steals up to ${it.v} of your gold`];
   }
 }
 let lastEnemySpr = null;
@@ -1287,6 +1637,7 @@ function renderHUD(){
   $('#eName').textContent = e.name;
   let tags = cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':cb.kind==='goblin'?'<span class="tag" style="background:#7a5608;color:#ffe58a">Rare</span>':'';
   if(e.passive) tags += `<span class="tag pass" id="passTag">${PASSIVES[e.passive.id].name}</span>`;
+  if(cb.phase) tags += '<span class="tag phase">Phase 2</span>';
   $('#eTags').innerHTML = tags;
   if(e.passive) $('#passTag').onclick = ()=>toast(`<b>${PASSIVES[e.passive.id].name}</b><br>${PASSIVES[e.passive.id].desc(e.passive.v)}`, e.spr);
   const ep = (100*e.hp/e.maxHp)+'%';
@@ -1311,8 +1662,11 @@ function renderHUD(){
   const m = cb.streak*streakStep();
   $('#streakText').textContent = m ? `+${fmt(m)}` : '-';
   $('#rerollText').textContent = cb.rerolls;
+  const pc = $('#petChip');
+  if(run.pet && PETS[run.pet]){ const P = PETS[run.pet]; pc.hidden = false; if(pc.dataset.k!==run.pet){ pc.innerHTML = `${img(P.spr,28)}<span id="petT"></span>`; pc.dataset.k = run.pet; } $('#petT').textContent = P.every - (cb.petT||0); pc.onclick = ()=>toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Acts in ${P.every-(cb.petT||0)} move(s).</span>`, P.spr); }
+  else pc.hidden = true;
   $('#rerollBtn').disabled = cb.rerolls<=0 || cb.over;
-  const C = CLASSES[run.cls].ult, pct = Math.min(100, 100*run.charge/C.need);
+  const C = ULT(), pct = Math.min(100, 100*run.charge/C.need);
   const ub = $('#ultBtn'); ub.style.setProperty('--p', pct);
   ub.classList.toggle('ready', pct>=100);
   if(!$('#ultIcon').dataset.k || $('#ultIcon').dataset.k!==run.cls){ $('#ultIcon').innerHTML = img(C.spr, 30); $('#ultIcon').dataset.k = run.cls; }
@@ -1328,7 +1682,7 @@ $('#rerollBtn').onclick = ()=>{
   cb.rerolls--; sfx('rotate');
   cb.hand = cb.hand.map(p=>p.used?p:newPiece());
   checkStuck();
-  if(!checkEnd()) renderHUD();
+  if(!checkEnd()){ renderHUD(); saveRun(); }
 };
 $('#ultBtn').onclick = useUlt;
 $('#comboStat').onclick = ()=>toast(`<b>Combo streak</b><br>Each move in a row that clears a line adds +${streakStep()} to your multiplier. Miss a clear and it resets.`, 'flame');
@@ -1363,8 +1717,10 @@ function layout(){
   const pad = 8, gap = 14, trayCells = 2.9;
   const byWidth = (wrapW - pad*2)/N;
   const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-  const byHeight = (vh - top - pad*2 - gap - 34)/(N + trayCells);
-  const cs = Math.max(28, Math.floor(Math.min(byWidth, byHeight)));
+  const appPad = parseFloat(getComputedStyle($('#app')).paddingBottom) || 16;
+  const hint = $('#hint'), hintH = hint && hint.style.display!=='none' ? hint.offsetHeight + 4 : 0;
+  const byHeight = (vh - top - pad*2 - gap - appPad - hintH - 2)/(N + trayCells);
+  const cs = Math.max(20, Math.floor(Math.min(byWidth, byHeight)));
   const bw = cs*N, W = Math.max(bw + pad*2, Math.min(wrapW, bw+pad*2+40));
   const trayH = Math.round(cs*trayCells), H = pad + bw + gap + trayH + pad;
   dpr = window.devicePixelRatio || 1;
@@ -1593,6 +1949,11 @@ cv.addEventListener('pointerup', ()=>{
 });
 cv.addEventListener('pointercancel', ()=>{ drag = null; press = null; });
 addEventListener('keydown', e=>{ if(e.key==='Escape' && !$('#modal').hidden) closeSettings(); });
+document.addEventListener('touchmove', e=>{ if(document.documentElement.classList.contains('lock') && !e.target.closest('#modal')) e.preventDefault(); }, {passive:false});
+window.addEventListener('scroll', ()=>{ if(document.documentElement.classList.contains('lock') && window.scrollY) window.scrollTo(0,0); });
 
 /* ================= boot ================= */
-titleScreen();
+let errShown = false;
+window.addEventListener('error', e=>{ console.error(e.error||e.message); if(!errShown){ errShown = true; try{ saveRun(); }catch(_){} toast('<b>Something went wrong</b><br>Your run is saved. If anything looks stuck, reopen the game.', 'bones', 4000); setTimeout(()=>errShown=false, 8000); } });
+try{ titleScreen(); }
+catch(err){ console.error(err); store.set('save', null); try{ titleScreen(); }catch(e2){ console.error(e2); } }
