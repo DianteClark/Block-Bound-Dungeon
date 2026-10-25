@@ -1095,6 +1095,7 @@ const EVENTS = [
   ()=>({spr:'pool', title:'Fountain of Youth', text:'Crystal water bubbles up from the stone. It smells of flowers.', opts:[
     {name:'Drink deeply', spr:'heal_icon', desc:'Heal to full HP.', ok:()=>run.hp<run.maxHp, go(){ run.hp = run.maxHp; sfx('heal'); }},
     {name:'Fill a flask', spr:'potion_health', desc:'Gain a Health Potion.', ok:()=>run.potions.length<run.potionSlots, go(){ givePotion('health'); sfx('potion'); }},
+    {name:'Toss a coin', spr:'coin', desc:'Pay 10 gold. +4 max HP.', ok:()=>run.gold>=10, go(){ run.gold-=10; run.maxHp+=4; run.hp+=4; sfx('coin'); }},
   ]}),
   ()=>({spr:'mage', title:'Hermit Sage', text:'"I can teach you to focus your power... for a price."', opts:[
     {name:'Study', spr:'spellbook', desc:'Pay 45 gold: your special needs 1 fewer line this run.', ok:()=>run.gold>=45, go(){ run.gold-=45; run.ultBonus = (run.ultBonus||0)+1; sfx('ult'); }},
@@ -1122,6 +1123,7 @@ function eventScreen(){
   show('event');
   const R = run.room; if(R.ev==null || !EVENTS[R.ev]){ R.ev = rand(0, EVENTS.length-1); saveRun(); }
   const ev = EVENTS[R.ev]();
+  if(!ev.opts.some(o=>!o.ok || o.ok())) ev.opts.push({name:'Move on', spr:'r_event', desc:'Nothing here for you right now.', go(){}});
   view(`${scene(ev.spr, ev.title, ev.text)}
     ${ev.opts.map((o,i)=>choiceBtn({id:i,spr:o.spr,name:o.name,desc:o.desc,disabled:o.ok&&!o.ok()})).join('')}`);
   bindChoices(i=>{
