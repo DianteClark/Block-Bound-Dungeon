@@ -119,6 +119,10 @@ const CLASSES = {
     desc:'A precise hunter. Pure lines hit much harder and every cleared line adds damage.',
     ult:{name:'Volley', need:7, spr:'mark', desc:'Fire 6 arrows that pierce armor, 5 damage each (more on deeper floors).'},
     unlock:{text:'Clear 15 pure lines in total', cost:180, ok:s=>s.pures>=15}},
+  bard:{name:'Bard', spr:'bard', hp:58, gold:35, relic:'lute', potions:['luck'],
+    desc:'Plays to the rhythm of combos. Every third clear in a row strikes a chord that shields and heals.',
+    ult:{name:'Encore', need:7, spr:'lute', desc:'Replay your last clear: its damage, shield, healing, poison and gold all happen again.'},
+    unlock:{text:'Reach Mastery 3 with any hero', cost:160, ok:()=>Object.keys(CLASSES).some(k=>masteryLevel(k)>=3)}},
 };
 function ULT(){ const u = CLASSES[run.cls].ult; return {...u, need: Math.max(3, u.need - (has('spellbook')?2:0) - (run.ultBonus||0))}; }
 const isUnlocked = id => !CLASSES[id].unlock || !!(store.get('heroes', {})[id]);
@@ -188,6 +192,11 @@ const RELICS = {
   vampcape:{name:'Vampire Cape', spr:'vampcape', desc:'Whenever an enemy attacks you, it loses 2 HP.', r:2},
   warhorn:{name:'War Horn', spr:'warhorn', desc:'Elites and bosses start with 15% less HP.', r:2},
   bluelantern:{name:'Spirit Lantern', spr:'bluelantern', desc:'Earn 2 extra Soul Shards for every room you enter.', r:1},
+  packrat:{name:'Packrat\'s Pouch', spr:'packrat', desc:'Placing a piece from your Stash gives 4 shield.', r:1},
+  compass:{name:'Hunter\'s Compass', spr:'compass', desc:'Elite and boss rewards offer one more relic to choose from.', r:2},
+  goldendice:{name:'Golden Dice', spr:'goldendice', desc:'+1 hand reroll each fight. Every reroll also gives 5 gold.', r:2},
+  lute:{name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +6 shield and heal 4.', r:0, starter:true},
+  phial:{name:'Bottomless Phial', spr:'phial', desc:'The first potion you drink in each fight is not used up.', r:3},
   emberheart:{name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
 };
 
@@ -219,7 +228,7 @@ const BOONS = [
   {id:'vital', name:'Vitality', spr:'heart', desc:'+6 max HP and heal 6.', w:3, apply(){ run.maxHp+=6; heal(6); }},
   {id:'mend', name:'Mend', spr:'heal_icon', desc:'Heal 15 HP.', w:3, apply(){ heal(15); }},
   {id:'purse', name:'Coin Purse', spr:'coin', desc:'+25 gold.', w:2, apply(){ run.gold+=25; }},
-  {id:'brew', name:'Potion', spr:'potion_health', desc:'Gain a random potion.', w:2, ok:()=>run.potions.length<run.potionSlots, apply(){ givePotion(); }},
+  {id:'brew', name:'Potion', spr:'potion_health', desc:'Gain a random potion.', w:2, ok:()=>canPotion(), apply(){ givePotion(); }},
   ...Object.entries(UPGRADES).map(([k,u])=>({id:'up_'+k, name:u.name, spr:u.spr, desc:u.desc+' (permanent)', w:2.5, apply(){ run.lvl[k]++; }})),
 ];
 
@@ -335,7 +344,7 @@ const PETS = {
 function petTick(){
   if(!run.pet || !PETS[run.pet] || cb.over) return;
   const P = PETS[run.pet]; cb.petT = (cb.petT||0) + 1;
-  if(cb.petT >= P.every){ cb.petT = 0; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); }
+  if(cb.petT >= P.every - (setOn('wild')?1:0)){ cb.petT = 0; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); }
 }
 
 /* ================= daily quests ================= */
@@ -401,6 +410,12 @@ const ACH = {
   rich:{name:'Hoarder', desc:'Hold 200 gold at once.', spr:'coin'},
   relics10:{name:'Collector', desc:'Hold 10 relics in one run.', spr:'r_treasure'},
   relics15:{name:'Hoard of Wonders', desc:'Hold 15 relics in one run.', spr:'holy'},
+  stasher:{name:'Saved for Later', desc:'Place a piece from your Stash.', spr:'packrat'},
+  daily:{name:'Daily Devotion', desc:'Finish a Daily Challenge run.', spr:'calendar'},
+  mutant:{name:'Glutton for Punishment', desc:'Win a run with 3 or more mutators.', spr:'mutator'},
+  decorator:{name:'Interior Decorator', desc:'Unlock a new board theme.', spr:'palette'},
+  setbonus:{name:'Matching Set', desc:'Complete a relic set (3 relics from one family).', spr:'r_treasure'},
+  bard:{name:'Encore!', desc:'Win a run as the Bard.', spr:'bard'},
   endless:{name:'Bottomless', desc:'Reach Endless Depth 3.', spr:'voideye'},
   petpal:{name:'Best Friends', desc:'Adopt a pet companion.', spr:'r_den'},
   questor:{name:'Daily Grind', desc:'Complete all three daily quests in one day.', spr:'scroll'},
@@ -413,6 +428,47 @@ function unlock(id){
   const a = store.get('ach', {}); if(a[id]) return;
   a[id] = Date.now(); store.set('ach', a);
   setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}`, 'trophy', 3200); }, 500);
+}
+
+/* ================= mutators ================= */
+const MUTS = {
+  glass:{name:'Glass Cannon', spr:'sword', desc:'Sword blocks deal +2 damage, but you have 30% less max HP.', bonus:0.25},
+  frail:{name:'Frail Shields', spr:'armor', desc:'Shield blocks give half as much shield.', bonus:0.2},
+  swarm:{name:'Swarm', spr:'rat', desc:'Regular enemies have 30% more HP.', bonus:0.2},
+  hasty:{name:'Hasty Foes', spr:'hourglass', desc:'Enemy actions arrive 1 turn sooner.', bonus:0.3},
+  heavy:{name:'Heavy Pieces', spr:'r_combat', desc:'Big pieces show up far more often.', bonus:0.15},
+  dry:{name:'Teetotaler', spr:'potion_iron', desc:'No potions at all: you start with none and find none.', bonus:0.2},
+  rush:{name:'Gold Rush', spr:'coin', desc:'Fights give double gold, but merchants charge 50% more.', bonus:0},
+  blessed:{name:'Blessed Start', spr:'holy', desc:'Start with a random uncommon relic. Earn 25% fewer Soul Shards.', bonus:-0.25},
+};
+const mut = id => !!run && (run.muts||[]).includes(id);
+const mutBonus = list => (list||[]).reduce((m,id)=>m*(1+(MUTS[id]?MUTS[id].bonus:0)), 1);
+
+/* ================= board themes (Wardrobe) ================= */
+const THEMES = {
+  stone:{name:'Dungeon Stone', board:'#0b080e', edge:'#4a3f58', a:'#1a1520', b:'#1e1825'},
+  frost:{name:'Frozen Crypt', board:'#07121a', edge:'#5aa0c8', a:'#0f2230', b:'#132a3a', unlock:{text:'Reach floor 4', ok:s=>s.bestFloor>=4}},
+  grove:{name:'Mossy Grove', board:'#08120b', edge:'#3dbb6a', a:'#102016', b:'#15291c', unlock:{text:'Adopt a pet', ok:()=>!!store.get('ach',{}).petpal}},
+  ember:{name:'Dragon Ember', board:'#150806', edge:'#e0602a', a:'#26100b', b:'#2f150f', unlock:{text:'Defeat the Ancient Dragon', ok:()=>!!store.get('ach',{}).dragon}},
+  void:{name:'The Abyss', board:'#0a0614', edge:'#9d4edd', a:'#170f26', b:'#1d1431', unlock:{text:'Reach floor 5', ok:s=>s.bestFloor>=5}},
+  royal:{name:'Royal Velvet', board:'#14060f', edge:'#ef5258', a:'#26101c', b:'#2e1422', unlock:{text:'Complete a Daily Challenge', ok:()=>!!store.get('ach',{}).daily}},
+  gold:{name:'Golden Hoard', board:'#141006', edge:'#f7c936', a:'#241c0a', b:'#2c230e', unlock:{text:'Win a run', ok:s=>s.wins>=1}},
+};
+const themeOk = id => !THEMES[id].unlock || THEMES[id].unlock.ok(stats());
+const theme = () => { const t = store.get('theme','stone'); return THEMES[t] && themeOk(t) ? THEMES[t] : THEMES.stone; };
+
+/* ================= seeded randomness (Daily Challenge) ================= */
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1 | a); t = t + Math.imul(t ^ t>>>7, 61 | t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+function hashStr(s){ let h = 2166136261; for(const ch of s){ h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function withSeed(seed, fn){ const o = Math.random; Math.random = mulberry32(seed); try{ return fn(); } finally{ Math.random = o; } }
+const runSeed = n => hashStr((run.daily||'') + '|' + n);
+function dailyInfo(){
+  const key = todayKey(), seed = hashStr('daily|' + key);
+  return withSeed(seed, ()=>{
+    const cls = pick(Object.keys(CLASSES));
+    const muts = shuffle(Object.keys(MUTS).filter(k=>k!=='blessed')).slice(0,2);
+    return {key, cls, muts};
+  });
 }
 
 /* ================= skill tree (permanent upgrades bought with Soul Shards) ================= */
@@ -442,6 +498,7 @@ function heal(n){ run.hp = Math.min(run.maxHp, run.hp + n); }
 function snapFight(){
   if(!cb || cb.over) return null;
   return {kind:cb.kind, board:cb.board.slice(), hand:cb.hand.map(p=>({cells:p.cells, h:p.h, w:p.w, type:p.type, used:!!p.used})),
+    stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null,
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
     tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, enraged:cb.enraged, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
     enemy:JSON.parse(JSON.stringify(cb.enemy))};
@@ -459,8 +516,9 @@ function seen(){ return Object.assign({e:{}, r:{}}, store.get('seen', {})); }
 function markSeen(kind, key){ const s = seen(); if(kind==='e'){ s.e[key] = s.e[key] || {seen:1, kills:0}; } else s.r[key] = 1; store.set('seen', s); }
 function markKill(name){ const s = seen(); s.e[name] = s.e[name] || {seen:1, kills:0}; s.e[name].kills++; store.set('seen', s); }
 
-function newRun(cls){
-  const C = CLASSES[cls], heat = clamp(+(store.get('heatSel',0)), 0, store.get('heat',0));
+function newRun(cls, opts){
+  opts = opts || {};
+  const C = CLASSES[cls], heat = opts.daily ? 0 : clamp(+(store.get('heatSel',0)), 0, store.get('heat',0));
   const hp = C.hp - (heat>=3 ? 10 : 0) + 5*skill('vit');
   run = {cls, heat, hp, maxHp:hp, gold:C.gold + 15*skill('purse'), relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
     jid:Date.now(), lvl:{sword:skill('whet'),shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, bosses:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
@@ -470,7 +528,12 @@ function newRun(cls){
   if(ml>=2){ run.maxHp += 5; run.hp += 5; }
   if(ml>=3) givePotion();
   if(ml>=4){ const [id] = relicOffers(1); if(id){ run.relics.push(id); markSeen('r', id); } }
-  run.map = genMap();
+  run.daily = opts.daily || null;
+  run.muts = opts.daily ? opts.muts.slice() : (opts.muts || []).filter(k=>MUTS[k]);
+  if(mut('glass')){ run.maxHp = Math.round(run.maxHp*0.7); run.hp = run.maxHp; }
+  if(mut('dry')) run.potions = [];
+  if(mut('blessed')){ const [id] = relicOffers(1, 2); if(id){ run.relics.push(id); markSeen('r', id); } }
+  run.map = run.daily ? withSeed(runSeed(1), genMap) : genMap();
   bumpStats(s=>s.runs++);
   markSeen('r', C.relic);
   sfx('door');
@@ -482,7 +545,7 @@ function validSave(s){
 }
 function migrate(r){
   if(!validSave(r)) throw new Error('bad save');
-  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
+  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, muts:[], daily:null, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
   delete r.choices;
   r.relics = r.relics.filter(id=>RELICS[id]);
@@ -495,7 +558,9 @@ function migrate(r){
   return r;
 }
 function gainRelic(id){
+  const sk = setOf(id), before = sk ? setCount(sk) : 0;
   run.relics.push(id); const R = RELICS[id]; if(R.onGet) R.onGet();
+  if(sk && before<3 && setCount(sk)>=3) setTimeout(()=>{ sfx('trophy'); toast(`<b>${SETS[sk].name} set complete!</b><br>${SETS[sk].bonus}`, R.spr, 3600); unlock('setbonus'); }, 900);
   markSeen('r', id);
   if(run.relics.length>=10) unlock('relics10');
   if(run.relics.length>=15) unlock('relics15');
@@ -506,8 +571,21 @@ function relicOffers(n, minR=1){
   const pool = free.filter(id=>RELICS[id].r>=minR);
   return shuffle(pool.length>=n?pool:free).slice(0,n);
 }
+/* ================= relic sets: hold 3 from one family for a bonus ================= */
+const SETS = {
+  gold:{name:'Gold', col:'#f7c936', relics:['idol','magnet','crown','clover','glove','goldendice'], bonus:'Coin blocks give +2 gold and fight rewards give 20% more gold.'},
+  blood:{name:'Blood', col:'#ef5258', relics:['fang','bloodpact','vampcape','bloodgem','leech','emberheart'], bonus:'Heal 1 HP for every line you clear.'},
+  arcane:{name:'Arcane', col:'#c77dff', relics:['prism','spellbook','seerorb','battery','ring','purist'], bonus:'Clearing 2+ lines at once adds 1 extra special charge.'},
+  iron:{name:'Iron', col:'#a8b4c4', relics:['chainmail','tower','spikes','boots','ironfist','stoneward','thickskin','mirror'], bonus:'Start every fight with 10 extra shield.'},
+  blast:{name:'Blast', col:'#ff8a3c', relics:['powder','sledge','satchel','crossed','warhorn','scythe','whetstone'], bonus:'Clearing 3+ lines at once deals 10 extra damage.'},
+  wild:{name:'Wild', col:'#45c674', relics:['feather','cauldron','hearth','toxin','warmcloak','tidecharm','packrat','souljar','bluelantern','compass','phial','hourglass','dice','drum','phoenix'], bonus:'Heal 6 HP after every fight, and pets act 1 move sooner.'},
+};
+const setOf = id => Object.keys(SETS).find(k=>SETS[k].relics.includes(id)) || null;
+const setCount = k => !run ? 0 : run.relics.filter(id=>SETS[k].relics.includes(id)).length;
+const setOn = k => setCount(k) >= 3;
+const canPotion = () => !!run && !mut('dry') && run.potions.length < run.potionSlots;
 function givePotion(id){
-  if(run.potions.length >= run.potionSlots) return false;
+  if(mut('dry') || run.potions.length >= run.potionSlots) return false;
   id = id || pick(Object.keys(POTIONS));
   run.potions.push(id); renderRunbar(); return id;
 }
@@ -529,13 +607,13 @@ function show(which){
   $('#combat').hidden = which!=='combat';
   $('#view').hidden = which==='combat';
   if(which==='combat'){ $('#view').innerHTML = ''; bump($('#combat'),'enter'); }
-  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills','journal'].includes(which);
+  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills','journal','wardrobe'].includes(which);
   selPotion = -1;
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   document.documentElement.classList.toggle('lock', which==='combat');
   if(run) renderRunbar();
   updateDanger();
-  Sound.music(['title','heroes','codex','trophies','skills','journal'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':run&&run.floor>FLOORS?'endless':'combat') : which==='shop' ? 'shop' : which==='rest' ? 'rest' : 'map');
+  Sound.music(['title','heroes','codex','trophies','skills','journal','wardrobe'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':run&&run.floor>FLOORS?'endless':'combat') : which==='shop' ? 'shop' : which==='rest' ? 'rest' : 'map');
   window.scrollTo(0,0);
 }
 function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
@@ -573,18 +651,22 @@ function openRelics(){
   const m = $('#modal'); m.hidden = false;
   m.innerHTML = `<div class="card" role="dialog" aria-label="Relics" style="max-height:80vh;overflow:auto">
     <div class="row"><h2 class="title" style="font-size:24px">Relics (${run.relics.length})</h2>${img('r_treasure',34)}</div>
-    ${run.relics.map(id=>{ const R = RELICS[id]; return `<div class="troph">${img(R.spr,40)}<div><b>${R.name}</b><small>${R.desc}</small></div></div>`; }).join('')}
+    <div class="setrow">${Object.entries(SETS).map(([k,S])=>{ const n = setCount(k); return n ? `<span class="setpill ${n>=3?'on':''}" style="--sc:${S.col}" data-s="${k}">${S.name} ${Math.min(n,3)}/3</span>` : ''; }).join('')}</div>
+    ${run.relics.map(id=>{ const R = RELICS[id], sk = setOf(id); return `<div class="troph">${img(R.spr,40)}<div><b>${R.name}${sk?` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name}</span>`:''}</b><small>${R.desc}</small></div></div>`; }).join('')}
     <div class="troph">${img(ULT().spr,40)}<div><b>Special: ${ULT().name}</b><small>${ULT().desc} Needs ${ULT().need} lines.</small></div></div>
     ${run.pet&&PETS[run.pet]?`<div class="troph">${img(PETS[run.pet].spr,40)}<div><b>Pet: ${PETS[run.pet].name}</b><small>${PETS[run.pet].desc}</small></div></div>`:''}
     <button class="btn" id="closeBtn">Close</button></div>`;
   $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
+  m.querySelectorAll('.setpill').forEach(p=>p.onclick=()=>{ const S = SETS[p.dataset.s]; toast(`<b>${S.name} set (${Math.min(3,setCount(p.dataset.s))}/3)</b><br>${S.bonus}`, 'r_treasure', 3200); });
 }
 function potionTap(i){
   const id = run.potions[i], P = POTIONS[id]; if(!P) return;
   const inFight = cb && !cb.over && !$('#combat').hidden;
   if(!inFight && !P.any){ toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Use it during a fight.</span>`, P.spr); return; }
   if(selPotion !== i){ selPotion = i; renderRunbar(); toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Tap again to drink.</span>`, P.spr); return; }
-  selPotion = -1; run.potions.splice(i,1);
+  selPotion = -1;
+  if(inFight && has('phial') && !cb.phialUsed){ cb.phialUsed = true; floatText($('#potionBar'), 'Refilled!', '#ffb3e6'); }
+  else run.potions.splice(i,1);
   bumpStats(s=>s.potions++); questAdd('potions', 1);
   sfx('potion'); P.use();
   renderRunbar();
@@ -593,7 +675,9 @@ function potionTap(i){
 }
 function view(html){ const v=$('#view'); v.innerHTML = `<div class="screen">${html}</div>`; return v; }
 function choiceBtn({id,spr,name,desc,price,disabled,r,size}){
-  const rar = r ? `<span class="rar rar${r}">${['','Common','Uncommon','Rare'][r]}</span>` : '';
+  let rar = r ? `<span class="rar rar${r}">${['','Common','Uncommon','Rare'][r]}</span>` : '';
+  const rid = typeof id==='string' ? id.replace(/^r:/,'') : id, sk = RELICS[rid] && run ? setOf(rid) : null;
+  if(sk) rar += ` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name} set ${Math.min(3,setCount(sk) + (run.relics.includes(rid)?0:1))}/3</span>`;
   return `<button class="choice" data-id="${id}" ${disabled?'disabled':''}><span class="ic">${img(spr, size||44)}</span><span><b>${name}</b>${rar}<small>${desc}</small></span>${price!=null?`<span class="price">${img('coin',18)}${price}</span>`:''}</button>`;
 }
 function bindChoices(fn){
@@ -663,7 +747,7 @@ function openSettings(){
   let armed = false, armT;
   $('#resetBtn').onclick = ()=>{
     if(!armed){ armed = true; $('#resetBtn').textContent = 'Tap again to erase everything'; sfx('warn'); clearTimeout(armT); armT = setTimeout(()=>{ armed=false; const b=$('#resetBtn'); if(b) b.textContent='Reset all data'; }, 3000); return; }
-    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated'].forEach(k=>store.set(k,null));
+    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated','daily','mutSel','theme','themesSeen'].forEach(k=>store.set(k,null));
     sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex, trophies, skills and heroes were erased.', 'bones');
   };
   const ab = $('#abandonBtn');
@@ -672,7 +756,7 @@ function openSettings(){
   m.onclick = e=>{ if(e.target===m) closeSettings(); };
 }
 /* backup / restore: every bbd_ key packed into one code you can copy somewhere safe */
-const BACKUP_KEYS = ['save','stats','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated','settings'];
+const BACKUP_KEYS = ['save','stats','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated','settings','daily','mutSel','theme','themesSeen'];
 function makeBackup(){
   const data = {v:1}; BACKUP_KEYS.forEach(k=>{ const v = store.get(k, null); if(v!=null) data[k] = v; });
   return 'BBD1-' + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -747,6 +831,12 @@ function questCard(){
     ${allClaimed && !q.bonus ? `<button class="btn" id="qbonus" style="font-size:17px;margin-top:6px">Claim bonus: ${QUEST_BONUS} Soul Shards</button>` : ''}
   </div>`;
 }
+function dailyCard(){
+  const D = dailyInfo(), rec = store.get('daily', {}), best = rec.key===D.key ? rec.best : 0, C = CLASSES[D.cls];
+  return `<div class="card dailycard"><div class="row"><h3 class="title" style="font-size:20px;display:flex;align-items:center;gap:6px">${img('calendar',28)}Daily Challenge</h3><span class="muted" style="font-size:12px">${best?`Best ${best.toLocaleString()}`:'Not played yet'}</span></div>
+    <div class="dailyrow">${img(C.spr,48)}<div><b>${C.name}</b>${D.muts.map(k=>`<span class="mchip">${img(MUTS[k].spr,16)}${MUTS[k].name}</span>`).join('')}<small>Same dungeon for everyone today. ${rec.key===D.key&&rec.rewarded?'Bonus claimed.':'First finish: +40 Soul Shards.'}</small></div></div>
+    <button class="btn" id="dailyBtn" style="font-size:18px;padding:9px">Play today's challenge</button></div>`;
+}
 function titleScreen(){
   run = null; cb = null; show('title');
   let save = store.get('save', null);
@@ -759,12 +849,15 @@ function titleScreen(){
     <div class="heroes">${heroes.slice(0,5).map(k=>img(CLASSES[k].spr, heroes.length>3?60:76)).join('')}</div>
     ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, ${save.floor>FLOORS?`Depth ${save.floor-FLOORS}`:`Floor ${save.floor}`}</button>`:''}
     <button class="btn ${save?'ghost':''}" id="startBtn">${save?'New Run':'Enter the Dungeon'}</button>
+    ${dailyCard()}
     ${questCard()}
     <div class="navgrid">
       <button class="navb" id="skillBtn">${img('rune',36)}<b>Skill Tree</b><small>${img('shard',14)} ${soulShards()}</small></button>
       <button class="navb" id="codexBtn">${img('book',36)}<b>Codex</b><small>Monsters &amp; relics</small></button>
       <button class="navb" id="trophyBtn">${img('trophy',36)}<b>Trophies</b><small>${Object.keys(ach).length} / ${Object.keys(ACH).length}</small></button>
       <button class="navb" id="journalBtn">${img('scroll',36)}<b>Journal</b><small>${st.runs} runs</small></button>
+      <button class="navb" id="wardBtn">${img('palette',36)}<b>Wardrobe</b><small>${Object.keys(THEMES).filter(themeOk).length} / ${Object.keys(THEMES).length} themes</small></button>
+      <button class="navb" id="setBtn2">${img('gear',36)}<b>Settings</b><small>Sound, display, data</small></button>
     </div>
     ${st.runs ? '' : `<div class="card">${howToHTML()}</div>`}
   `);
@@ -776,6 +869,12 @@ function titleScreen(){
   $('#skillBtn').onclick = ()=>{ sfx('click'); skillScreen(); };
   $('#trophyBtn').onclick = ()=>{ sfx('click'); trophyScreen(); };
   $('#journalBtn').onclick = ()=>{ sfx('click'); journalScreen(); };
+  $('#wardBtn').onclick = ()=>{ sfx('click'); wardrobeScreen(); };
+  $('#setBtn2').onclick = openSettings;
+  const db = $('#dailyBtn'); if(db) db.onclick = ()=>{
+    if(store.get('save', null) && db.dataset.armed!=='1'){ db.dataset.armed = '1'; sfx('warn'); toast('Starting the Daily Challenge replaces your saved run. Tap again to start.', 'calendar', 3000); return; }
+    const D = dailyInfo(); sfx('door'); newRun(D.cls, {daily:D.key, muts:D.muts}); };
+  checkThemeUnlocks();
   $('#view').querySelectorAll('.qclaim').forEach(b=>b.onclick=()=>{
     const q = quests(), id = b.dataset.q; if(q.claimed[id] || (q.prog[id]||0) < QUESTS[id].goal) return;
     q.claimed[id] = 1; store.set('quests', q); store.set('shards', soulShards()+QUEST_REWARD);
@@ -783,6 +882,23 @@ function titleScreen(){
   });
   const qb = $('#qbonus'); if(qb) qb.onclick = ()=>{ const q = quests(); if(q.bonus) return; q.bonus = true; store.set('quests', q); store.set('shards', soulShards()+QUEST_BONUS); unlock('questor'); sfx('trophy'); confetti(50); setTimeout(titleScreen, 300); };
   checkHeroUnlocks();
+}
+function checkThemeUnlocks(){
+  const seenT = store.get('themesSeen', {stone:1}); let fresh = null;
+  Object.keys(THEMES).forEach(id=>{ if(!seenT[id] && themeOk(id)){ seenT[id] = 1; fresh = id; } });
+  if(fresh){ store.set('themesSeen', seenT); unlock('decorator'); setTimeout(()=>toast(`<b>New board theme!</b><br>${THEMES[fresh].name} is now in your Wardrobe.`, 'palette', 3200), 1400); }
+}
+function wardrobeScreen(){
+  show('wardrobe');
+  const cur = store.get('theme','stone');
+  view(`<div class="center"><h2 class="title">Wardrobe</h2><p class="muted">Choose how your battle board looks.</p></div>
+    <div class="themes">${Object.entries(THEMES).map(([id,T])=>{ const ok = themeOk(id);
+      return `<button class="theme ${ok?'':'lockd'} ${id===cur&&ok?'on':''}" data-t="${id}" ${ok?'':'aria-disabled="true"'}>
+        <span class="mini" style="--bd:${T.board};--ed:${T.edge};--a:${T.a};--b:${T.b}">${'<i></i>'.repeat(16)}</span>
+        <b>${T.name}</b><small>${ok ? (id===cur?'Equipped':'Tap to equip') : T.unlock.text}</small></button>`; }).join('')}</div>
+    <button class="btn ghost" id="backBtn">Back</button>`);
+  $('#view').querySelectorAll('.theme').forEach(b=>b.onclick=()=>{ const id = b.dataset.t; if(!themeOk(id)){ sfx('invalid'); toast(`<b>${THEMES[id].name}</b><br>Unlock: ${THEMES[id].unlock.text}.`, 'palette'); return; } store.set('theme', id); sfx('relic'); wardrobeScreen(); });
+  $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
 function journalScreen(){
   show('journal');
@@ -796,7 +912,7 @@ function journalScreen(){
       <div>Pure lines<br><b>${st.pures||0}</b></div><div>Potions drunk<br><b>${st.potions||0}</b></div>
     </div></div>
     <h3 class="title" style="font-size:20px">Recent runs</h3>
-    ${jr.length ? jr.map(e=>`<div class="troph">${img(CLASSES[e.cls]?CLASSES[e.cls].spr:'bones',44)}<div style="flex:1"><b>${CLASSES[e.cls]?CLASSES[e.cls].name:'Hero'} <span class="rar ${e.won?'rar3':'rar1'}">${e.won?(e.depth?`Victory, depth ${e.depth}`:'Victory'):`Fell on floor ${e.floor}`}</span></b><small>${e.kills} foes · +${e.shards} shards${e.heat?` · Heat ${e.heat}`:''}${e.pet&&PETS[e.pet]?` · ${PETS[e.pet].name}`:''} · ${ago(e.date)}</small></div></div>`).join('') : '<p class="center muted">No runs yet. Your adventures will be recorded here.</p>'}
+    ${jr.length ? jr.map(e=>`<div class="troph">${img(CLASSES[e.cls]?CLASSES[e.cls].spr:'bones',44)}<div style="flex:1"><b>${CLASSES[e.cls]?CLASSES[e.cls].name:'Hero'} <span class="rar ${e.won?'rar3':'rar1'}">${e.won?(e.depth?`Victory, depth ${e.depth}`:'Victory'):`Fell on floor ${e.floor}`}</span></b><small>${e.daily?'Daily · ':''}${e.kills} foes · +${e.shards} shards${e.heat?` · Heat ${e.heat}`:''}${e.pet&&PETS[e.pet]?` · ${PETS[e.pet].name}`:''} · ${ago(e.date)}</small></div></div>`).join('') : '<p class="center muted">No runs yet. Your adventures will be recorded here.</p>'}
     <button class="btn ghost" id="backBtn">Back</button>`);
   $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
@@ -815,7 +931,12 @@ function heroScreen(){
   show('heroes');
   const maxHeat = store.get('heat', 0); let heat = clamp(+store.get('heatSel', 0), 0, maxHeat);
   const hasSave = !!store.get('save', null);
+  let msel = (store.get('mutSel', [])||[]).filter(k=>MUTS[k]);
+  const mutsOpen = stats().runs >= 1;
   view(`<div class="center"><h2 class="title">Choose your hero</h2>${hasSave?'<p class="muted" style="font-size:13px;color:#ffb07a">Starting a new run will replace your saved run.</p>':''}</div>
+    ${mutsOpen ? `<div class="card mutcard"><div class="row"><h3 class="title" style="font-size:18px;display:flex;align-items:center;gap:6px">${img('mutator',26)}Mutators</h3><span class="muted" id="mutMul" style="font-size:13px"></span></div>
+      <div class="mchips">${Object.entries(MUTS).map(([k,M])=>`<button class="mchip big ${msel.includes(k)?'on':''}" data-m="${k}">${img(M.spr,20)}${M.name}</button>`).join('')}</div>
+      <small class="muted" id="mutDesc" style="font-size:12px">Optional twists for your run. Harder mutators earn more Soul Shards.</small></div>` : ''}
     ${maxHeat ? `<div class="card heatsel"><button id="hm" aria-label="Less heat">-</button><div class="mid"><b id="hn"></b><small id="hd"></small></div><button id="hp" aria-label="More heat">+</button></div>` : ''}
     ${Object.entries(CLASSES).map(([id,C])=>{
       const R = RELICS[C.relic], wins = (stats().winsBy||{})[id]||0;
@@ -829,6 +950,9 @@ function heroScreen(){
         ${(()=>{ const lv = masteryLevel(id), x = masteryXp(id), nx = MASTERY[lv]; return `<span class="mastery"><span class="mlv">Mastery ${lv}</span><span class="qbar"><i style="width:${nx?Math.min(100,100*(x-MASTERY[lv-1])/(nx-MASTERY[lv-1])):100}%"></i></span><small>${nx?`Next: ${MASTERY_PERKS[lv]}`:'Max mastery'}</small></span>`; })()}
       </span></button>`; }).join('')}
     <button class="btn ghost" id="backBtn">Back</button>`);
+  const paintM = ()=>{ const el = $('#mutMul'); if(el){ const m = mutBonus(msel); el.textContent = msel.length ? `Soul Shards x${fmt(Math.round(m*100)/100)}` : 'None selected'; } };
+  $('#view').querySelectorAll('.mchip.big').forEach(b=>b.onclick=()=>{ const k = b.dataset.m; msel = msel.includes(k) ? msel.filter(x=>x!==k) : [...msel, k]; store.set('mutSel', msel); b.classList.toggle('on'); $('#mutDesc').textContent = `${MUTS[k].name}: ${MUTS[k].desc}`; sfx('click'); paintM(); });
+  paintM();
   const paint = ()=>{ if(!maxHeat) return; $('#hn').textContent = HEAT[heat].name; $('#hd').textContent = HEAT[heat].desc; $('#hm').disabled = heat<=0; $('#hp').disabled = heat>=maxHeat; store.set('heatSel', heat); };
   if(maxHeat){ $('#hm').onclick = ()=>{ heat--; sfx('click'); paint(); }; $('#hp').onclick = ()=>{ heat++; sfx('rage'); paint(); }; paint(); }
   $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
@@ -840,7 +964,7 @@ function heroScreen(){
       store.set('shards', soulShards() - C.unlock.cost); const h = store.get('heroes', {}); h[k] = 1; store.set('heroes', h); unlock('roster');
       sfx('trophy'); confetti(60); heroScreen(); return;
     }
-    sfx('click'); newRun(id);
+    sfx('click'); newRun(id, {muts: mutsOpen ? msel : []});
   }; });
   $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
@@ -967,7 +1091,7 @@ function goMap(){
   }));
   view(`
     <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${floorName()}</div></div>
-      ${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}</div>
+      <span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${run.daily?`<span class="heatchip" style="background:#3a2a5a;border-color:#c77dff;color:#f0d6ff">${img('calendar',20)}Daily</span>`:''}${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}${(run.muts||[]).map(k=>`<span class="heatchip mut" title="${MUTS[k].name}">${img(MUTS[k].spr,20)}</span>`).join('')}</span></div>
     <p class="muted center" style="font-size:13px">Descend toward the boss. Tap a glowing room.</p>
     ${!run.path.length?`<div class="starttoken">${img(CLASSES[run.cls].spr,40)}<span>You are here</span></div>`:''}
     <div class="map" style="height:${H}px"><svg viewBox="0 0 100 ${H}" preserveAspectRatio="none">${lines}</svg>${nodesHtml}</div>
@@ -982,7 +1106,7 @@ function goMap(){
 function enterRoom(r, i){
   run.path.push([r,i]); run.step = run.path.length - 1;
   let t = run.map[r][i].t;
-  if(t==='combat' && Math.random()<0.1) t = 'goblin';
+  if(t==='combat' && (run.daily ? withSeed(runSeed(`g${run.floor}-${r}-${i}`), Math.random) : Math.random()) < 0.1) t = 'goblin';
   run.room = {r, i, t};
   run.rooms = (run.rooms||0) + 1; questAdd('rooms', 1);
   sfx('door');
@@ -1011,7 +1135,7 @@ function advance(){
     questAdd('floor', run.floor);
     if(run.floor>=FLOORS+3) unlock('endless');
     if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3'); if(run.floor===4) unlock('floor4'); if(run.floor===5) unlock('floor5');
-    run.map = genMap(); run.path = [];
+    run.map = run.daily ? withSeed(runSeed(run.floor), genMap) : genMap(); run.path = [];
     heal(Math.round(run.maxHp*0.3));
     banner(`Floor ${run.floor}`, floorName(), 2200);
     setTimeout(()=>toast('You descend deeper and catch your breath. <b>+30% HP</b>', 'r_rest'), 600);
@@ -1051,22 +1175,29 @@ function treasureScreen(){
 }
 function shopScreen(){
   show('shop');
-  const disc = has('clover') ? 0.8 : 1, P = x => Math.round(x*disc);
+  const disc = (has('clover') ? 0.8 : 1) * (mut('rush') ? 1.5 : 1), P = x => Math.round(x*disc);
   const R = run.room;
   if(!R.shop){ R.shop = {
     stock: relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false})),
     pots: shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})),
     up: pick(Object.keys(UPGRADES)), upSold:false, packSold:false, removeSold:false }; saveRun(); }
   const S = R.shop, stock = S.stock, pots = S.pots, up = S.up, upPrice = P(50), packPrice = P(70);
+  const rerollPrice = () => P(15 + 10*(S.rerolls||0));
   const render = ()=>{
     const full = run.potions.length>=run.potionSlots;
     view(`${scene('r_shop','The Merchant', has('clover')?'"Lucky you. Everything is marked down."':'"Gold for goods, friend."')}
       ${stock.map(s=>s.sold?'':choiceBtn({id:'r:'+s.id,...RELICS[s.id],price:s.price,disabled:run.gold<s.price})).join('')}
-      ${pots.map(s=>s.sold?'':choiceBtn({id:'p:'+s.id,spr:POTIONS[s.id].spr,name:POTIONS[s.id].name,desc:POTIONS[s.id].desc+(full?' (potion slots full)':''),price:s.price,disabled:run.gold<s.price||full})).join('')}
+      ${mut('dry')?'':pots.map(s=>s.sold?'':choiceBtn({id:'p:'+s.id,spr:POTIONS[s.id].spr,name:POTIONS[s.id].name,desc:POTIONS[s.id].desc+(full?' (potion slots full)':''),price:s.price,disabled:run.gold<s.price||full})).join('')}
       ${S.upSold?'':choiceBtn({id:'u:'+up,spr:UPGRADES[up].spr,name:UPGRADES[up].name,desc:UPGRADES[up].desc+' (permanent)',price:upPrice,disabled:run.gold<upPrice})}
-      ${S.packSold||run.potionSlots>=5?'':choiceBtn({id:'b:pack',spr:'satchel',name:'Bigger Pack',desc:'+1 potion slot.',price:packPrice,disabled:run.gold<packPrice})}
+      ${S.packSold||run.potionSlots>=5||mut('dry')?'':choiceBtn({id:'b:pack',spr:'satchel',name:'Bigger Pack',desc:'+1 potion slot.',price:packPrice,disabled:run.gold<packPrice})}
       ${S.healSold?'':choiceBtn({id:'h:heal',spr:'heal_icon',name:'Bandages',desc:'Heal 30% of your max HP.',price:P(35),disabled:run.gold<P(35)||run.hp>=run.maxHp})}
+      <button class="btn ghost" id="rerollShop" ${run.gold<rerollPrice()?'disabled':''}>Restock relics and potions (${rerollPrice()} gold)</button>
       <button class="btn ghost" id="leaveBtn">Leave</button>`);
+    $('#rerollShop').onclick = ()=>{
+      const c = rerollPrice(); if(run.gold<c) return; run.gold -= c; S.rerolls = (S.rerolls||0)+1;
+      stock.splice(0, stock.length, ...relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false})));
+      pots.splice(0, pots.length, ...shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})));
+      sfx('shuffle'); renderRunbar(); render(); saveRun(); };
     $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
       const [kind,id] = b.dataset.id.split(':');
       if(kind==='r'){ const s=stock.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; gainRelic(id); }
@@ -1136,7 +1267,7 @@ const EVENTS = [
     {name:'Leave it', spr:'r_event', desc:'Move on.', go(){} },
   ]}),
   ()=>({spr:'potion_venom', title:'Bubbling Alchemist', text:'A hooded figure stirs a cauldron of glowing liquid.', opts:[
-    {name:'Buy a brew', spr:'potion_health', desc:'Pay 15 gold for a random potion.', ok:()=>run.gold>=15&&run.potions.length<run.potionSlots, go(){ run.gold-=15; givePotion(); sfx('potion'); }},
+    {name:'Buy a brew', spr:'potion_health', desc:'Pay 15 gold for a random potion.', ok:()=>run.gold>=15&&canPotion(), go(){ run.gold-=15; givePotion(); sfx('potion'); }},
     {name:'Drink from the pot', spr:'potion_venom', desc:'Heal to full, but lose 5 max HP.', go(){ run.maxHp=Math.max(10,run.maxHp-5); run.hp=run.maxHp; sfx('heal'); }},
     {name:'Leave', spr:'r_event', desc:'Move on.', go(){} },
   ]}),
@@ -1150,7 +1281,7 @@ const EVENTS = [
   ]}),
   ()=>({spr:'pool', title:'Fountain of Youth', text:'Crystal water bubbles up from the stone. It smells of flowers.', opts:[
     {name:'Drink deeply', spr:'heal_icon', desc:'Heal to full HP.', ok:()=>run.hp<run.maxHp, go(){ run.hp = run.maxHp; sfx('heal'); }},
-    {name:'Fill a flask', spr:'potion_health', desc:'Gain a Health Potion.', ok:()=>run.potions.length<run.potionSlots, go(){ givePotion('health'); sfx('potion'); }},
+    {name:'Fill a flask', spr:'potion_health', desc:'Gain a Health Potion.', ok:()=>canPotion(), go(){ givePotion('health'); sfx('potion'); }},
     {name:'Toss a coin', spr:'coin', desc:'Pay 10 gold. +4 max HP.', ok:()=>run.gold>=10, go(){ run.gold-=10; run.maxHp+=4; run.hp+=4; sfx('coin'); }},
   ]}),
   ()=>({spr:'mage', title:'Hermit Sage', text:'"I can teach you to focus your power... for a price."', opts:[
@@ -1210,6 +1341,7 @@ function rewardScreen(kind){
 function rollReward(RW, kind){
   let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*Math.min(run.floor,FLOORS):rand(10,18);
   if(has('magnet')) g = Math.round(g*1.4);
+  if(mut('rush')) g *= 2;
   if(has('glove')) g += 10;
   run.gold += g;
   let extra = '';
@@ -1218,6 +1350,8 @@ function rollReward(RW, kind){
   if(has('philflask')){ const p = givePotion(); if(p) extra += ` Brewed a ${POTIONS[p].name}.`; }
   if(skill('mend')){ const h = Math.round(run.maxHp*0.05*skill('mend')); heal(h); extra += ` Recovered ${h} HP.`; }
   if(has('bloodgem')){ heal(5); extra += ' Bloodstone heals 5.'; }
+  if(setOn('wild')){ heal(6); extra += ' Wild set heals 6.'; }
+  if(setOn('gold')){ const b = Math.round(g*0.2); run.gold += b; g += b; }
   questAdd('gold', g);
   let offers = [];
   if(kind==='combat' || kind==='goblin'){
@@ -1226,7 +1360,7 @@ function rollReward(RW, kind){
     while(offers.length<3 && guard++<50){ const b = weighted(pool.map(x=>[x,x.w])); if(!offers.some(o=>o.id===b.id)) offers.push({id:b.id, boon:true}); }
     if(Math.random()<(kind==='goblin'?1:0.3)){ const [id]=relicOffers(1); if(id) offers[2] = {id}; }
   } else {
-    offers = relicOffers(3+(skill('sense')?1:0), kind==='boss'?2:1).map(id=>({id}));
+    offers = relicOffers(3+(skill('sense')?1:0)+(has('compass')?1:0), kind==='boss'?2:1).map(id=>({id}));
   }
   Object.assign(RW, {g, extra, offers});
   renderRunbar();
@@ -1239,19 +1373,30 @@ function endScreen(won){
   if(settings.tips && !settings.tipsManual && stats().runs>=1){ settings.tips = false; store.set('settings', settings); }
   bumpStats(s=>{ if(run.floor>FLOORS) s.bestDepth = Math.max(s.bestDepth||0, run.floor-FLOORS); if(won){ s.wins++; s.winsBy = s.winsBy||{}; s.winsBy[run.cls] = (s.winsBy[run.cls]||0)+1; } s.kills+=run.kills-(run.killsCounted||0); s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)); s.bestLines=Math.max(s.bestLines, run.bestLines); s.bestHit=Math.max(s.bestHit, run.bestHit); });
   if(won){
-    unlock('win'); if(run.heat>=1) unlock('heat');
+    unlock('win'); if(run.heat>=1) unlock('heat'); if(run.cls==='bard') unlock('bard');
     const wb = stats().winsBy; if(['knight','rogue','mage'].every(k=>wb[k])) unlock('allheroes');
     const mh = store.get('heat',0);
     if(run.heat>=mh && mh<HEAT.length-1){ store.set('heat', mh+1); heatMsg = `<p class="center" style="color:#ff8a80;font-family:var(--display);font-size:18px">${HEAT[mh+1].name} unlocked!</p>`; }
   }
   let earned = run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0) + Math.max(0, run.floor-FLOORS-1)*20 + (has('bluelantern')?2*(run.rooms||0):0);
-  earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?1.5:1));
+  earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?1.5:1) * mutBonus(run.muts));
   earned = Math.max(0, earned - (run.awarded||0)); run.awarded = (run.awarded||0) + earned; run.killsCounted = run.kills;
   const mBefore = masteryLevel(run.cls); const mm = store.get('mastery', {}); mm[run.cls] = (mm[run.cls]||0) + earned; store.set('mastery', mm);
   const mAfter = masteryLevel(run.cls);
+  let dailyMsg = '';
+  if(run.daily){
+    const score = Math.min(run.floor,FLOORS+1)*1000 + Math.max(0,run.floor-FLOORS-1)*1500 + run.kills*25 + (run.bosses||0)*400 + (won||wasEndless?3000:0) + Math.round(run.dmg/10);
+    const d = store.get('daily', {}); const same = d.key===run.daily; const best = same ? Math.max(d.best||0, score) : score;
+    let bonus = 0; if(!same || !d.rewarded){ bonus = 40; store.set('shards', soulShards()+bonus); }
+    store.set('daily', {key:run.daily, best, rewarded:true, last:score});
+    unlock('daily');
+    dailyMsg = `<div class="card center"><div class="title" style="font-size:20px">Daily score: ${score.toLocaleString()}</div><div class="muted" style="font-size:13px">Today's best: ${best.toLocaleString()}${bonus?` · +${bonus} bonus Soul Shards`:''}</div></div>`;
+  }
+  if((won||wasEndless) && (run.muts||[]).filter(k=>MUTS[k].bonus>0).length>=3) unlock('mutant');
+  checkThemeUnlocks();
   if(mAfter>=5) unlock('master');
   if(mAfter>mBefore) setTimeout(()=>sfx('levelup'), 900);
-  const jr = store.get('journal', []); if(jr[0] && run.jid && jr[0].jid===run.jid) jr.shift(); jr.unshift({jid:run.jid, cls:run.cls, floor:Math.min(run.floor,FLOORS), depth:Math.max(0,run.floor-FLOORS-1), won: won||wasEndless, kills:run.kills, heat:run.heat||0, date:Date.now(), shards:earned, pet:run.pet||null}); store.set('journal', jr.slice(0,20));
+  const jr = store.get('journal', []); if(jr[0] && run.jid && jr[0].jid===run.jid) jr.shift(); jr.unshift({jid:run.jid, cls:run.cls, floor:Math.min(run.floor,FLOORS), depth:Math.max(0,run.floor-FLOORS-1), won: won||wasEndless, kills:run.kills, heat:run.heat||0, date:Date.now(), shards:earned, pet:run.pet||null, daily:!!run.daily}); store.set('journal', jr.slice(0,20));
   store.set('shards', soulShards() + earned); bumpStats(s=>s.shards += earned);
   checkHeroUnlocks();
   show('end'); Sound.music(won?'map':'menu');
@@ -1259,6 +1404,7 @@ function endScreen(won){
   if(won){ confetti(160); banner('VICTORY', 'The dungeon is conquered', 2600); }
   view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':wasEndless?'The depths claim you...':'You have fallen...', won?'The Demon Lord is banished. Legends will be told.':wasEndless?`${CLASSES[run.cls].name} reached Endless Depth ${run.floor-FLOORS}.`:`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
     ${heatMsg}
+    ${dailyMsg}
     ${mAfter>mBefore?`<div class="card center" style="color:#ffcf7a;font-family:var(--display);font-size:18px">${CLASSES[run.cls].name} reached Mastery ${mAfter}!<div class="muted" style="font-family:var(--body);font-size:13px">${MASTERY_PERKS[mAfter-1]}</div></div>`:''}
     ${won && !wasEndless ? `<button class="btn" id="endlessBtn" style="background:linear-gradient(#c77dff,#8a3fd1);color:#fff;text-shadow:0 1px 0 #000">Descend into Endless Depths</button>` : ''}
     <div class="card center" style="display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--display);font-size:22px">${img('shard',34)}+${earned} Soul Shards<span class="muted" style="font-size:14px;font-family:var(--body)">(${soulShards()} total)</span></div>
@@ -1268,7 +1414,7 @@ function endScreen(won){
       <div>${run.bestHit}<small>biggest hit</small></div>
       <div>${run.bestLines}<small>best clear</small></div>
     </div></div>
-    <div class="card"><p class="center muted" style="font-size:13px;margin-bottom:6px">${CLASSES[run.cls].name}${run.heat?` · Heat ${run.heat}`:''} · ${run.relics.length} relics</p><div class="relicrow">${run.relics.map(id=>img(RELICS[id].spr,30)).join('')}</div></div>
+    <div class="card"><p class="center muted" style="font-size:13px;margin-bottom:6px">${CLASSES[run.cls].name}${run.heat?` · Heat ${run.heat}`:''}${run.daily?' · Daily':''}${(run.muts||[]).length?` · ${run.muts.map(k=>MUTS[k].name).join(', ')}`:''} · ${run.relics.length} relics</p><div class="relicrow">${run.relics.map(id=>img(RELICS[id].spr,30)).join('')}</div></div>
     <button class="btn" id="againBtn">New Run</button>
     <button class="btn ghost" id="titleBtn">Title</button>`);
   $('#againBtn').onclick = ()=>{ sfx('click'); heroScreen(); }; $('#titleBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
@@ -1288,6 +1434,7 @@ function shapeWeight(s){
   const n = s.cells.length;
   let w = n<=2?0.9 : n<=4?1.3 : n<=5?1.0 : 0.5;
   if(has('feather')){ if(n<=3) w*=2.4; if(n>=6) w*=0.4; }
+  if(mut('heavy')){ if(n>=5) w*=2.4; if(n<=2) w*=0.4; }
   return w;
 }
 function newPiece(){
@@ -1302,8 +1449,10 @@ function fits(p,r,c,board){
 }
 function fitsAnywhere(p){ for(let r=0;r<=N-p.h;r++) for(let c=0;c<=N-p.w;c++) if(fits(p,r,c)) return true; return false; }
 function fitsAnyRot(p){ let q = p; for(let k=0;k<4;k++){ if(fitsAnywhere(q)) return true; q = rotated(q); } return false; }
+const STASH = 3;
+const pieceAt = i => i===STASH ? cb.stash : cb.hand[i];
 function rotatePiece(i){
-  const p = cb.hand[i]; const r = rotated(p);
+  const p = pieceAt(i); if(!p) return; const r = rotated(p);
   p.cells = r.cells; p.h = r.h; p.w = r.w; p.rotT = performance.now();
   sfx('rotate');
   if(!store.get('rotated', false)){ store.set('rotated', true); const h = $('#hint'); if(h){ h.style.display = 'none'; layout(); } }
@@ -1319,10 +1468,12 @@ function startCombat(kind, forced){
   const RM = run.room;
   if(RM.fight) return resumeFight(RM.fight);
   const F = floorPool();
-  let tpl = forced || RM.tpl || (kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal));
+  const pickTpl = () => kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal);
+  let tpl = forced || RM.tpl || (run.daily ? withSeed(runSeed(`e${run.floor}-${RM.r}-${RM.i}`), pickTpl) : pickTpl());
   const heat = run.heat||0;
   let hpMul = FS([1.15,1.4,1.55,1.6,1.7]) * (kind==='boss'?1.1:(0.92+Math.random()*0.16));
   if(heat>=1) hpMul *= 1.15;
+  if(mut('swarm') && kind==='combat') hpMul *= 1.3;
   if(heat>=5 && kind==='boss') hpMul *= 1.25;
   if(kind==='goblin') hpMul = FS([1,1.7,2.4,3.1,3.8]);
   if(heat>=4 && kind==='elite' && !tpl.passive){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; }
@@ -1332,10 +1483,10 @@ function startCombat(kind, forced){
   RM.tpl = tpl; RM.maxHp = maxHp; RM.t = kind;
   const pas = tpl.passive || null;
   cb = {
-    kind, board:Array(N*N).fill(null), hand:[], fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
+    kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
     streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0, enraged:false,
-    shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort'),
-    rerolls: 1+(has('dice')?1:0)+skill('hands'),
+    shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort') + (setOn('iron')?10:0),
+    rerolls: 1+(has('dice')?1:0)+(has('goldendice')?1:0)+skill('hands'),
     enemy:{...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null},
   };
   markSeen('e', tpl.name);
@@ -1355,7 +1506,7 @@ function startCombat(kind, forced){
 }
 function resumeFight(f){
   $('#hint').style.display = (settings.tips && !store.get('rotated', false)) ? '' : 'none';
-  cb = {...f, fx:[], parts:[], beams:[], pops:[], over:false, fled:false, hand:f.hand.map(p=>({...p, rotT:0}))};
+  cb = {...f, fx:[], parts:[], beams:[], pops:[], over:false, fled:false, hand:f.hand.map(p=>({...p, rotT:0})), stash: f.stash ? {...f.stash, used:false, rotT:0} : null};
   if(!cb.enemy.intent) nextIntent();
   lastEnemySpr = null;
   show('combat'); layout(); renderHUD();
@@ -1365,7 +1516,7 @@ function resumeFight(f){
 const streakStep = () => (has('daggers') ? 0.5 : 0.25) * (has('seerorb') ? 1.5 : 1);
 function nextIntent(){
   const e = cb.enemy, m = e.moves[e.mi % e.moves.length]; e.mi++;
-  e.intent = {...m, left: m.t + (has('hourglass')&&m.k!=='flee'?1:0)};
+  e.intent = {...m, left: Math.max(1, m.t + (has('hourglass')&&m.k!=='flee'?1:0) - (mut('hasty')&&m.k!=='flee'?1:0))};
 }
 function peekIntent(){ const e = cb.enemy; return e.moves[e.mi % e.moves.length]; }
 function intentDamage(it){ return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)) + cb.enemy.rage; }
@@ -1374,10 +1525,13 @@ function addBlocks(type, n, silent){
   shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]=type; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type}); });
 }
 function place(idx, r, c){
-  const p = cb.hand[idx];
+  const p = pieceAt(idx); if(!p) return;
+  const fromStash = idx===STASH;
   const now0 = performance.now();
   p.cells.forEach(([dr,dc])=>{ const i = (r+dr)*N + c+dc; cb.board[i] = p.type; cb.pops.push({i, t0:now0}); });
-  p.used = true; selPotion = -1; cb.moves++;
+  if(fromStash){ cb.stash = null; run.stashPlays = (run.stashPlays||0)+1; unlock('stasher'); if(has('packrat')){ cb.shield += 4; floatText($('#shieldStat'), '+4', '#a8ceff'); } }
+  else p.used = true;
+  cb.stashUsed = false; selPotion = -1; cb.moves++;
   sfx('place'); buzz(8);
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   resolveClears();
@@ -1392,6 +1546,7 @@ function place(idx, r, c){
   renderHUD();
   saveRun();
   if(cb.moves===1) setTimeout(()=>{ const b = cv.getBoundingClientRect(); coach('clear', 'Clear lines', 'Fill a whole row or column. Every block in it fires: swords hit, shields block, hearts heal, coins pay. Drag over the grid to preview the result.', {left:b.left, width:b.width, top:b.top+L.ty, bottom:b.top+L.ty+L.trayH}, true); }, 350);
+  else if(cb.moves===4) setTimeout(()=>{ const b = cv.getBoundingClientRect(), B = L.stash; coach('stash', 'Stash', 'Drag a piece into the Stash to save it for later. You can stash once per move.', {left:b.left+B.x, width:B.w, top:b.top+B.y, bottom:b.top+B.y+B.h}, true); }, 350);
   else if(cb.moves===2) setTimeout(()=>coach('intent', 'Enemy intent', 'This is what the enemy does next, and how many of your moves until it happens.', $('#intent'), false), 350);
   if(run.charge >= ULT().need) coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true);
 }
@@ -1444,12 +1599,13 @@ function computeEffects(board, set, o){
   const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0};
   set.forEach(i=>{ const t = board[i]; if(t) cnt[t]++; });
   const Lv = run.lvl, mult = o.mult, lines = o.lines;
-  const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0);
-  const shieldVal = 2 + Lv.shield + (has('tower')?1:0) + (has('oath')?1:0);
+  const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
+  let shieldVal = 2 + Lv.shield + (has('tower')?1:0) + (has('oath')?1:0);
+  if(mut('frail')) shieldVal = Math.max(1, Math.floor(shieldVal/2));
   let healVal = 2 + Lv.heal;
   let swordBonus = 0;
   if(has('bloodlust')){ swordBonus = Math.floor((1 - Math.max(0,run.hp)/run.maxHp)*5); healVal = Math.max(1, healVal-1); }
-  const coinVal = 1 + Lv.coin + (has('idol')?1:0) + (has('daggers')?1:0);
+  const coinVal = 1 + Lv.coin + (has('idol')?1:0) + (has('daggers')?1:0) + (setOn('gold')?2:0);
   let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + cnt.rainbow*2 + cnt.blast*3) * mult);
   let sh  = Math.round((cnt.shield*shieldVal + cnt.rainbow) * mult);
   let hp  = Math.round((cnt.heal*healVal + cnt.rainbow) * mult);
@@ -1459,6 +1615,8 @@ function computeEffects(board, set, o){
   if(lines>=3){ if(has('powder')) dmg += 12; if(has('orb')) dmg += 8; }
   if(has('crossed') && o.rows && o.cols) dmg += 8;
   if(has('fang')) hp += 2*lines;
+  if(setOn('blood')) hp += lines;
+  if(setOn('blast') && lines>=3) dmg += 10;
   if(has('huntersmark')) dmg += 3*lines;
   if(has('holysymbol')) dmg += Math.round(cnt.heal*2*mult);
   let perfect = true;
@@ -1477,6 +1635,8 @@ function resolveClears(){
   fireCells(plan.set, plan);
   cb.streak++;
   if(cb.streak>=2) setTimeout(()=>sfx('combo', cb ? cb.streak : 2), 120);
+  if(has('lute') && cb.streak>0 && cb.streak%3===0){ cb.shield += 6; heal(4); floatText($('#shieldStat'), '+6', '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
+  if(setOn('arcane') && plan.lines>=2) run.charge = Math.min(ULT().need, run.charge+1);
 }
 /* fires every block in `set`, clears them, applies all effects */
 function fireCells(set, o){
@@ -1521,6 +1681,7 @@ function fireCells(set, o){
   if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
   if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); }
     const over = fx.hp - got; if(over>0 && has('holysymbol')){ cb.shield += over; floatText($('#shieldStat'), `+${over}`, '#a8ceff'); } }
+  if(!o.noCharge) cb.lastClear = {dmg:fx.dmg, sh:fx.sh, hp:fx.hp, poison:fx.poison, gold:fx.gold};
   if(fx.gold>0){ run.gold += fx.gold; floatText($('#goldWrap'), `+${fx.gold}`, '#ffe58a'); sfx('coin'); burstAt($('#goldWrap'), ['#f7c936','#ffe58a'], 6); }
 }
 function damageEnemy(n, noThorns, pierce){
@@ -1591,7 +1752,7 @@ function enemyTick(){
 }
 function checkStuck(){
   let guard = 0;
-  while(!cb.over && !cb.hand.some(p=>!p.used && fitsAnyRot(p)) && guard++<5){
+  while(!cb.over && !cb.hand.some(p=>!p.used && fitsAnyRot(p)) && !(cb.stash && fitsAnyRot(cb.stash)) && guard++<5){
     toast('<b>Cave-in!</b> No room to move. The ceiling collapses.', 'rock');
     sfx('cavein'); flash('rgba(120,100,90,.5)');
     hitPlayer(Math.round((4 + run.floor*2) * (has('boots')?0.5:1)));
@@ -1646,6 +1807,17 @@ function useUlt(){
     cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,6); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; } });
   } else if(run.cls==='rogue'){
     dealHand(); cb.enemy.intent.left += 1; cb.doubleNext = true;
+  } else if(run.cls==='bard'){
+    const L2 = cb.lastClear;
+    if(!L2){ run.charge = ULT().need; toast('Nothing to replay yet. Clear a line first; your charge is kept.', 'lute'); }
+    else {
+      floatText($('#board'), 'ENCORE!', '#ffb3e6', true); sfx('levelup');
+      if(L2.dmg>0) damageEnemy(L2.dmg);
+      if(L2.poison>0) cb.enemy.poison += L2.poison;
+      if(L2.sh>0){ cb.shield += L2.sh; floatText($('#shieldStat'), `+${L2.sh}`, '#a8ceff'); }
+      if(L2.hp>0){ const b = run.hp; heal(L2.hp); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }
+      if(L2.gold>0){ run.gold += L2.gold; floatText($('#goldWrap'), `+${L2.gold}`, '#ffe58a'); }
+    }
   } else if(run.cls==='paladin'){
     const d = cb.shield + 15 + 5*(run.floor-1); flash('rgba(255,240,170,.55)'); damageEnemy(d, true);
   } else if(run.cls==='ranger'){
@@ -1764,6 +1936,7 @@ $('#gearBtn').innerHTML = img('gear',26);
 $('#rerollBtn').onclick = ()=>{
   if(!cb || cb.rerolls<=0 || cb.over) return;
   cb.rerolls--; sfx('rotate');
+  if(has('goldendice')){ run.gold += 5; floatText($('#goldWrap'), '+5', '#ffe58a'); }
   cb.hand = cb.hand.map(p=>p.used?p:newPiece());
   checkStuck();
   if(!checkEnd()){ renderHUD(); saveRun(); }
@@ -1818,7 +1991,9 @@ function layout(){
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
   cv.style.width = W+'px'; cv.style.height = H+'px';
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  L = {W,H,cs,bx:(W-bw)/2,by:pad,bw,ty:pad+bw+gap,trayH,slotW:W/3};
+  const handW = Math.round(W*0.76), sw = W - handW - 10;
+  const hx = settings.lefty ? W - handW : 0, sx = settings.lefty ? 6 : handW + 4;
+  L = {W,H,cs,bx:(W-bw)/2,by:pad,bw,ty:pad+bw+gap,trayH,slotW:handW/3,hx, stash:{x:sx, y:pad+bw+gap+4, w:sw, h:trayH-8}};
 }
 function relayout(){ if(cb && !$('#combat').hidden){ window.scrollTo(0,0); layout(); } sizeFx(); }
 window.addEventListener('resize', relayout);
@@ -1843,9 +2018,21 @@ function drawPiece(p, x, y, s, alpha, sticker){
   p.cells.forEach(([r,c])=>drawCell(x+c*s, y+r*s, s, p.type, alpha));
 }
 function trayRect(i){
-  const p = cb.hand[i]; const {slotW, ty, trayH, cs} = L;
+  const p = pieceAt(i); const {slotW, ty, trayH, cs} = L;
+  if(i===STASH){ const B = L.stash, s = Math.min(cs*0.5, (B.w-16)/p.w, (B.h-30)/p.h); return {s, x: B.x + (B.w - p.w*s)/2, y: B.y + 18 + (B.h - 18 - p.h*s)/2}; }
   const s = Math.min(cs*0.62, (slotW-22)/p.w, (trayH-22)/p.h);
-  return {s, x: i*slotW + (slotW - p.w*s)/2, y: ty + (trayH - p.h*s)/2};
+  return {s, x: L.hx + i*slotW + (slotW - p.w*s)/2, y: ty + (trayH - p.h*s)/2};
+}
+const inStash = (x,y) => { const B = L.stash; return B && x>=B.x-6 && x<=B.x+B.w+6 && y>=B.y-6 && y<=B.y+B.h+6; };
+function stashPiece(i){
+  const p = cb.hand[i]; if(!p || p.used) return;
+  if(cb.stashUsed){ sfx('invalid'); toast('You can stash once per move. Place a piece first.', 'packrat'); return; }
+  const old = cb.stash;
+  cb.stash = {...p, used:false, rotT:performance.now()};
+  if(old) cb.hand[i] = {...old, used:false, rotT:performance.now()}; else p.used = true;
+  cb.stashUsed = true; sfx('pick'); buzz(10);
+  if(cb.hand.every(x=>x.used)) dealHand();
+  checkStuck(); if(!checkEnd()){ renderHUD(); saveRun(); }
 }
 function shards(i, type, n){
   if(!L.cs || !cb) return;
@@ -1878,12 +2065,13 @@ function frame(){
   if(!cb || $('#combat').hidden || !L.cs) return;
   const {W,H,cs,bx,by,bw,ty,trayH} = L;
   ctx.clearRect(0,0,W,H);
-  rrect(bx-6, by-6, bw+12, bw+12, 14); ctx.fillStyle = '#0b080e'; ctx.fill();
-  ctx.lineWidth = 3; ctx.strokeStyle = '#4a3f58'; ctx.stroke();
+  const TH = theme();
+  rrect(bx-6, by-6, bw+12, bw+12, 14); ctx.fillStyle = TH.board; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = TH.edge; ctx.stroke();
   for(let r=0;r<N;r++) for(let c=0;c<N;c++){
     const x = bx+c*cs, y = by+r*cs, t = cb.board[r*N+c];
     if(t) drawCell(x,y,cs,t);
-    else { rrect(x+2,y+2,cs-4,cs-4,cs*0.18); ctx.fillStyle = (r+c)%2 ? '#1a1520' : '#1e1825'; ctx.fill(); }
+    else { rrect(x+2,y+2,cs-4,cs-4,cs*0.18); ctx.fillStyle = (r+c)%2 ? TH.a : TH.b; ctx.fill(); }
   }
   const now = performance.now();
   if(drag && drag.valid){
@@ -1917,6 +2105,12 @@ function frame(){
     }
   });
   rrect(4, ty-2, W-8, trayH+4, 14); ctx.fillStyle = 'rgba(255,255,255,.035)'; ctx.fill();
+  { const B = L.stash, hot = drag && drag.idx!==STASH && inStash(drag.x, drag.y);
+    ctx.save(); rrect(B.x, B.y, B.w, B.h, 12); ctx.fillStyle = hot ? 'rgba(255,207,122,.18)' : 'rgba(0,0,0,.28)'; ctx.fill();
+    ctx.setLineDash([6,5]); ctx.lineWidth = 2; ctx.strokeStyle = hot ? '#ffcf7a' : cb.stashUsed ? '#3a3046' : '#5a4c6a'; ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = `13px 'Lilita One', system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = hot ? '#ffcf7a' : '#8a7f99';
+    ctx.fillText('STASH', B.x + B.w/2, B.y + 5); ctx.textAlign = 'left'; ctx.restore();
+    if(cb.stash && !(drag && drag.idx===STASH)){ const p = cb.stash, {s,x,y} = trayRect(STASH), ok = fitsAnywhere(p); drawPiece(p, x, y, s, ok?1:fitsAnyRot(p)?0.6:0.25, ok); } }
   cb.hand.forEach((p,i)=>{
     if(p.used || (drag && drag.idx===i)) return;
     const {s,x,y} = trayRect(i);
@@ -1928,7 +2122,7 @@ function frame(){
     ctx.restore();
   });
   if(drag){
-    const p = cb.hand[drag.idx];
+    const p = pieceAt(drag.idx);
     drawPiece(p, drag.x - p.w*cs/2, drag.y - drag.lift - p.h*cs/2, cs, drag.valid?0.97:0.8, true);
     if(drag.valid && drag.plan && drag.fx) drawPreview(drag.plan, drag.fx);
   }
@@ -2029,7 +2223,7 @@ requestAnimationFrame(frame);
 /* ================= input: tap to rotate, drag to place ================= */
 function pt(e){ const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; }
 function updateDrag(){
-  const p = cb.hand[drag.idx], {cs,bx,by} = L;
+  const p = pieceAt(drag.idx), {cs,bx,by} = L;
   const ox = drag.x - p.w*cs/2, oy = drag.y - drag.lift - p.h*cs/2;
   const c = Math.round((ox-bx)/cs), r = Math.round((oy-by)/cs);
   if(r===drag.r && c===drag.c) return;
@@ -2046,8 +2240,10 @@ cv.addEventListener('pointerdown', e=>{
   if(!cb || cb.over) return;
   const {x,y} = pt(e);
   if(y < L.ty - 10) return;
-  const i = clamp(Math.floor(x / L.slotW), 0, 2);
-  const p = cb.hand[i]; if(!p || p.used) return;
+  let i;
+  if(inStash(x,y)){ if(!cb.stash){ toast('<b>Stash</b><br>Drag a piece here to save it for later. One stash per move.', 'packrat'); return; } i = STASH; }
+  else i = clamp(Math.floor((x - L.hx) / L.slotW), 0, 2);
+  const p = pieceAt(i); if(!p || p.used) return;
   press = {idx:i, x0:x, y0:y, mouse:e.pointerType==='mouse'};
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   e.preventDefault();
@@ -2065,9 +2261,11 @@ cv.addEventListener('pointermove', e=>{
 });
 cv.addEventListener('pointerup', ()=>{
   if(drag){ const d = drag; drag = null; press = null;
-    if(d.valid && cb && !cb.over) place(d.idx, d.r, d.c); else if(d.y < L.ty) sfx('invalid');
+    if(!cb || cb.over) return;
+    if(d.idx!==STASH && inStash(d.x, d.y)) return stashPiece(d.idx);
+    if(d.valid) place(d.idx, d.r, d.c); else if(d.y < L.ty) sfx('invalid');
     return; }
-  if(press){ const i = press.idx; press = null; if(cb && !cb.over && cb.hand[i] && !cb.hand[i].used) rotatePiece(i); }
+  if(press){ const i = press.idx; press = null; const p = cb && pieceAt(i); if(cb && !cb.over && p && !p.used) rotatePiece(i); }
 });
 cv.addEventListener('pointercancel', ()=>{ drag = null; press = null; });
 addEventListener('keydown', e=>{ if(e.key==='Escape' && !$('#modal').hidden) closeSettings(); });
