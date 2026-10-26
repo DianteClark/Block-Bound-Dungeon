@@ -595,7 +595,7 @@ function validSave(s){
 }
 function migrate(r){
   if(!validSave(r)) throw new Error('bad save');
-  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, muts:[], daily:null, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}}, r);
+  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, muts:[], daily:null, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}, level:1, xp:0, perks:{}, lvUp:0}, r);
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
   delete r.choices;
   r.relics = r.relics.filter(id=>RELICS[id]);
@@ -673,7 +673,8 @@ function show(which){
 function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
 function renderRunbar(){
   if(!run) return;
-  $('#heroIcon').innerHTML = img(CLASSES[run.cls].spr, 34);
+  const hi = $('#heroIcon'); hi.innerHTML = img(CLASSES[run.cls].spr, 34) + `<b class="lvb">${run.level||1}</b>`; hi.onclick = openPerks;
+  const xf = $('#xpFill'); if(xf) xf.style.width = (100*(run.xp||0)/xpNeed(run.level||1))+'%';
   const pct = (100*Math.max(0,run.hp)/run.maxHp)+'%';
   $('#hpFill').style.width = pct; $('#hpTrail').style.width = pct;
   $('#hpText').textContent = `${Math.max(0,run.hp)} / ${run.maxHp}`;
@@ -1427,6 +1428,7 @@ function eventScreen(){
 
 /* ================= rewards & end ================= */
 function rewardScreen(kind){
+  if(run.lvUp>0) return levelScreen(()=>rewardScreen(kind));
   show('reward');
   if(!run.room) run.room = {t:kind};
   const RW = run.room.reward = run.room.reward || {kind};
@@ -1607,11 +1609,12 @@ function startCombat(kind, forced){
     kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
     bombs:{}, chains:[], weak:[], weakT:0, webs:{}, silence:0,
     streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0,
-    shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort') + (setOn('iron')?10:0),
-    rerolls: 1+(has('dice')?1:0)+(has('goldendice')?1:0)+skill('hands'),
+    shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort') + (setOn('iron')?10:0) + 6*pk('guard'),
+    rerolls: 1+(has('dice')?1:0)+(has('goldendice')?1:0)+skill('hands')+pk('hands'),
     enemies: tpls.map((t,i)=>makeEnemy(t, maxHps[i])),
   };
   attachEnemy(cb);
+  if(pk('charged')) run.charge = Math.min(ULT().need, run.charge + 2*pk('charged'));
   tpls.forEach(t=>markSeen('e', t.name));
   run.charge = Math.min(ULT().need, run.charge + skill('focus'));
   if(run.floor>1 && kind!=='goblin') addBlocks('stone', Math.min(6,(run.floor-1)*2), true);
@@ -1777,7 +1780,7 @@ function hazardTick(){
     cb.bombs[k]--;
     if(cb.bombs[k]<=0){ delete cb.bombs[k]; cb.board[i] = 'stone'; cb.fx.push({i,type:'bomb',t0:now}); shards(i,'bomb',10);
       const r = Math.floor(i/N), c = i%N; [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{ const rr=r+dr, cc=c+dc; if(rr>=0&&cc>=0&&rr<N&&cc<N&&!cb.board[rr*N+cc]&&Math.random()<0.5){ cb.board[rr*N+cc]='stone'; cb.fx.push({i:rr*N+cc,type:'stone',t0:now,drop:true}); } });
-      floatText($('#board'), 'BOOM!', '#ff8a3c', true); sfx('blast'); shake(); hitPlayer(bombDmg()); }
+      floatText($('#board'), 'BOOM!', '#ff8a3c', true); sfx('blast'); shake(); hitPlayer(pk('defuse') ? Math.ceil(bombDmg()/2) : bombDmg()); }
   });
   cb.chains = cb.chains.filter(ch=>{ ch.t--; return ch.t>0 && cb.board[ch.i]; });
   if(cb.webs) Object.keys(cb.webs).forEach(k=>{ const i = +k; if(cb.board[i]!=='web'){ delete cb.webs[k]; return; } if(--cb.webs[k]<=0){ delete cb.webs[k]; cb.board[i] = null; cb.fx.push({i,type:'web',t0:now}); } });
@@ -1785,7 +1788,65 @@ function hazardTick(){
   const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
   if(cb.kind!=='goblin' && cb.weak.length < want && ++cb.weakT >= 3){ cb.weakT = 0; spawnWeak(1); }
 }
-const streakStep = () => (has('daggers') ? 0.5 : 0.25) * (has('seerorb') ? 1.5 : 1);
+const streakStep = () => ((has('daggers') ? 0.5 : 0.25) + 0.1*pk('rhythm')) * (has('seerorb') ? 1.5 : 1);
+/* ---------- in-run levels & perks ---------- */
+const PERKS = {
+  tough:{name:'Toughness', spr:'heart', max:5, desc:'+8 max HP and heal 8.', apply(){ run.maxHp += 8; heal(8); }},
+  sharp:{name:'Sharpened Edge', spr:'sword', max:3, desc:'Sword blocks deal +1 damage.'},
+  sturdy:{name:'Sturdy Guard', spr:'shield', max:3, desc:'Shield blocks give +1 shield.'},
+  mend:{name:'Field Medic', spr:'heal_icon', max:3, desc:'Heart blocks heal +1.'},
+  greed:{name:'Greed', spr:'coin', max:3, desc:'Coin blocks give +1 gold.'},
+  focus:{name:'Focus', spr:'flame', max:2, desc:'Your special needs 1 fewer line.', apply(){ run.ultBonus = (run.ultBonus||0)+1; }},
+  hands:{name:'Quick Hands', spr:'dice', max:2, desc:'+1 hand reroll every fight.'},
+  guard:{name:'Ready Stance', spr:'armor', max:3, desc:'Start every fight with +6 shield.'},
+  rhythm:{name:'Rhythm', spr:'drum', max:3, desc:'Combo streaks add +0.1 more to your multiplier.'},
+  opener:{name:'Opening Strike', spr:'daggers', max:3, desc:'Your first clear each fight deals +10 damage.'},
+  wind:{name:'Second Wind', spr:'feather', max:1, desc:'Once per fight, dropping below 30% HP heals you for 15.'},
+  satchel:{name:'Deep Pockets', spr:'cauldron', max:1, desc:'+1 potion slot and a random potion.', ok:()=>!mut('dry'), apply(){ run.potionSlots++; givePotion(); }},
+  toxic:{name:'Toxic Touch', spr:'poison', max:3, desc:'Every clear also poisons the enemy for 1.'},
+  wrecker:{name:'Wrecker', spr:'hammer', max:2, desc:'Rubble, ice and webs in your clears deal 2 damage each.'},
+  scav:{name:'Scavenger', spr:'satchel', max:3, desc:'+6 gold after every fight.'},
+  medic:{name:'Bandages', spr:'potion_health', max:3, desc:'Heal 5 after every fight.'},
+  defuse:{name:'Bomb Squad', spr:'bomb', max:1, desc:'Enemy bombs explode for half damage.'},
+  stasher:{name:'Packrat', spr:'bagicon', max:2, desc:'Stashing a piece gives 3 shield.'},
+  weak:{name:'Keen Eye', spr:'weakspot', max:2, desc:'Weak spots deal +50% bonus damage.'},
+  charged:{name:'Battle Trance', spr:'orb', max:2, desc:'Start every fight with 2 special charge.'},
+  purist:{name:'Purist', spr:'gem', max:2, desc:'Pure lines add another +0.25 to the multiplier.'},
+  finisher:{name:'Clean Sweep', spr:'trophy', max:2, desc:'Perfect clears deal +25 damage.'},
+  thorns:{name:'Spiked Armor', spr:'spikes', max:2, desc:'When an enemy hits your shield, it takes 3 damage.'},
+  vigor:{name:'Vigor', spr:'emberheart', max:1, desc:'Heal to full now.', apply(){ run.hp = run.maxHp; }},
+};
+const pk = id => (run && run.perks && run.perks[id]) || 0;
+const xpNeed = lv => 18 + 10*(lv-1);
+function gainXP(n){
+  run.level = run.level || 1; run.xp = (run.xp||0) + n;
+  while(run.xp >= xpNeed(run.level)){ run.xp -= xpNeed(run.level); run.level++; run.lvUp = (run.lvUp||0)+1; }
+}
+function perkOffers(){
+  const pool = Object.keys(PERKS).filter(k=>pk(k) < PERKS[k].max && (!PERKS[k].ok || PERKS[k].ok()));
+  return shuffle(pool).slice(0,3);
+}
+function levelScreen(then){
+  show('reward');
+  if(!run.lvOffer || !run.lvOffer.length) run.lvOffer = perkOffers();
+  saveRun(); sfx('levelup'); setTimeout(()=>confetti(40), 80);
+  view(`${scene(CLASSES[run.cls].spr, `Level ${run.level - (run.lvUp-1)}!`, `${CLASSES[run.cls].name} grows stronger. Choose a perk:`)}
+    <div class="choices">${run.lvOffer.map(k=>{ const P = PERKS[k]; return `<button class="choice" data-id="${k}">${img(P.spr,46)}<div><b>${P.name}${pk(k)?` <span class="muted" style="font-size:12px">${pk(k)}/${P.max}</span>`:''}</b><small>${P.desc}</small></div></button>`; }).join('')}</div>
+    ${run.lvOffer.length?'':`<button class="btn" id="lvSkip">Continue</button>`}`);
+  const done = () => { run.lvUp = Math.max(0, (run.lvUp||1)-1); run.lvOffer = null; saveRun(); renderRunbar(); then(); };
+  document.querySelectorAll('#view .choice').forEach(b=>b.onclick = ()=>{ const k = b.dataset.id; run.perks = run.perks || {}; run.perks[k] = pk(k)+1; if(PERKS[k].apply) PERKS[k].apply(); sfx('relic'); toast(`<b>${PERKS[k].name}</b><br>${PERKS[k].desc}`, PERKS[k].spr); done(); });
+  const s = $('#lvSkip'); if(s) s.onclick = done;
+}
+function openPerks(){
+  sfx('click'); const m = $('#modal'); m.hidden = false;
+  const owned = Object.keys(run.perks||{});
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Level and perks" style="max-height:84vh;overflow:auto">
+    <div class="scene">${img(CLASSES[run.cls].spr,80)}<h2 class="title" style="font-size:24px">Level ${run.level||1}</h2>
+    <p class="muted">${run.xp||0} / ${xpNeed(run.level||1)} XP to the next level. Win fights to earn XP.</p></div>
+    ${owned.length ? owned.map(k=>`<div class="troph">${img(PERKS[k].spr,34)}<div><b>${PERKS[k].name} ${PERKS[k].max>1?`<span class="muted" style="font-size:12px">${pk(k)}/${PERKS[k].max}</span>`:''}</b><small>${PERKS[k].desc}</small></div></div>`).join('') : '<p class="muted center">No perks yet. Level up to choose one.</p>'}
+    <button class="btn" id="closeBtn">Close</button></div>`;
+  $('#closeBtn').onclick = closeSettings; m.onclick = ev=>{ if(ev.target===m) closeSettings(); };
+}
 function nextIntent(e){
   e = e || cb.enemy; const m = e.moves[e.mi % e.moves.length]; e.mi++;
   e.intent = {...m, left: Math.max(1, m.t + (has('hourglass')&&m.k!=='flee'?1:0) - (mut('hasty')&&m.k!=='flee'?1:0))};
@@ -1862,7 +1923,7 @@ function planClear(board){
   let pure = 0;
   rows.forEach(r=>{ if(isPure(board, [...Array(N).keys()].map(c=>r*N+c))) pure++; });
   cols.forEach(c=>{ if(isPure(board, [...Array(N).keys()].map(r=>r*N+c))) pure++; });
-  let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*((has('purist')||has('huntersmark'))?1:0.5);
+  let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*((has('purist')||has('huntersmark'))?1:0.5) + pure*0.25*pk('purist');
   if(cb.firstClear && has('ring')) mult *= 2;
   if(cb.doubleNext) mult *= 2;
   const set = lineCells(rows, cols);
@@ -1873,19 +1934,21 @@ function computeEffects(board, set, o){
   const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0,bomb:0,web:0};
   set.forEach(i=>{ const t = board[i]; if(t) cnt[t]++; });
   const Lv = run.lvl, mult = o.mult, lines = o.lines;
-  const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
-  let shieldVal = 2 + Lv.shield + (has('tower')?1:0) + (has('oath')?1:0);
+  const swordVal = 2 + Lv.sword + pk('sharp') + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
+  let shieldVal = 2 + Lv.shield + pk('sturdy') + (has('tower')?1:0) + (has('oath')?1:0);
   if(mut('frail')) shieldVal = Math.max(1, Math.floor(shieldVal/2));
-  let healVal = 2 + Lv.heal;
+  let healVal = 2 + Lv.heal + pk('mend');
   let swordBonus = 0;
   if(has('bloodlust')){ swordBonus = Math.floor((1 - Math.max(0,run.hp)/run.maxHp)*5); healVal = Math.max(1, healVal-1); }
-  const coinVal = 1 + Lv.coin + (has('idol')?1:0) + (has('daggers')?1:0) + (setOn('gold')?2:0);
+  const coinVal = 1 + Lv.coin + pk('greed') + (has('idol')?1:0) + (has('daggers')?1:0) + (setOn('gold')?2:0);
   let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + cnt.rainbow*2 + cnt.blast*3) * mult);
   let sh  = Math.round((cnt.shield*shieldVal + cnt.rainbow) * mult);
   let hp  = Math.round((cnt.heal*healVal + cnt.rainbow) * mult);
-  const poison = Math.round(cnt.venom * mult);
+  const poison = Math.round(cnt.venom * mult) + pk('toxic');
   const gold = cnt.coin*coinVal;
   if(has('sledge')) dmg += (cnt.stone+cnt.ice)*4;
+  dmg += (cnt.stone+cnt.ice+cnt.web)*2*pk('wrecker');
+  if(cb && cb.firstClear && pk('opener')) dmg += 10*pk('opener');
   if(lines>=3){ if(has('powder')) dmg += 12; if(has('orb')) dmg += 8; }
   if(has('crossed') && o.rows && o.cols) dmg += 8;
   if(has('fang')) hp += 2*lines;
@@ -1893,11 +1956,11 @@ function computeEffects(board, set, o){
   if(setOn('blast') && lines>=3) dmg += 10;
   if(has('huntersmark')) dmg += 3*lines;
   let weakHits = 0; if(cb && cb.weak) set.forEach(i=>{ if(cb.weak.includes(i) && board[i]) weakHits++; });
-  dmg += weakHits*weakBonus() + cnt.bomb*5;
+  dmg += Math.round(weakHits*weakBonus()*(1+0.5*pk('weak'))) + cnt.bomb*5;
   if(has('holysymbol')) dmg += Math.round(cnt.heal*2*mult);
   let perfect = true;
   for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak')))){ perfect = false; break; } }
-  if(perfect) dmg += 20 + 10*(run.floor-1);
+  if(perfect) dmg += 20 + 10*(run.floor-1) + 25*pk('finisher');
   const e = cb.enemy;
   if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
   if(e.passive && e.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
@@ -2015,9 +2078,11 @@ function hitPlayer(n, small){
   let v = n; if(has('thickskin')) v = Math.max(0, v-1);
   const absorbed = Math.min(cb.shield, v); cb.shield -= absorbed; v -= absorbed;
   if(absorbed>0 && has('spikes')) damageEnemy(5, true);
+  if(absorbed>0 && pk('thorns') && !small) damageEnemy(3*pk('thorns'), true);
   const wasSafe = run.hp/run.maxHp > 0.3;
   run.hp -= v;
   if(v>0) cb.tookDmg = true;
+  if(pk('wind') && !cb.windUsed && run.hp>0 && run.hp < run.maxHp*0.3){ cb.windUsed = true; heal(15); setTimeout(()=>floatText(hpEl(), 'Second wind +15', '#86e6a8', true), 200); }
   floatText(hpEl(), v>0?`-${v}`:'Blocked!', v>0?'#ff6a6f':'#a8ceff');
   if(v>0){ sfx('hurt'); if(!small){ shake(); flash('rgba(200,20,30,.45)'); buzz(60); } if(wasSafe && run.hp>0 && run.hp/run.maxHp<=0.3) sfx('heartbeat'); }
   else sfx('block');
@@ -2105,6 +2170,11 @@ function checkEnd(){
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
+    const xp = {combat:10, elite:20, boss:32, goblin:8}[kind] || 10;
+    gainXP(xp + (cb.enemies.length>1 ? 6 : 0));
+    if(pk('scav')) run.gold += 6*pk('scav');
+    if(pk('medic')) heal(5*pk('medic'));
+    setTimeout(()=>floatText($('#heroIcon'), `+${xp} XP`, '#ffd23f', true), 500);
     run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind}; saveRun();
     setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, T(1000)); return true;
   }
@@ -2383,6 +2453,7 @@ function stashPiece(i){
   cb.stash = {...p, used:false, rotT:performance.now()};
   if(old) cb.hand[i] = {...old, used:false, rotT:performance.now()}; else p.used = true;
   cb.stashUsed = true; sfx('pick'); buzz(10);
+  if(pk('stasher')){ cb.shield += 3*pk('stasher'); floatText($('#shieldStat'), `+${3*pk('stasher')}`, '#a8ceff'); }
   if(cb.hand.every(x=>x.used)) dealHand();
   checkStuck(); if(!checkEnd()){ renderHUD(); saveRun(); }
 }
