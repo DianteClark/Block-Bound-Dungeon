@@ -317,6 +317,9 @@ const ART = {
     + [[24,34,'#ef5258'],[70,30,'#4a98ff'],[30,58,'#45c674'],[64,60,'#f7c936'],[48,74,'#c77dff']].map(([x,y,col])=>r(x-6,y-6,12,12,3,col) + hl(x-2,y-3,3,1.5,0,.6)).join('')
     + ln('M20 44 C30 50 34 44 42 50','#5a0a1a',2.5) + ln('M80 44 C70 52 66 46 58 50','#5a0a1a',2.5)
     + e(50,46,15,13,'#2a0a14') + glow(50,46,7,'#ff3b3b') + e(50,46,3,9,K) + glow(36,40,3,'#ffd23f') + glow(64,40,3,'#ffd23f') + hl(28,24,7,4,-30,.35),
+  owl: () => both(p('M24 30 L18 10 L36 24Z','#8a6a4a')) + p('M50 18 C74 18 86 36 86 58 C86 80 70 94 50 94 C30 94 14 80 14 58 C14 36 26 18 50 18Z','#a07a5a') + pn('M50 18 C74 18 86 36 86 58 C86 80 70 94 50 94 C64 82 72 66 70 48 C68 32 60 22 50 18Z','#7a5a40') + po('M50 18 C74 18 86 36 86 58 C86 80 70 94 50 94 C30 94 14 80 14 58 C14 36 26 18 50 18Z')
+    + p('M30 66 C36 86 64 86 70 66 C62 72 38 72 30 66Z','#e8d4b0') + c(36,46,13,'#f3ead6') + c(64,46,13,'#f3ead6') + c(36,46,7,'#ffd23f') + c(64,46,7,'#ffd23f') + cn(36,46,3.5,K) + cn(64,46,3.5,K) + cn(34,44,1.4,'#fff') + cn(62,44,1.4,'#fff') + p('M46 56 L54 56 L50 66Z','#ff9d3c') + hl(30,28,5,3,-20,.4),
+  pet_golem0: () => scaled(0.86, 7, 10, ()=>ART.golem()),
   /* ---------- floor bosses (new) ---------- */
   vampirelord: () => p('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z','#a8203a') + pn('M68 58 L86 44 L92 96 L72 96Z','#7a1028') + po('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z')
     + p('M26 96 L30 66 L50 74 L70 66 L74 96Z','#2a2233') + p('M44 70 L50 90 L56 70Z','#f3ead6') + c(50,84,4.5,'#f7c936')
@@ -542,6 +545,10 @@ const ART = {
 const SVG_CACHE = {};
 /* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
+  pet_owl1:{base:'owl', hue:210, bs:[0.9,5,10], over:[['acc_halo',0.8,10,-4]]},
+  pet_owl2:{base:'owl', m:[0.4,0.2,0.4,0.05, 0.2,0.3,0.4,0.05, 0.4,0.2,0.8,0.12], bs:[0.86,7,14], under:['acc_runes'], over:[['acc_crown',0.36,32,-4]]},
+  pet_golem1:{base:'golem', m:[0.6,0.2,0.2,0.05, 0.2,0.6,0.2,0.05, 0.2,0.2,0.75,0.08], bs:[0.86,7,14], under:['acc_crystals']},
+  pet_golem2:{base:'golem', m:[0.8,0.2,0,0.06, 0.6,0.3,0,0.03, 0.3,0.2,0.2,0], bs:[0.84,8,16], under:['acc_runes'], over:[['acc_crown',0.36,32,-4]]},
   x_sharpener:{base:'whetstone', hue:200},
   x_quickdraw:{base:'daggers', hue:120},
   x_hazmat:{base:'armor', hue:80},

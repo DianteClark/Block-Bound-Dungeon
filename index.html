@@ -350,8 +350,13 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
 .mastery{display:block;margin-top:6px}
 .mastery .mlv{font-family:var(--display);font-size:13px;color:#7ff0ff}
 .mastery small{color:var(--muted);font-size:11px}
-#petChip{padding:1px 9px 1px 2px}
-#petChip:disabled{opacity:.5}
+#petWrap{display:flex;gap:6px}
+.petchip{position:relative;width:46px;height:46px;border-radius:50%;border:3px solid #fff;padding:0;cursor:pointer;display:grid;place-items:center;background:conic-gradient(#86e6a8 var(--p,0%), #3a3046 0);flex:none}
+.petchip::before{content:'';position:absolute;inset:3px;border-radius:50%;background:radial-gradient(circle,#3d3150,#1d1724)}
+.petchip .stk{position:relative}
+.petchip .pcv{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);background:#000;border-radius:6px;padding:0 4px;font:11px var(--display);white-space:nowrap;color:#fff}
+.petchip.ready{animation:ready 1.1s infinite;border-color:#86e6a8}
+.petchip.ready .pcv{background:#45c674;color:#0d2a17}
 .tag.phase{background:#b8323a;color:#fff}
 
 /* settings & accessibility */
@@ -503,7 +508,7 @@ button.setpill{font:inherit;font-family:var(--display);font-size:14px}
     <div id="playerPanel">
       <span class="stat" id="shieldStat"><span id="shieldIcon"></span><span id="shieldText">0</span></span>
       <span class="stat" id="comboStat"><span id="flameIcon"></span><span id="streakText">-</span></span>
-      <button class="stat" id="petChip" hidden aria-label="Pet"></button>
+      <span id="petWrap"></span>
       <button id="rerollBtn"><span id="diceIcon"></span><span id="rerollText">1</span></button>
       <button id="ultBtn"><span id="ultIcon"></span><small id="ultText"></small></button>
     </div>

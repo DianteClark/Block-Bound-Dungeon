@@ -200,8 +200,8 @@ const CLASSES = {
     ult:{name:'Deep Freeze', need:8, spr:'frostshard', desc:'Delay every enemy by 2 moves and gain shield (more for each ice block on your grid).'},
     unlock:{text:'Reach floor 5', cost:220, ok:s=>s.bestFloor>=5}},
   beastmaster:{name:'Beastmaster', spr:'beastmaster', hp:66, gold:25, relic:'whistle', potions:['health'], bag:{sword:5, shield:3, heal:3, coin:3},
-    desc:'Never fights alone. Starts with a pet, and your pet acts a move sooner.',
-    ult:{name:'Stampede', need:6, spr:'whistle', desc:'Your pet acts 3 times in a row.'},
+    desc:'Never fights alone. Starts with a pet, and pets charge faster.',
+    ult:{name:'Stampede', need:6, spr:'whistle', desc:'Every pet you have unleashes its ability twice.'},
     unlock:{text:'Play 10 runs', cost:200, ok:s=>s.runs>=10}},
 };
 function ULT(){ const u = CLASSES[run.cls].ult; return {...u, need: Math.max(3, u.need - rv('spellbook',[2,3,4]) - rv('bloodengine',[3,3,4]) - (run.ultBonus||0))}; }
@@ -287,7 +287,7 @@ const RELICS = {
   laurel:{tiers:['+2 max HP for every foe you defeat.','+3 max HP for every foe you defeat.','+4 max HP for every foe you defeat.'], name:'Victor\'s Laurel', spr:'laurel', desc:'+2 max HP for every foe you defeat.', r:0, starter:true},
   totem:{tiers:['Every 4 moves, a random block on your grid turns Rainbow.','Every 3 moves, a random block turns Rainbow.','Every 3 moves, two random blocks turn Rainbow.'], name:'Spirit Totem', spr:'totem', desc:'Every 4 moves, a random block on your grid turns Rainbow.', r:0, starter:true},
   frostshard:{tiers:['Ice never cracks into rubble, and ice in your clears deals 4 damage each.','Ice never cracks, and ice in your clears deals 6 damage each.','Ice never cracks, and ice in your clears deals 8 damage each.'], name:'Frost Shard', spr:'frostshard', desc:'Ice never cracks into rubble, and ice in your clears deals 4 damage each.', r:0, starter:true},
-  whistle:{tiers:['Start with a random pet. Your pet charges faster.','Start with a random pet. Your pet charges even faster.','Start with a random pet. Your pet charges much faster.'], name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) setPet(pick(Object.keys(PETS))); }},
+  whistle:{tiers:['Start with a random pet. Your pet charges faster.','Start with a random pet. Your pet charges even faster.','Start with a random pet. Your pet charges much faster.'], name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet charges faster.', r:0, starter:true, onGet(){ if(!run.pet) setPet(pick(Object.keys(PETS))); }},
   cursedcrown:{tiers:['Gain 60 gold now. Coins give 50% more gold. Enemies have 10% more HP.','Coins give 75% more gold. Enemies have 10% more HP.','Coins give double gold. Enemies have 10% more HP.'], name:'Cursed Crown', spr:'b_crown', boss:true, r:4, desc:'Gain 60 gold now. Coins give 50% more gold. Enemies have 10% more HP.', onGet(){ run.gold += 60; }},
   bloodengine:{tiers:['Your special needs 3 fewer lines, but using it costs 4 HP.','Your special needs 3 fewer lines and costs 3 HP.','Your special needs 4 fewer lines and costs 2 HP.'], name:'Blood Engine', spr:'b_engine', boss:true, r:4, desc:'Your special needs 3 fewer lines, but using it costs 4 HP.'},
   titanheart:{tiers:['+30 max HP. All healing is 30% weaker.','+30 max HP. Healing is 20% weaker.','+30 max HP. Healing is 10% weaker.'], name:'Titan\'s Heart', spr:'b_heart', boss:true, r:4, desc:'+30 max HP. All healing is 30% weaker.', onGet(){ run.maxHp += 30; run.hp += 30; }},
@@ -492,22 +492,34 @@ const FLOORS = 5, STEPS = 8;
 
 /* ================= pets ================= */
 const PETS = {
-  bat:{name:'Bat Familiar', spr:'bat', every:4, forms:[['Bat Familiar','bat'],['Vampire Bat','pet_bat1'],['Night Terror','pet_bat2']],
-    desc:m=>`Every few moves, bites the enemy for ${Math.round((6 + 2*(Math.min(run?run.floor:1,8)-1))*m)}.`, act(m){ damageEnemy(Math.round((6 + 2*(Math.min(run.floor,8)-1))*m), true); }},
-  slime:{name:'Pet Slime', spr:'slime', every:5, forms:[['Pet Slime','slime'],['Gel Guardian','pet_slime1'],['Slime Sovereign','pet_slime2']],
-    desc:m=>`Every few moves, heals you for ${Math.round(7*m)}.`, act(m){ const b = run.hp; heal(Math.round(7*m)); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }},
-  turtle:{name:'Shell Buddy', spr:'turtle', every:4, forms:[['Shell Buddy','turtle'],['Iron Shell','pet_turtle1'],['Fortress Tortoise','pet_turtle2']],
-    desc:m=>`Every few moves, gives you ${Math.round(8*m)} shield.`, act(m){ const s = Math.round(8*m); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); }},
-  wisp:{name:'Friendly Wisp', spr:'ghost', every:5, forms:[['Friendly Wisp','ghost'],['Star Wisp','pet_wisp1'],['Spirit Beacon','pet_wisp2']],
-    desc:m=>`Every few moves, adds ${Math.round(2*m)} charge to your special.`, act(m){ const n = Math.round(2*m); run.charge = Math.min(ULT().need, run.charge+n); floatText($('#ultBtn'), `+${n}`, '#c8fbff'); }},
-  rat:{name:'Lucky Rat', spr:'rat', every:5, forms:[['Lucky Rat','rat'],['Fortune Rat','pet_rat1'],['Rat Tycoon','pet_rat2']],
-    desc:m=>`Every few moves, sniffs out ${Math.round(6*m)} gold.`, act(m){ const n = Math.round(6*m); run.gold += n; floatText($('#goldWrap'), `+${n}`, '#ffe58a'); questAdd('gold', n); }},
-  spider:{name:'Weaver', spr:'spider', every:4, forms:[['Weaver','spider'],['Silk Queen','pet_spider1'],['Widow Empress','pet_spider2']],
-    desc:m=>`Every few moves, poisons the enemy for ${Math.round(4*m)}.`, act(m){ const n = Math.round(4*m); const e = cb.enemy; e.poison += n; floatText(eArt(e), `+${n} poison`, '#dcb6ff'); }},
-  imp:{name:'Ember Imp', spr:'imp', every:6, forms:[['Ember Imp','imp'],['Flame Imp','pet_imp1'],['Inferno Fiend','pet_imp2']],
-    desc:m=>`Every few moves, burns away all rubble, ice and webs for ${Math.round(2*m)} damage each.`, act(m){
-    const now = performance.now(); let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,5); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; delete cb.bombs[i]; n++; } });
-    if(n) damageEnemy(Math.round(2*m*n), true); else floatText($('#board'), 'Nothing to burn', '#ffb07a'); }},
+  bat:{name:'Bat Familiar', spr:'bat', role:'Hunter', need:5, forms:[['Bat Familiar','bat'],['Vampire Bat','pet_bat1'],['Night Terror','pet_bat2']],
+    passive:'Weak spots deal 40% more.', desc:m=>`Swoop: strikes every enemy for ${Math.round((9 + 3*(Math.min(run?run.floor:1,8)-1))*m)} and marks a new weak spot.`,
+    act(m){ aliveEnemies().filter(e=>!e.guarded).forEach(e=>damageEnemy(Math.round((9 + 3*(Math.min(run.floor,8)-1))*m), true, false, e)); spawnWeak(1); }},
+  slime:{name:'Pet Slime', spr:'slime', role:'Janitor', need:6, forms:[['Pet Slime','slime'],['Gel Guardian','pet_slime1'],['Slime Sovereign','pet_slime2']],
+    passive:'Clearing rubble, ice or webs heals 1 each.', desc:m=>`Gobble: eats every rubble, ice, web and bomb on your grid, turning them into hearts, and heals ${Math.round(5*m)}.`,
+    act(m){ const now = performance.now(); cb.board.forEach((t,i)=>{ if(JUNK(t)){ cb.board[i] = 'heal'; delete cb.bombs[i]; if(cb.webs) delete cb.webs[i]; cb.fx.push({i,type:'heal',t0:now,drop:true}); } }); cb.chains = []; const b = run.hp; heal(Math.round(5*m)); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }},
+  turtle:{name:'Shell Buddy', spr:'turtle', role:'Guardian', need:6, forms:[['Shell Buddy','turtle'],['Iron Shell','pet_turtle1'],['Fortress Tortoise','pet_turtle2']],
+    passive:'Start every fight with 6 shield.', desc:m=>`Shell Up: gain ${Math.round(10*m)} shield and fully block the next enemy attack.`,
+    act(m){ const s = Math.round(10*m); cb.shield += s; cb.mirror = (+cb.mirror||0) + 1; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); }},
+  wisp:{name:'Friendly Wisp', spr:'ghost', role:'Mystic', need:5, forms:[['Friendly Wisp','ghost'],['Star Wisp','pet_wisp1'],['Spirit Beacon','pet_wisp2']],
+    passive:'Clearing 2+ lines at once adds 1 special charge.', desc:m=>`Spark: adds ${Math.round(3*m)} special charge, refreshes your stash and gives a reroll.`,
+    act(m){ const n = Math.round(3*m); run.charge = Math.min(ULT().need, run.charge+n); cb.stashUsed = false; cb.rerolls++; floatText($('#ultBtn'), `+${n}`, '#c8fbff'); }},
+  rat:{name:'Lucky Rat', spr:'rat', role:'Scavenger', need:5, forms:[['Lucky Rat','rat'],['Fortune Rat','pet_rat1'],['Rat Tycoon','pet_rat2']],
+    passive:'Find 3 extra gold after every fight.', desc:m=>`Pilfer: steals every enemy's armor as your shield and finds ${Math.round(6*m)} gold.`,
+    act(m){ let a = 0; aliveEnemies().forEach(e=>{ a += e.armor; e.armor = 0; }); if(a){ cb.shield += a; floatText($('#shieldStat'), `+${a}`, '#a8ceff'); } const n = Math.round(6*m); run.gold += n; floatText($('#goldWrap'), `+${n}`, '#ffe58a'); questAdd('gold', n); }},
+  spider:{name:'Weaver', spr:'spider', role:'Trapper', need:6, forms:[['Weaver','spider'],['Silk Queen','pet_spider1'],['Widow Empress','pet_spider2']],
+    passive:'Every clear also poisons for 1.', desc:m=>`Ensnare: every enemy's next move comes 1 turn later, and each takes ${Math.round(4*m)} poison.`,
+    act(m){ const n = Math.round(4*m); aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left++; e.poison += n; floatText(eArt(e), `+${n} poison`, '#dcb6ff'); }); }},
+  imp:{name:'Ember Imp', spr:'imp', role:'Demolisher', need:6, forms:[['Ember Imp','imp'],['Flame Imp','pet_imp1'],['Inferno Fiend','pet_imp2']],
+    passive:'Bombs on your grid tick 1 slower.', desc:m=>`Detonate: hurls every bomb at the enemy (${Math.round(8*m)} each), breaks all chains and burns rubble, ice and webs for ${Math.round(2*m)} each.`,
+    act(m){ const now = performance.now(); let b = 0, j = 0; cb.board.forEach((t,i)=>{ if(t==='bomb') b++; if(JUNK(t)){ shards(i,t,5); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; delete cb.bombs[i]; if(t!=='bomb') j++; } }); cb.chains = []; if(cb.webs) cb.webs = {};
+      const d = b*Math.round(8*m) + j*Math.round(2*m); if(d) damageEnemy(d, true); else floatText($('#board'), 'Nothing to burn', '#ffb07a'); }},
+  owl:{name:'Wise Owl', spr:'owl', role:'Seer', need:5, forms:[['Wise Owl','owl'],['Star Owl','pet_owl1'],['Oracle Owl','pet_owl2']],
+    passive:'+1 hand reroll every fight.', desc:m=>`Foresight: replaces your hand with pieces that fit, and delays every enemy's next move by ${m>=1.6?2:1}.`,
+    act(m){ cb.hand = cb.hand.map(p=>p.used?p:newPiece()); let g2 = 0; while(!cb.hand.every(p=>p.used || fitsAnyRot(p)) && g2++<20) cb.hand = cb.hand.map(p=>p.used || fitsAnyRot(p) ? p : newPiece()); aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += m>=1.6?2:1; }); floatText($('#board'), 'Foresight!', '#c8fbff'); }},
+  golem:{name:'Pebble Golem', spr:'golem', role:'Bulwark', need:7, forms:[['Pebble Golem','pet_golem0'],['Stone Sentinel','pet_golem1'],['Mountain Warden','pet_golem2']],
+    passive:'The first hit you take each fight is halved.', desc:m=>`Slam: gain ${Math.round(8*m)} shield, then deal half your shield to every enemy.`,
+    act(m){ const s = Math.round(8*m); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); const d = Math.floor(cb.shield/2); aliveEnemies().filter(e=>!e.guarded).forEach(e=>damageEnemy(d, true, false, e)); shake(); }},
 };
 const PET_UPS = {
   swift:{name:'Swift', spr:'boots', desc:'Acts 1 move sooner.'},
@@ -523,26 +535,46 @@ const PET_EVO = [3, 8];
 const petHas = id => !!(run && run.petUps && run.petUps.includes(id));
 const petTier = () => (run && run.petLv) || 0;
 const petPow = () => (1 + 0.4*petTier()) * (petHas('strong') ? 1.5 : 1);
-const petEvery = () => { const P = PETS[run.pet]; return Math.max(2, P.every - (setOn('wild')?1:0) - (has('whistle')?1:0) - (petHas('swift')?1:0)); };
+const petKeys = () => [run.pet, run.pet2].filter(k=>k && PETS[k]);
+const petOn = k => !!run && (run.pet===k || run.pet2===k);
+const petNeed = i => { const k = petKeys()[i]; if(!k) return 99; return Math.max(2, PETS[k].need - petTier() - (setOn('wild')?1:0) - rv('whistle',[1,1,2]) - (petHas('swift')?1:0)); };
+const petEvery = () => petNeed(0);
 const petForm = (k, t) => { const P = PETS[k || run.pet]; const f = P.forms[t==null ? petTier() : t]; return {name:f[0], spr:f[1]}; };
-const petDesc = (k, t) => PETS[k].desc(t==null ? petPow() : 1 + 0.4*t) + (k===run.pet && run.petUps && run.petUps.length ? ' ' + run.petUps.map(u=>PET_UPS[u].name).join(', ') + '.' : '');
-function setPet(k){ run.pet = k; run.petLv = 0; run.petXp = 0; run.petUps = []; run.petEvo = 0; run.petOffer = null; }
-function petFire(){
-  const P = PETS[run.pet]; if(!P || !cb || cb.over) return;
+const petDesc = (k, t) => `${PETS[k].role}. ${PETS[k].passive} Ready: ${PETS[k].desc(t==null ? petPow() : 1 + 0.4*t)}` + (k===run.pet && run.petUps && run.petUps.length ? ' Tricks: ' + run.petUps.map(u=>PET_UPS[u].name).join(', ') + '.' : '');
+function setPet(k){
+  if(run.floor>FLOORS && run.pet && !run.pet2 && k!==run.pet){ run.pet2 = k; toast(`<b>${PETS[k].name}</b> takes your second companion slot!`, PETS[k].spr, 3000); return; }
+  run.pet = k; run.petLv = 0; run.petXp = 0; run.petUps = []; run.petEvo = 0; run.petOffer = null;
+}
+function petFire(i){
+  i = i || 0; const k = petKeys()[i], P = PETS[k]; if(!P || !cb || cb.over) return;
   const reps = petHas('twice') ? 2 : 1;
   for(let r=0;r<reps;r++){
-    sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(petPow());
+    sfx('pet', k); const chip = document.querySelector(`.petchip[data-i="${i}"]`); if(chip) bump(chip,'petgo'); P.act(petPow());
     if(petHas('guard')){ cb.shield += 4; floatText($('#shieldStat'), '+4', '#a8ceff'); }
     if(petHas('mend')) heal(3);
     if(petHas('charge')) run.charge = Math.min(ULT().need, run.charge+1);
     if(petHas('loot')){ run.gold += 3; }
     if(petHas('fang') && aliveEnemies().length) damageEnemy(4, true);
   }
+  questAdd('pets', 1);
+}
+function renderPetChips(){
+  const wrap = $('#petWrap'); if(!wrap) return;
+  const keys = run && cb ? petKeys() : []; cb.petCharge = cb.petCharge || keys.map(()=>0);
+  const sig = keys.map(k=>k+petTier()).join('|');
+  if(wrap.dataset.sig !== sig){ wrap.dataset.sig = sig; wrap.innerHTML = keys.map((k,i)=>`<button class="petchip" data-i="${i}" aria-label="${PETS[k].name}">${img(i===0?petForm(k).spr:petForm(k,0).spr,30)}<span class="pcv"></span></button>`).join(''); wrap.querySelectorAll('.petchip').forEach(b=>b.onclick = ()=>usePet(+b.dataset.i)); }
+  keys.forEach((k,i)=>{ const b = wrap.querySelector(`.petchip[data-i="${i}"]`); if(!b) return; const need = petNeed(i), c = Math.min(need, cb.petCharge[i]||0);
+    b.style.setProperty('--p', (100*c/need)+'%'); b.classList.toggle('ready', c>=need && !cb.over); b.querySelector('.pcv').textContent = c>=need ? 'GO' : `${c}/${need}`; });
+}
+function usePet(i){
+  if(!cb || cb.over) return; cb.petCharge = cb.petCharge || [];
+  const k = petKeys()[i]; if(!k) return; const need = petNeed(i);
+  if((cb.petCharge[i]||0) < need){ toast(`<b>${petForm(k, k===run.pet?null:0).name}</b> (${PETS[k].role})<br>${petDesc(k)}<br><span class="muted">Charging: ${cb.petCharge[i]||0}/${need}. It charges 1 every move.${petTier()<2?` Pet XP ${run.petXp||0}/${PET_EVO[petTier()]}.`:''}</span>`, petForm(k).spr, 3600); return; }
+  cb.petCharge[i] = 0; petFire(i); renderHUD(); if(!checkEnd()){ checkStuck(); saveRun(); }
 }
 function petTick(){
-  if(!run.pet || !PETS[run.pet] || cb.over) return;
-  cb.petT = (cb.petT||0) + 1;
-  if(cb.petT >= petEvery()){ cb.petT = 0; petFire(); }
+  if(!cb || cb.over) return; cb.petCharge = cb.petCharge || [];
+  petKeys().forEach((k,i)=>{ const need = petNeed(i); const was = cb.petCharge[i]||0; cb.petCharge[i] = Math.min(need, was+1); if(was<need && cb.petCharge[i]>=need){ sfx('pet', k); floatText(document.querySelector(`.petchip[data-i="${i}"]`), 'Ready!', '#86e6a8'); } });
 }
 function gainPetXP(n){
   if(!run.pet) return;
@@ -586,7 +618,7 @@ const QUESTS = {
   bosses:{text:'Defeat a boss', goal:1, spr:'r_boss'},
   triples:{text:'Clear 3+ lines with one piece', goal:2, spr:'bomb'},
   rooms:{text:'Enter 12 rooms', goal:12, spr:'r_event'},
-  pets:{text:'Have your pet act 6 times', goal:6, spr:'r_den'},
+  pets:{text:'Unleash your pet 4 times', goal:4, spr:'r_den'},
 };
 function weekKey(){ const d = new Date(); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = t.getUTCFullYear(); const wk = Math.ceil(((t - Date.UTC(y,0,1))/86400000 + 1)/7); return `${y}-W${wk}`; }
 const RULES = {
@@ -855,7 +887,7 @@ function snapFight(){
     stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
     tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
-    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, turret:cb.turret||0, windUsed:!!cb.windUsed, pthorns:cb.pthorns||0, echoNext:cb.echoNext||null, keepStreak:!!cb.keepStreak, petCharge:cb.petCharge||null, nullLeft:cb.nullLeft||0, timeLeft:cb.timeLeft||0, cloakLeft:cb.cloakLeft||0, thunder:cb.thunder||0, echoUsed:!!cb.echoUsed, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
+    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, turret:cb.turret||0, windUsed:!!cb.windUsed, pthorns:cb.pthorns||0, echoNext:cb.echoNext||null, keepStreak:!!cb.keepStreak, petCharge:cb.petCharge||null, golemHit:!!cb.golemHit, nullLeft:cb.nullLeft||0, timeLeft:cb.timeLeft||0, cloakLeft:cb.cloakLeft||0, thunder:cb.thunder||0, echoUsed:!!cb.echoUsed, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
 }
 function saveRun(){
   if(!run) return;
@@ -977,7 +1009,7 @@ const HERO_RELICS = {
   c_rime:{hero:'cryomancer', mlv:2, name:'Rime Gauntlet', base:'frostshard', desc:'Every fight starts with 3 ice blocks on your grid.', onFight(){ addBlocks('ice', 3, true); }},
   c_glacier:{hero:'cryomancer', mlv:4, name:'Glacier Heart', base:'frostshard', desc:'Ice in your clears also gives 3 shield each.', eff(c,o,R){ R.sh += c.ice*3; }},
   bm_collar:{hero:'beastmaster', mlv:2, name:'Spiked Collar', base:'whistle', desc:'Your pet earns 1 extra XP from every fight.', onKill(){ if(cb && cb.enemies.every(e=>e.hp<=0)) gainPetXP(1); }},
-  bm_horn:{hero:'beastmaster', mlv:4, name:'Hunting Horn', base:'whistle', desc:'Your pet acts once at the start of every fight.', onFight(){ setTimeout(()=>{ if(cb && !cb.over && run.pet){ petFire(); renderHUD(); } }, 700); }},
+  bm_horn:{hero:'beastmaster', mlv:4, name:'Hunting Horn', base:'whistle', desc:'Your pets start every fight fully charged.', onFight(){ if(run.pet){ cb.petCharge = petKeys().map((k,i)=>petNeed(i)); } }},
 };
 Object.entries(HERO_RELICS).forEach(([id,H])=>{ RELICS[id] = {...H, spr:id, r:5, tiers:[H.desc, H.desc+' (50% stronger)', H.desc+' (twice as strong)']}; });
 Object.values(RELICS).forEach(R=>{ if(R.tiers) R.desc = R.tiers[0]; });
@@ -1048,7 +1080,7 @@ const SETS = {
   arcane:{name:'Arcane', col:'#c77dff', relics:['prism','spellbook','seerorb','battery','ring','purist'], bonus:'Clearing 2+ lines at once adds 1 extra special charge.'},
   iron:{name:'Iron', col:'#a8b4c4', relics:['chainmail','tower','spikes','boots','ironfist','stoneward','thickskin','mirror'], bonus:'Start every fight with 10 extra shield.'},
   blast:{name:'Blast', col:'#ff8a3c', relics:['powder','sledge','satchel','crossed','warhorn','scythe','whetstone'], bonus:'Clearing 3+ lines at once deals 10 extra damage.'},
-  wild:{name:'Wild', col:'#45c674', relics:['feather','cauldron','hearth','toxin','warmcloak','tidecharm','packrat','souljar','bluelantern','compass','phial','hourglass','dice','drum','phoenix'], bonus:'Heal 6 HP after every fight, and pets act 1 move sooner.'},
+  wild:{name:'Wild', col:'#45c674', relics:['feather','cauldron','hearth','toxin','warmcloak','tidecharm','packrat','souljar','bluelantern','compass','phial','hourglass','dice','drum','phoenix'], bonus:'Heal 6 HP after every fight, and pets charge faster.'},
 };
 const setOf = id => Object.keys(SETS).find(k=>SETS[k].relics.includes(id)) || null;
 const setCount = k => !run ? 0 : run.relics.filter(id=>SETS[k].relics.includes(id)).length;
@@ -1163,6 +1195,7 @@ function openRelics(){
     <div id="setInfo">${Object.entries(SETS).filter(([k])=>setOn(k)).map(([k,S])=>`<div class="setinfo" style="--sc:${S.col}"><b>${S.name} set bonus active</b>${S.bonus}</div>`).join('')}</div>
     ${run.relics.map(id=>{ const R = RELICS[id], sk = setOf(id); return `<div class="troph">${img(R.spr,40)}<div><b>${R.name} <span class="tierpip">${ROMAN[rt(id)]}</span>${R.starter?' <span class="muted" style="font-size:11px">free slot</span>':''}${sk?` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name}</span>`:''}</b><small>${relicDesc(id)}${rt(id)<3?`<br><span style="color:#c8fbff">Next: ${relicDesc(id, rt(id)+1)} (${Math.max(0, RELIC_XP[rt(id)]-((run.rxp||{})[id]||0))} more wins)</span>`:''}</small></div></div>`; }).join('')}
     <div class="troph">${img(ULT().spr,40)}<div><b>Special: ${ULT().name}</b><small>${ULT().desc} Needs ${ULT().need} lines.</small></div></div>
+    ${run.pet2&&PETS[run.pet2]?`<div class="troph">${img(petForm(run.pet2,0).spr,40)}<div><b>Second pet: ${PETS[run.pet2].name}</b><small>${petDesc(run.pet2,0)}</small></div></div>`:''}
     ${run.pet&&PETS[run.pet]?`<div class="troph">${img(petForm().spr,40)}<div><b>Pet: ${petForm().name}${petTier()<2?` <span class="muted" style="font-size:12px">XP ${run.petXp||0}/${PET_EVO[petTier()]}</span>`:''}</b><small>${petDesc(run.pet)}</small></div></div>`:''}
     <button class="btn" id="closeBtn">Close</button></div>`;
   $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
@@ -1557,7 +1590,7 @@ function codexScreen(tab){
   } else if(tab==='k'){
     body = `<p class="center muted">Win fights to earn XP. Each level lets you pick 1 of 3 perks for the rest of the run.</p>${Object.values(PERKS).map(P=>`<div class="troph">${img(P.spr,40)}<div><b>${P.name} <span class="muted" style="font-size:12px">max ${P.max}</span></b><small>${P.desc}</small></div></div>`).join('')}`;
   } else if(tab==='p'){
-    body = `<p class="center muted">Find pets in Beast Dens, at merchants and in events. Pets earn XP from fights and evolve twice.</p>${Object.entries(PETS).map(([k,P])=>`<div class="troph petrow"><div class="petforms">${P.forms.map(f=>img(f[1],38)).join('')}</div><div><b>${P.forms.map(f=>f[0]).join(', then ')}</b><small>${P.desc(1)}</small></div></div>`).join('')}`;
+    body = `<p class="center muted">Find pets in Beast Dens, at merchants and in events. Pets charge every move: tap them when ready. They earn XP and evolve twice. In the Endless Depths you can bring a second pet.</p>${Object.entries(PETS).map(([k,P])=>`<div class="troph petrow"><div class="petforms">${P.forms.map(f=>img(f[1],38)).join('')}</div><div><b>${P.role}: ${P.forms.map(f=>f[0]).join(', then ')}</b><small>${P.passive} Ready: ${P.desc(1)}</small></div></div>`).join('')}`;
   } else {
     const ids = Object.keys(RELICS), n = ids.filter(id=>s.r[id]).length;
     body = `<p class="center muted">${n} / ${ids.length} discovered</p><div class="grid">${ids.map(id=>{ const k = s.r[id]; return `<div class="cell ${k?'':'unk'}" data-r="${id}">${img(RELICS[id].spr,50)}${k?RELICS[id].name:'???'}</div>`; }).join('')}</div>`;
@@ -1717,6 +1750,7 @@ function advance(){
     if(run.floor===FLOORS+1 && !run.won){ if(!run.secretDone && !run.daily && secretWhy().length){ run.floor = FLOORS; run.room = {t:'gate'}; saveRun(); return gateScreen(); } return endScreen(true); }
     questAdd('floor', run.floor);
     if(run.floor>=FLOORS+3) unlock('endless');
+    if(run.floor===FLOORS+1 && run.pet && !run.pet2) setTimeout(()=>toast('<b>Second companion slot</b><br>The next pet you adopt joins your current one.', 'r_den', 3600), 4200);
     if(run.floor===FLOORS+1){ run.slotBonus = (run.slotBonus||0)+4; setTimeout(()=>toast(`<b>+4 relic slots</b><br>The depths let you carry more. You can equip ${relicCap()} relics.`, 'r_treasure', 3600), 2600); }
     else if(run.floor>FLOORS+1 && (run.floor-FLOORS-1)%2===0 && relicCap()<16){ run.slotBonus = (run.slotBonus||0)+1; setTimeout(()=>toast(`<b>+1 relic slot</b>`, 'r_treasure'), 2600); }
     if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3'); if(run.floor===4) unlock('floor4'); if(run.floor===5) unlock('floor5');
@@ -1794,7 +1828,7 @@ function shopScreen(){
       ${choiceBtn({id:'a:add',spr:'bagicon',name:'Hire Blocks',desc:'Add 2 blocks of a type you choose to your bag.',price:P(30+10*(S.adds||0)),disabled:run.gold<P(30+10*(S.adds||0))})}
       ${S.cutSold?'':choiceBtn({id:'c:cut',spr:'bagicon',name:'Remove a Block Type',desc:'Remove up to 3 blocks of one type from your bag.',price:P(45),disabled:run.gold<P(45)||bagSize()-1<BAG_MIN})}
       ${S.boxSold?'':choiceBtn({id:'m:box',spr:'r_treasure',name:'Mystery Box',desc:'Could be a relic, potions, a pile of gold... or a pet.',price:P(50),disabled:run.gold<P(50)})}
-      ${run.pet||S.petSold?'':choiceBtn({id:'q:pet',spr:PETS[S.pet||(S.pet=pick(Object.keys(PETS)))].spr,name:`Adopt: ${PETS[S.pet].name}`,desc:petDesc(S.pet,0),price:P(65),disabled:run.gold<P(65)})}
+      ${(run.pet && !(run.floor>FLOORS && !run.pet2))||S.petSold?'':choiceBtn({id:'q:pet',spr:PETS[S.pet||(S.pet=pick(Object.keys(PETS)))].spr,name:`Adopt: ${PETS[S.pet].name}`,desc:petDesc(S.pet,0),price:P(65),disabled:run.gold<P(65)})}
       ${run.pet && petTier()<2 && !S.treatSold ? choiceBtn({id:'t:treat',spr:'bone_treat',name:'Pet Treat',desc:`+3 XP for your ${petForm().name}.`,price:P(30),disabled:run.gold<P(30)}) : ''}
       ${S.healSold?'':choiceBtn({id:'h:heal',spr:'heal_icon',name:'Bandages',desc:'Heal 30% of your max HP.',price:P(35),disabled:run.gold<P(35)||run.hp>=run.maxHp})}
       <button class="btn ghost" id="rerollShop" ${run.gold<rerollPrice()?'disabled':''}>Restock relics and potions (${rerollPrice()} gold)</button>
@@ -1817,7 +1851,7 @@ function shopScreen(){
         else if(roll<0.65 && canPotion()){ givePotion(); if(canPotion()) givePotion(); toast('<b>Mystery Box</b><br>Potions!', 'potion_health'); }
         else if(roll<0.85 || run.pet){ run.gold += 90; toast('<b>Mystery Box</b><br>90 gold!', 'coin'); questAdd('gold', 90); }
         else { setPet(pick(Object.keys(PETS))); unlock('petpal'); toast(`<b>Mystery Box</b><br>A ${PETS[run.pet].name} hops out and joins you!`, PETS[run.pet].spr); } }
-      else if(kind==='q'){ if(run.gold<P(65)||S.petSold||run.pet) return; run.gold -= P(65); S.petSold = true; setPet(S.pet); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[S.pet].name}</b> joins you!`, PETS[S.pet].spr); }
+      else if(kind==='q'){ if(run.gold<P(65)||S.petSold||(run.pet && !(run.floor>FLOORS && !run.pet2))) return; run.gold -= P(65); S.petSold = true; setPet(S.pet); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[S.pet].name}</b> joins you!`, PETS[S.pet].spr); }
       else if(kind==='t'){ if(run.gold<P(30)||S.treatSold) return; run.gold -= P(30); S.treatSold = true; gainPetXP(3); sfx('heal'); toast(`<b>${petForm().name}</b><br>+3 pet XP${run.petEvo?'. Ready to evolve after your next fight!':''}`, petForm().spr); }
       else if(kind==='h'){ if(run.gold<P(35)||S.healSold) return; run.gold-=P(35); S.healSold=true; heal(Math.round(run.maxHp*0.3)); sfx('heal'); }
       else { if(run.gold<packPrice||S.packSold) return; run.gold-=packPrice; S.packSold=true; run.potionSlots++; sfx('buy'); }
@@ -1829,7 +1863,7 @@ function shopScreen(){
 }
 function denScreen(){
   show('den');
-  const R = run.room; if(!R.pets){ R.pets = shuffle(Object.keys(PETS).filter(k=>k!==run.pet)).slice(0,2); saveRun(); }
+  const R = run.room; if(!R.pets){ R.pets = shuffle(Object.keys(PETS).filter(k=>k!==run.pet && k!==run.pet2)).slice(0,2); saveRun(); }
   const cur = run.pet && PETS[run.pet] ? petForm() : null;
   view(`${scene('r_den','Beast Den', cur?`Your ${cur.name} sniffs at the newcomers. You can only keep one companion${petTier()?', and a new one starts unevolved':''}.`:'Creatures peek out from the straw. One of them could join you.')}
     ${R.pets.map(k=>choiceBtn({id:k, spr:PETS[k].spr, name:PETS[k].name, desc:petDesc(k,0)})).join('')}
@@ -2255,6 +2289,9 @@ function startCombat(kind, forced){
   };
   attachEnemy(cb);
   if(run.carry){ cb.shield += run.carry; run.carry = 0; }
+  if(petOn('turtle')) cb.shield += 6;
+  if(petOn('owl')) cb.rerolls += 1;
+  cb.petCharge = petKeys().map(()=>0); cb.golemHit = petOn('golem');
   if(has('quickdraw')) cb.streak += rv('quickdraw',[1,2,3]);
   if(has('warbanner')) cb.streak += rt('warbanner')-1;
   if(has('spyglass') && kind!=='goblin') spawnWeak(rv('spyglass',[1,1,2]));
@@ -2540,7 +2577,7 @@ function place(idx, r, c){
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   resolveClears();
   if(checkEnd()) return;
-  if(run.pet){ petTick(); if(cb.petT===0) questAdd('pets', 1); if(checkEnd()) return; }
+  if(run.pet){ petTick(); if(checkEnd()) return; }
   if(!cb.lastCleared && has('tidecharm')){ const tc = rv('tidecharm',[3,5,7]); cb.shield += tc; floatText($('#shieldStat'), `+${tc}`, '#a8ceff'); }
   enemyTick();
   if(checkEnd()) return;
@@ -2618,11 +2655,12 @@ function computeEffects(board, set, o){
   let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + rb*2 + cnt.blast*(3 + (plusOn('blast')?5:0) + rv('satchel',[0,2,4])) + cnt.rainbow*rv('prism',[0,1,2]) + (plusOn('coin')?cnt.coin*2:0)) * mult * (has('stormbanner')?rv('stormbanner',[1.2,1.3,1.4]):1));
   let sh  = Math.round((cnt.shield*shieldVal + rb) * mult);
   let hp  = Math.round((cnt.heal*healVal + rb) * mult);
-  const poison = Math.round(cnt.venom * mult * (plusOn('venom')?2:1)) + pk('toxic');
+  const poison = Math.round(cnt.venom * mult * (plusOn('venom')?2:1)) + pk('toxic') + (petOn('spider')?1:0);
   const gold = Math.round(cnt.coin*coinVal*(has('midas')?rv('midas',[2,2.5,3]):1)*(has('cursedcrown')?rv('cursedcrown',[1.5,1.75,2]):1));
   if(has('sledge')) dmg += (cnt.stone+cnt.ice+(rt('sledge')>=3?cnt.web:0))*rv('sledge',[4,6,8]);
   if(rt('warmcloak')>=2){ sh += cnt.ice*2; if(rt('warmcloak')>=3) dmg += cnt.ice*3; }
   dmg += (cnt.stone+cnt.ice+cnt.web)*2*pk('wrecker');
+  if(petOn('slime')) hp += cnt.stone+cnt.ice+cnt.web;
   if(has('katana') && lines===1) dmg += rv('katana',[8,12,18]);
   if(has('doubloon')) dmg += cnt.coin*rv('doubloon',[1,2,3]);
   if(has('gearbox')) dmg += cnt.blast*rv('gearbox',[4,6,9]);
@@ -2636,7 +2674,7 @@ function computeEffects(board, set, o){
   if(setOn('blast') && lines>=3) dmg += 10;
   if(has('huntersmark')) dmg += rv('huntersmark',[3,5,7])*lines;
   let weakHits = 0; if(cb && cb.weak) set.forEach(i=>{ if(cb.weak.includes(i) && board[i]) weakHits++; });
-  dmg += Math.round(weakHits*weakBonus()*(1+0.5*pk('weak')+rv('spyglass',[0.25,0.5,0.75]))) + cnt.bomb*5;
+  dmg += Math.round(weakHits*weakBonus()*(1+0.5*pk('weak')+rv('spyglass',[0.25,0.5,0.75])+(petOn('bat')?0.4:0))) + cnt.bomb*5;
   if(has('momentum') && cb && cb.streak>=3) dmg += rv('momentum',[4,7,10]);
   { const corners = [0,7,56,63]; if(has('cornerstone') && corners.some(i=>set.has(i))) dmg += rv('cornerstone',[6,10,15]); }
   if(has('edgerunner') && ((o.rowIdx||[]).some(r=>r===0||r===7) || (o.colIdx||[]).some(c=>c===0||c===7))) sh += rv('edgerunner',[3,5,8]);
@@ -2685,6 +2723,7 @@ function resolveClears(){
   if(cb.streak>=2){ setTimeout(()=>sfx('combo', cb ? cb.streak : 2), 120); announce(cb.streak); }
   if(has('lute') && cb.streak>0 && cb.streak%3===0){ const ls = rv('lute',[8,12,16]); cb.shield += ls; heal(rv('lute',[5,7,10])); floatText($('#shieldStat'), `+${ls}`, '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
   if(setOn('arcane') && plan.lines>=2) run.charge = Math.min(ULT().need, run.charge+1);
+  if(petOn('wisp') && plan.lines>=2) run.charge = Math.min(ULT().need, run.charge+1);
 }
 /* fires every block in `set`, clears them, applies all effects */
 function fireCells(set, o){
@@ -2750,7 +2789,7 @@ function fireCells(set, o){
     if(c.note) cb.streak += Math.min(2, c.note);
     if(c.lotus) cb.keepStreak = true;
     if(c.cog) cb.turret = (cb.turret||0) + c.cog;
-    if(c.paw && cb.petCharge) run.pets.forEach((k,i)=>{ cb.petCharge[i] = Math.min(petNeed(i), (cb.petCharge[i]||0) + c.paw); });
+    if(c.paw && cb.petCharge) petKeys().forEach((k,i)=>{ cb.petCharge[i] = Math.min(petNeed(i), (cb.petCharge[i]||0) + c.paw); });
     if(c.elixir && Math.random() < 0.15*c.elixir){ const p = givePotion(); if(p) floatText($('#potionBar'), 'Brewed!', '#ecffb0'); }
     if(c.vine) setTimeout(()=>{ if(cb && !cb.over){ addBlocks('heal', c.vine); } }, 350);
   }
@@ -2805,6 +2844,7 @@ function damageEnemy(n, noThorns, pierce, target){
 function hitPlayer(n, small){
   if(cb.mirror && !small){ cb.mirror = (+cb.mirror||1)-1; floatText(hpEl(), 'Reflected!', '#a8ceff'); sfx('block'); if(rt('mirror')>=2 && cb.enemy && cb.enemy.hp>0) damageEnemy(Math.round(n/2), true); return; }
   if(has('vampcape') && !small && cb.enemy.hp>0){ cb.enemy.hp = Math.max(1, cb.enemy.hp-rv('vampcape',[2,4,6])); }
+  if(cb.golemHit && !small && n>0){ cb.golemHit = false; n = Math.ceil(n/2); floatText(hpEl(), 'Golem guards!', '#c9c2d4'); }
   let v = n; if(has('thickskin')) v = Math.max(0, v-rv('thickskin',[1,2,3]));
   if(has('colossus')) v = Math.ceil(v/2);
   const absorbed = Math.min(cb.shield, v); cb.shield -= absorbed; v -= absorbed;
@@ -2863,7 +2903,7 @@ function enemyAct(e){
       const took = Math.min(run.gold, it.v); run.gold -= took; floatText($('#goldWrap'), `-${took}`, '#ff8a80'); sfx('steal'); break; }
     case 'bomb': {
       const empty = []; cb.board.forEach((t,i)=>{ if(!t) empty.push(i); });
-      shuffle(empty).slice(0, it.v).forEach(i=>{ cb.board[i] = 'bomb'; cb.bombs[i] = 4 + (rt('hourglass')>=2?1:0); cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); });
+      shuffle(empty).slice(0, it.v).forEach(i=>{ cb.board[i] = 'bomb'; cb.bombs[i] = 4 + (rt('hourglass')>=2?1:0) + (petOn('imp')?1:0); cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); });
       floatText($('#board'), `Bombs x${it.v}!`, '#ff8a3c'); sfx('rubble'); break; }
     case 'chain': {
       if(rt('stoneward')>=3){ floatText($('#board'), 'Warded!', '#c9c2d4'); sfx('block'); break; }
@@ -2930,6 +2970,7 @@ function checkEnd(){
     run.carry = Math.max(plusOn('shield') ? Math.min(30, Math.floor(cb.shield/2)) : 0, has('vault') ? Math.floor(cb.shield*rv('vault',[0.2,0.35,0.5])) : 0);
     if(kind==='boss') run.bossRelic = 1;
     if(pk('scav')) run.gold += 6*pk('scav');
+    if(petOn('rat')) run.gold += 3;
     if(pk('medic')) heal(5*pk('medic'));
     setTimeout(()=>floatText($('#heroIcon'), `+${xp} XP`, '#ffd23f', true), 500);
     run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind}; saveRun();
@@ -3005,7 +3046,7 @@ function useUlt(){
   } else if(run.cls==='beastmaster'){
     if(!run.pet) setPet(pick(Object.keys(PETS)));
     const fight = cb;
-    for(let k=0;k<3;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; petFire(); renderHUD(); if(!checkEnd()) saveRun(); }, 220*k);
+    for(let k=0;k<2;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; petKeys().forEach((x,i)=>petFire(i)); renderHUD(); if(!checkEnd()) saveRun(); }, 260*k);
   } else if(run.cls==='paladin'){
     const d = cb.shield + 15 + 5*(run.floor-1); flash('rgba(255,240,170,.55)'); damageEnemy(d, true);
   } else if(run.cls==='ranger'){
@@ -3132,10 +3173,7 @@ function renderHUD(){
   $('#streakText').textContent = m ? `+${fmt(m)}` : '-';
   $('#comboStat').classList.toggle('hot', cb.streak>=3);
   $('#rerollText').textContent = cb.rerolls;
-  const pc = $('#petChip');
-  if(run.pet && PETS[run.pet]){ const F = petForm(), key = run.pet+petTier(); pc.hidden = false; if(pc.dataset.k!==key){ pc.innerHTML = `${img(F.spr,28)}<span id="petT"></span>`; pc.dataset.k = key; } const left = Math.max(1, petEvery() - (cb.petT||0)); $('#petT').textContent = left;
-    pc.onclick = ()=>toast(`<b>${F.name}</b><br>${petDesc(run.pet)}<br><span class="muted">Acts in ${left} move(s).${petTier()<2?` Pet XP ${run.petXp||0}/${PET_EVO[petTier()]}.`:''}</span>`, F.spr, 3200); }
-  else pc.hidden = true;
+  renderPetChips();
   $('#rerollBtn').disabled = cb.rerolls<=0 || cb.over;
   const C = ULT(), pct = Math.min(100, 100*run.charge/C.need);
   const ub = $('#ultBtn'); ub.style.setProperty('--p', pct); ub.classList.toggle('sealed', cb.silence>0);
