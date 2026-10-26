@@ -123,7 +123,7 @@ const CLASSES = {
     desc:'A precise hunter. Pure lines hit much harder and every cleared line adds damage.',
     ult:{name:'Volley', need:7, spr:'mark', desc:'Fire 6 arrows that pierce armor, 5 damage each (more on deeper floors).'},
     unlock:{text:'Clear 15 pure lines in total', cost:180, ok:s=>s.pures>=15}},
-  bard:{name:'Bard', spr:'bard', hp:58, gold:35, relic:'lute', potions:['luck'], bag:{sword:5, shield:3, heal:3, coin:3},
+  bard:{name:'Bard', spr:'bard', hp:62, gold:35, relic:'lute', potions:['luck'], bag:{sword:5, shield:3, heal:3, coin:3},
     desc:'Plays to the rhythm of combos. Every third clear in a row strikes a chord that shields and heals.',
     ult:{name:'Encore', need:7, spr:'lute', desc:'Replay your last clear: its damage, shield, healing, poison and gold all happen again.'},
     unlock:{text:'Reach Mastery 3 with any hero', cost:160, ok:()=>Object.keys(CLASSES).some(k=>masteryLevel(k)>=3)}},
@@ -177,6 +177,7 @@ const isUnlocked = id => !CLASSES[id].unlock || !!(store.get('heroes', {})[id]);
 function checkHeroUnlocks(){
   const st = stats(), h = store.get('heroes', {}); let any = null;
   Object.entries(CLASSES).forEach(([id,C])=>{ if(C.unlock && !h[id] && C.unlock.ok(st)){ h[id] = 1; any = id; } });
+  if(Object.keys(CLASSES).every(isUnlocked)) unlock('allstar');
   if(any){ store.set('heroes', h); unlock('roster'); setTimeout(()=>{ sfx('trophy'); toast(`<b>New hero unlocked!</b><br>The ${CLASSES[any].name} joins your party.`, CLASSES[any].spr, 3500); }, 900); }
 }
 const HEAT = [
@@ -254,7 +255,7 @@ const RELICS = {
   totem:{name:'Spirit Totem', spr:'totem', desc:'Every 4 moves, a random block on your grid turns Rainbow.', r:0, starter:true},
   frostshard:{name:'Frost Shard', spr:'frostshard', desc:'Ice never cracks into rubble, and ice in your clears deals 4 damage each.', r:0, starter:true},
   whistle:{name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) run.pet = pick(Object.keys(PETS)); }},
-  lute:{name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +6 shield and heal 4.', r:0, starter:true},
+  lute:{name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +8 shield and heal 5.', r:0, starter:true},
   phial:{name:'Bottomless Phial', spr:'phial', desc:'The first potion you drink in each fight is not used up.', r:3},
   emberheart:{name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
 };
@@ -517,6 +518,10 @@ const ACH = {
   mutant:{name:'Glutton for Punishment', desc:'Win a run with 3 or more mutators.', spr:'mutator'},
   decorator:{name:'Interior Decorator', desc:'Unlock a new board theme.', spr:'palette'},
   collector:{name:'Window Shopper', desc:'Buy something in the Bazaar.', spr:'shard'},
+  level8:{name:'Seasoned', desc:'Reach level 8 in a single run.', spr:'trophy'},
+  bossdex:{name:'Boss Hunter', desc:'Defeat 10 different bosses.', spr:'r_boss'},
+  minion:{name:'Crowd Control', desc:'Defeat a boss\'s minion.', spr:'skeleton'},
+  allstar:{name:'Full Roster', desc:'Unlock all 20 heroes.', spr:'knight'},
   setbonus:{name:'Matching Set', desc:'Complete a relic set (3 relics from one family).', spr:'r_treasure'},
   bard:{name:'Encore!', desc:'Win a run as the Bard.', spr:'bard'},
   endless:{name:'Bottomless', desc:'Reach Endless Depth 3.', spr:'voideye'},
@@ -548,7 +553,7 @@ const MUTS = {
 const mut = id => !!run && (run.muts||[]).includes(id);
 const mutBonus = list => (list||[]).reduce((m,id)=>m*(1+(MUTS[id]?MUTS[id].bonus:0)), 1);
 
-/* ================= board themes (Wardrobe) ================= */
+/* ================= board themes (Bazaar > Boards) ================= */
 const THEMES = {
   stone:{name:'Dungeon Stone', board:'#0b080e', edge:'#4a3f58', a:'#1a1520', b:'#1e1825'},
   frost:{name:'Frozen Crypt', board:'#07121a', edge:'#5aa0c8', a:'#0f2230', b:'#132a3a', unlock:{text:'Reach floor 4', ok:s=>s.bestFloor>=4}},
@@ -1076,7 +1081,7 @@ function bindQuests(){
 function checkThemeUnlocks(){
   const seenT = store.get('themesSeen', {stone:1}); let fresh = null;
   Object.keys(THEMES).forEach(id=>{ if(!seenT[id] && !THEMES[id].cost && themeOk(id)){ seenT[id] = 1; fresh = id; } });
-  if(fresh){ store.set('themesSeen', seenT); unlock('decorator'); setTimeout(()=>toast(`<b>New board theme!</b><br>${THEMES[fresh].name} is now in your Wardrobe.`, 'palette', 3200), 1400); }
+  if(fresh){ store.set('themesSeen', seenT); unlock('decorator'); setTimeout(()=>toast(`<b>New board theme!</b><br>${THEMES[fresh].name} is now in the Bazaar under Boards.`, 'palette', 3200), 1400); }
 }
 function wardrobeScreen(tab){
   show('wardrobe'); tab = tab || store.get('bazTab', 'skin'); store.set('bazTab', tab);
@@ -1208,6 +1213,11 @@ function codexScreen(tab){
   if(tab==='e'){
     const n = ALL_ENEMIES.filter(e=>s.e[e.name]).length;
     body = `<p class="center muted">${n} / ${ALL_ENEMIES.length} discovered</p><div class="grid">${ALL_ENEMIES.map((e,i)=>{ const k = s.e[e.name]; return `<div class="cell ${k?'':'unk'}" data-i="${i}">${img(e.spr,58)}${k?e.name:'???'}</div>`; }).join('')}</div>`;
+  } else if(tab==='b'){
+    const bosses = ALL_ENEMIES.filter(e=>e.boss), n = bosses.filter(e=>s.e[e.name]).length;
+    body = `<p class="center muted">${n} / ${bosses.length} bosses met. Each floor's guardian is picked at random.</p>${[1,2,3,4,5].map(f=>`<h4 class="codexh">Floor ${f}: ${FLOOR_NAMES[f-1]}</h4>${bosses.filter(e=>e.floor===f).map(e=>{ const k = s.e[e.name]; return `<div class="troph ${k?'':'unk'}">${k?img(e.spr,48):img(e.spr,48,'sil')}<div><b>${k?e.name:'???'}${k&&k.kills?` <span class="muted" style="font-size:12px">${k.kills} defeated</span>`:''}</b><small>${k?e.sigd:'Not yet encountered.'}</small></div></div>`; }).join('')}`).join('')}`;
+  } else if(tab==='k'){
+    body = `<p class="center muted">Win fights to earn XP. Each level lets you pick 1 of 3 perks for the rest of the run.</p>${Object.values(PERKS).map(P=>`<div class="troph">${img(P.spr,40)}<div><b>${P.name} <span class="muted" style="font-size:12px">max ${P.max}</span></b><small>${P.desc}</small></div></div>`).join('')}`;
   } else if(tab==='p'){
     body = `<p class="center muted">Find pets in Beast Dens and some events.</p>${Object.entries(PETS).map(([k,P])=>`<div class="troph">${img(P.spr,44)}<div><b>${P.name}</b><small>${P.desc}</small></div></div>`).join('')}`;
   } else {
@@ -1215,9 +1225,9 @@ function codexScreen(tab){
     body = `<p class="center muted">${n} / ${ids.length} discovered</p><div class="grid">${ids.map(id=>{ const k = s.r[id]; return `<div class="cell ${k?'':'unk'}" data-r="${id}">${img(RELICS[id].spr,50)}${k?RELICS[id].name:'???'}</div>`; }).join('')}</div>`;
   }
   view(`<div class="center"><h2 class="title">Codex</h2></div>
-    <div class="tabs"><button class="${tab==='e'?'on':''}" id="tE">Bestiary</button><button class="${tab==='r'?'on':''}" id="tR">Relics</button><button class="${tab==='p'?'on':''}" id="tP">Pets</button></div>
+    <div class="tabs codextabs"><button class="${tab==='e'?'on':''}" id="tE">Bestiary</button><button class="${tab==='b'?'on':''}" id="tB">Bosses</button><button class="${tab==='r'?'on':''}" id="tR">Relics</button><button class="${tab==='k'?'on':''}" id="tK">Perks</button><button class="${tab==='p'?'on':''}" id="tP">Pets</button></div>
     ${body}<button class="btn ghost" id="backBtn">Back</button>`);
-  $('#tE').onclick = ()=>{ sfx('click'); codexScreen('e'); }; $('#tR').onclick = ()=>{ sfx('click'); codexScreen('r'); }; $('#tP').onclick = ()=>{ sfx('click'); codexScreen('p'); };
+  $('#tE').onclick = ()=>{ sfx('click'); codexScreen('e'); }; $('#tB').onclick = ()=>{ sfx('click'); codexScreen('b'); }; $('#tK').onclick = ()=>{ sfx('click'); codexScreen('k'); }; $('#tR').onclick = ()=>{ sfx('click'); codexScreen('r'); }; $('#tP').onclick = ()=>{ sfx('click'); codexScreen('p'); };
   $('#view').querySelectorAll('.cell').forEach(c=>c.onclick=()=>{
     sfx('click');
     if(c.dataset.i!=null){
@@ -1555,6 +1565,28 @@ const EVENTS = [
     {name:'Bandage them', spr:'heal_icon', desc:'Lose 5 HP. Gain 15 gold.', ok:()=>run.hp>5, go(){ run.hp-=5; run.gold+=15; sfx('coin'); }},
     {name:'Walk past', spr:'r_event', desc:'Move on.', go(){} },
   ]}),
+  ()=>({spr:'dummy', title:'Sparring Hall', text:'Straw dummies stand in rows. A sign reads: "Practice makes perfect."', opts:[
+    {name:'Spar for an hour', spr:'sword', desc:'Lose 6 HP. Gain 25 XP.', ok:()=>run.hp>6, go(){ run.hp-=6; gainXP(25); sfx('hit'); toast(`<b>+25 XP</b><br>${run.lvUp?'Level up after your next fight!':`${run.xp} / ${xpNeed(run.level)} XP`}`, 'dummy'); }},
+    {name:'Stretch', spr:'heal_icon', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
+  ]}),
+  ()=>({spr:'satchel', title:'Abandoned Cart', text:'A merchant\'s cart lies on its side. Nobody is around.', opts:[
+    {name:'Search the crates', spr:'potion_health', desc:'Find 2 random potions.', ok:()=>canPotion(), go(){ givePotion(); if(canPotion()) givePotion(); sfx('chest'); }},
+    {name:'Take the coin purse', spr:'coin', desc:'+30 gold.', go(){ run.gold+=30; sfx('coin'); }},
+  ]}),
+  ()=>({spr:'orb', title:'Fortune Teller', text:'"I see the guardian waiting below... but fate can be changed, for a price."', opts:[
+    {name:'Change your fate', spr:'r_boss', desc:`Pay 25 gold: replace ${bossFor().name} with a different boss for this floor.`, ok:()=>run.gold>=25, go(){ run.gold-=25; const list = (run.floor<=5 ? ENEMIES[run.floor-1] : ENEMIES[2+((run.floor-6)%3)]).bosses; let k = run.bossPick[run.floor]; let nk = k; while(list.length>1 && nk===k) nk = rand(0, list.length-1); run.bossPick[run.floor] = nk; sfx('phase'); toast(`<b>Fate rewritten</b><br>${bossFor().name} now waits below.`, bossFor().spr, 3200); }},
+    {name:'Ask about treasure', spr:'coin', desc:'Pay 10 gold: she points you to a hidden relic.', ok:()=>run.gold>=10, go(){ run.gold-=10; const [id] = relicOffers(1); if(id) gainRelic(id); }},
+    {name:'Leave', spr:'r_event', desc:'Move on.', go(){} },
+  ]}),
+  ()=>({spr:'bagicon', title:'Block Peddler', text:'A goblin rattles a sack full of glowing blocks. "Special stock, very rare!"', opts:[
+    {name:'Rainbow blocks', spr:'blastblock', desc:'Pay 40 gold: add 2 Rainbow blocks to your bag.', ok:()=>run.gold>=40, go(){ run.gold-=40; bagAdd('rainbow',2); sfx('buy'); }},
+    {name:'Blast blocks', spr:'bomb', desc:'Pay 30 gold: add 2 Blast blocks to your bag.', ok:()=>run.gold>=30, go(){ run.gold-=30; bagAdd('blast',2); sfx('buy'); }},
+    {name:'No thanks', spr:'r_event', desc:'Move on.', go(){} },
+  ]}),
+  ()=>({spr:'r_den', title:'Mysterious Egg', text:'A warm, speckled egg sits in a nest of bones. It wobbles.', opts:[
+    {name:'Keep it warm', spr:'heart', desc:run.pet?'It hatches... and runs off, leaving 35 gold behind.':'It hatches into a random pet that joins you.', go(){ if(run.pet){ run.gold+=35; sfx('coin'); } else { run.pet = pick(Object.keys(PETS)); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[run.pet].name}</b> hatches and joins you!`, PETS[run.pet].spr); } }},
+    {name:'Cook it', spr:'flame', desc:'Heal 15 HP.', go(){ heal(15); sfx('heal'); }},
+  ]}),
 ];
 function eventScreen(){
   show('event');
@@ -1749,7 +1781,7 @@ function startCombat(kind, forced){
   if(heat>=4 && kind==='elite' && !tpl.passive && !RM.tpls){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; tpls = [tpl, ...tpls.slice(1)]; }
   if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= 0.85;
   hpMul *= endlessMul();
-  const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (tpls.length>1 ? 0.62 : 1)));
+  const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (tpls.length>1 ? 0.58 : 1)));
   RM.tpls = tpls; RM.maxHps = maxHps; RM.t = kind; delete RM.tpl; delete RM.maxHp;
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
@@ -1971,6 +2003,7 @@ const xpNeed = lv => 18 + 10*(lv-1);
 function gainXP(n){
   run.level = run.level || 1; run.xp = (run.xp||0) + n;
   while(run.xp >= xpNeed(run.level)){ run.xp -= xpNeed(run.level); run.level++; run.lvUp = (run.lvUp||0)+1; }
+  if(run.level>=8) unlock('level8');
 }
 function perkOffers(){
   const pool = Object.keys(PERKS).filter(k=>pk(k) < PERKS[k].max && (!PERKS[k].ok || PERKS[k].ok()));
@@ -2128,7 +2161,7 @@ function resolveClears(){
   fireCells(plan.set, plan);
   cb.streak++;
   if(cb.streak>=2) setTimeout(()=>sfx('combo', cb ? cb.streak : 2), 120);
-  if(has('lute') && cb.streak>0 && cb.streak%3===0){ cb.shield += 6; heal(4); floatText($('#shieldStat'), '+6', '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
+  if(has('lute') && cb.streak>0 && cb.streak%3===0){ cb.shield += 8; heal(5); floatText($('#shieldStat'), '+8', '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
   if(setOn('arcane') && plan.lines>=2) run.charge = Math.min(ULT().need, run.charge+1);
 }
 /* fires every block in `set`, clears them, applies all effects */
@@ -2314,13 +2347,14 @@ function checkEnd(){
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
   fresh.forEach(e=>{ e.dead = true; run.kills++; if(has('laurel')){ run.maxHp += 2; run.hp += 2; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
+    if(e.minion) unlock('minion');
     const el = eArt(e); if(el){ el.classList.add('dead'); floatText(el, 'Defeated!', '#ffcf7a', true); burstAt(el, ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30); }
     sfx('kill'); buzz(40); });
   if(fresh.length && cb.enemies.some(e=>!e.dead)){ renderHUD(); }
   if(cb.enemies.every(e=>e.dead)){
     cb.over = true; if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
     if(cb.kind==='goblin') unlock('goblin');
-    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
+    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; { const sn = seen(); if(ALL_ENEMIES.filter(x=>x.boss && sn.e[x.name] && sn.e[x.name].kills>0).length>=10) unlock('bossdex'); } if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
