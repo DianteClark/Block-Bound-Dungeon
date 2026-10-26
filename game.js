@@ -72,8 +72,11 @@ const TYPES = {
   blast:  {c:'#ff7a2f', d:'#a8400a', l:'#ffc49a', name:'Blast'},
   stone:  {c:'#736b7f', d:'#38333f', l:'#a69eb2', name:'Rubble'},
   ice:    {c:'#a6def4', d:'#4f8fb0', l:'#f0fbff', name:'Ice'},
+  bomb:   {c:'#4a3a58', d:'#1d1424', l:'#8f7fa6', name:'Bomb'},
 };
-const JUNK = t => t==='stone' || t==='ice';
+const JUNK = t => t==='stone' || t==='ice' || t==='bomb';
+const bombDmg = () => 4 + 2*Math.min(run.floor, 8);
+const weakBonus = () => 5 + 2*Math.min(run.floor, 8);
 const SHAPE_SRC = [
   ['#'], ['##'], ['###'], ['####'], ['#####'],
   ['##','##'], ['###','###','###'], ['###','###'],
@@ -212,7 +215,7 @@ const POTIONS = {
     set.forEach(i=>{ shards(i, cb.board[i], 6); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; });
     sfx('blast'); shake(); damageEnemy(3*set.length, true);
   }},
-  venom:{name:'Venom Vial', spr:'potion_venom', desc:'Poison the enemy for 8.', use(){ cb.enemy.poison += 8; floatText($('#eArt'), '+8 poison', '#dcb6ff'); sfx('poison'); }},
+  venom:{name:'Venom Vial', spr:'potion_venom', desc:'Poison the enemy for 8.', use(){ cb.enemy.poison += 8; floatText(eArt(), '+8 poison', '#dcb6ff'); sfx('poison'); }},
   mana:{name:'Mana Potion', spr:'potion_mana', desc:'Fully charge your hero special.', use(){ run.charge = ULT().need; floatText($('#ultBtn'), 'Charged!', '#c8fbff'); sfx('ult'); }},
   chaos:{name:'Chaos Brew', spr:'potion_chaos', desc:'Turn every piece in your hand into Rainbow blocks.', use(){ cb.hand.forEach(p=>{ if(!p.used) p.type='rainbow'; }); floatText($('#board'), 'Chaos!', '#f0d6ff', true); sfx('ult'); }},
   luck:{name:'Liquid Luck', spr:'potion_luck', desc:'Your next clear has its multiplier doubled.', use(){ cb.doubleNext = true; floatText($('#board'), 'Lucky!', '#86e6a8', true); sfx('trophy'); }},
@@ -251,20 +254,20 @@ const ENEMIES = [
   },
   { normal:[
       {name:'Skeleton', spr:'skeleton', hp:52, moves:[M('armor',8,2),M('atk',12,4)]},
-      {name:'Goblin', spr:'goblin', hp:48, moves:[M('atk',8,3),M('multi',4,4,3)]},
+      {name:'Goblin', spr:'goblin', hp:48, moves:[M('atk',8,3),M('bomb',1,2),M('multi',4,4,3)]},
       {name:'Wisp', spr:'ghost', hp:40, passive:{id:'ethereal'}, moves:[M('atk',7,2),M('curse',3,2)]},
       {name:'Shambler', spr:'zombie', hp:62, moves:[M('atk',9,3),M('rage',2,2),M('atk',9,3)]},
       {name:'Banshee', spr:'banshee', hp:46, passive:{id:'ethereal'}, moves:[M('sap',2,2),M('atk',9,2),M('shuffle',0,3)]},
-      {name:'Bone Archer', spr:'bonearcher', hp:50, moves:[M('multi',3,3,3),M('armor',6,2)]},
+      {name:'Bone Archer', spr:'bonearcher', hp:50, moves:[M('multi',3,3,3),M('chain',3,2),M('armor',6,2)]},
     ],
     elite:[
       {name:'Warlock', spr:'warlock', hp:115, moves:[M('curse',5,3),M('atk',12,2),M('heal',15,3)]},
-      {name:'Mimic', spr:'mimic', hp:125, passive:{id:'thorns',v:2}, moves:[M('multi',5,4,3),M('armor',12,2),M('atk',15,4)]},
+      {name:'Mimic', spr:'mimic', hp:125, passive:{id:'thorns',v:2}, moves:[M('multi',5,4,3),M('chain',3,2),M('armor',12,2),M('atk',15,4)]},
     ],
     boss:{name:'The Hydra', spr:'hydra', hp:240, passive:{id:'regen',v:3}, moves:[M('multi',5,3,3),M('curse',5,3),M('atk',18,4),M('ice',4,2)]},
   },
   { normal:[
-      {name:'Fire Imp', spr:'imp', hp:60, moves:[M('atk',7,2),M('atk',7,2),M('curse',3,2)]},
+      {name:'Fire Imp', spr:'imp', hp:60, moves:[M('atk',7,2),M('bomb',2,2),M('atk',7,2)]},
       {name:'Cultist', spr:'cultist', hp:68, moves:[M('rage',3,2),M('atk',12,3),M('drain',8,3)]},
       {name:'Wyrmling', spr:'wyrm', hp:78, moves:[M('atk',15,3),M('ice',4,3)]},
       {name:'Gargoyle', spr:'gargoyle', hp:72, passive:{id:'armor',v:15}, moves:[M('armor',10,3),M('atk',13,3)]},
@@ -280,7 +283,7 @@ const ENEMIES = [
       {name:'Frost Wisp', spr:'frostwisp', hp:70, passive:{id:'ethereal'}, moves:[M('ice',3,2),M('atk',12,2)]},
       {name:'Ice Spider', spr:'icespider', hp:76, moves:[M('ice',3,2),M('atk',10,2),M('atk',10,2)]},
       {name:'Snow Yeti', spr:'yeti', hp:96, moves:[M('atk',16,3),M('rage',3,2),M('atk',16,3)]},
-      {name:'Frozen Skeleton', spr:'frostskel', hp:82, moves:[M('armor',12,2),M('petrify',3,3),M('atk',15,3)]},
+      {name:'Frozen Skeleton', spr:'frostskel', hp:82, moves:[M('armor',12,2),M('chain',4,2),M('atk',15,3)]},
       {name:'Frost Troll', spr:'frosttroll', hp:105, passive:{id:'regen',v:4}, moves:[M('atk',17,3),M('ice',3,2)]},
     ],
     elite:[
@@ -290,14 +293,14 @@ const ENEMIES = [
     boss:{name:'The Frost Lich', spr:'lich', hp:380, passive:{id:'regen',v:4}, moves:[M('ice',6,3),M('petrify',4,3),M('multi',6,4,4),M('sap',4,3),M('atk',24,4)]},
   },
   { normal:[
-      {name:'Void Imp', spr:'voidimp', hp:86, moves:[M('atk',11,2),M('shuffle',0,2),M('atk',11,2)]},
+      {name:'Void Imp', spr:'voidimp', hp:86, moves:[M('atk',11,2),M('bomb',2,2),M('shuffle',0,2),M('atk',11,2)]},
       {name:'Abyssal Ooze', spr:'voidslime', hp:112, moves:[M('curse',5,3),M('petrify',3,3),M('atk',14,3)]},
       {name:'Void Eye', spr:'voideye', hp:96, passive:{id:'thorns',v:3}, moves:[M('sap',3,2),M('atk',16,3),M('drain',12,3)]},
       {name:'Shade', spr:'shade', hp:82, passive:{id:'ethereal'}, moves:[M('atk',13,2),M('shuffle',0,2),M('drain',10,3)]},
       {name:'Void Spider', spr:'voidspider', hp:92, moves:[M('petrify',3,2),M('atk',15,2),M('steal',15,3)]},
     ],
     elite:[
-      {name:'Abyssal Knight', spr:'abyssknight', hp:220, passive:{id:'thorns',v:4}, moves:[M('atk',26,4),M('armor',18,2),M('multi',9,3,3)]},
+      {name:'Abyssal Knight', spr:'abyssknight', hp:220, passive:{id:'thorns',v:4}, moves:[M('atk',26,4),M('chain',4,2),M('armor',18,2),M('multi',9,3,3)]},
       {name:'Chaos Wyrm', spr:'chaoswyrm', hp:205, passive:{id:'enrage',v:6}, moves:[M('atk',22,3),M('ice',5,3),M('petrify',4,3)]},
     ],
     boss:{name:'The Demon Lord', spr:'demonlord', hp:470, passive:{id:'enrage',v:8}, moves:[M('curse',6,3),M('atk',28,4),M('shuffle',0,2),M('multi',8,4,4),M('petrify',5,3),M('sap',5,3),M('rage',4,2)]},
@@ -338,7 +341,7 @@ const PETS = {
   turtle:{name:'Shell Buddy', spr:'turtle', every:4, desc:'Every 4 moves, gives you 8 shield.', act(){ cb.shield += 8; floatText($('#shieldStat'), '+8', '#a8ceff'); }},
   wisp:{name:'Friendly Wisp', spr:'ghost', every:5, desc:'Every 5 moves, adds 2 charge to your special.', act(){ run.charge = Math.min(ULT().need, run.charge+2); floatText($('#ultBtn'), '+2', '#c8fbff'); }},
   rat:{name:'Lucky Rat', spr:'rat', every:5, desc:'Every 5 moves, sniffs out 6 gold.', act(){ run.gold += 6; floatText($('#goldWrap'), '+6', '#ffe58a'); questAdd('gold', 6); }},
-  spider:{name:'Weaver', spr:'spider', every:4, desc:'Every 4 moves, poisons the enemy for 4.', act(){ cb.enemy.poison += 4; floatText($('#eArt'), '+4 poison', '#dcb6ff'); }},
+  spider:{name:'Weaver', spr:'spider', every:4, desc:'Every 4 moves, poisons the enemy for 4.', act(){ cb.enemy.poison += 4; floatText(eArt(), '+4 poison', '#dcb6ff'); }},
   imp:{name:'Ember Imp', spr:'imp', every:6, desc:'Every 6 moves, burns away all rubble and ice for 2 damage each.', act(){
     const now = performance.now(); let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,5); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; n++; } });
     if(n) damageEnemy(2*n, true); else floatText($('#board'), 'Nothing to burn', '#ffb07a'); }},
@@ -423,6 +426,7 @@ const ACH = {
   questor:{name:'Daily Grind', desc:'Complete all three daily quests in one day.', spr:'scroll'},
   master:{name:'Master Adventurer', desc:'Reach Mastery 5 with any hero.', spr:'paladin'},
   thief:{name:'Sticky Fingers', desc:'Defeat a Kobold Thief or Void Spider.', spr:'glove'},
+  duo:{name:'Double Trouble', desc:'Win a fight against two foes at once.', spr:'r_combat'},
   flawless:{name:'Untouchable', desc:'Beat a boss without losing HP in that fight.', spr:'mirror'},
   goblin:{name:'Finders Keepers', desc:'Catch a Treasure Goblin.', spr:'goldgoblin'},
 };
@@ -502,8 +506,8 @@ function snapFight(){
   return {kind:cb.kind, board:cb.board.slice(), hand:cb.hand.map(p=>({cells:p.cells, h:p.h, w:p.w, type:p.type, used:!!p.used})),
     stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
-    tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, enraged:cb.enraged, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
-    enemy:JSON.parse(JSON.stringify(cb.enemy))};
+    tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
+    enemies:JSON.parse(JSON.stringify(cb.enemies)), bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
 }
 function saveRun(){
   if(!run) return;
@@ -559,7 +563,8 @@ function migrate(r){
   if(!Array.isArray(r.map) || r.map.length!==STEPS){ r.map = genMap(); r.path = []; r.room = null; }
   if(r.room && !r.room.t) r.room = null;
   const f = r.room && r.room.fight;
-  if(f && !(Array.isArray(f.board) && f.board.length===N*N && Array.isArray(f.hand) && f.hand.length && f.enemy && Array.isArray(f.enemy.moves) && f.enemy.moves.length)) delete r.room.fight;
+  if(f && !(Array.isArray(f.board) && f.board.length===N*N && Array.isArray(f.hand) && f.hand.length && (f.enemies||[f.enemy]).every(e=>e && Array.isArray(e.moves) && e.moves.length))) delete r.room.fight;
+  if(f && r.room.fight && !f.enemies){ f.enemies = [f.enemy]; delete f.enemy; }
   if(r.room && r.room.tpl && !(Array.isArray(r.room.tpl.moves) && r.room.tpl.moves.length)) { delete r.room.tpl; delete r.room.maxHp; }
   return r;
 }
@@ -1540,34 +1545,40 @@ function startCombat(kind, forced){
   if(RM.fight) return resumeFight(RM.fight);
   const F = floorPool();
   const pickTpl = () => kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal);
-  let tpl = forced || RM.tpl || (run.daily ? withSeed(runSeed(`e${run.floor}-${RM.r}-${RM.i}`), pickTpl) : pickTpl());
+  const rollTpls = () => { const list = [pickTpl()];
+    if(kind==='combat' && run.floor>=2 && Math.random() < (run.floor>=4 ? 0.38 : 0.3)){ let t2 = pick(F.normal); if(t2.name===list[0].name) t2 = pick(F.normal); list.push(t2); }
+    return list; };
+  let tpls = forced ? [forced] : RM.tpls || (RM.tpl ? [RM.tpl] : null) || (run.daily ? withSeed(runSeed(`e${run.floor}-${RM.r}-${RM.i}`), rollTpls) : rollTpls());
+  let tpl = tpls[0];
   const heat = run.heat||0;
   let hpMul = FS([1.15,1.4,1.55,1.6,1.7]) * (kind==='boss'?1.1:(0.92+Math.random()*0.16));
   if(heat>=1) hpMul *= 1.15;
   if(mut('swarm') && kind==='combat') hpMul *= 1.3;
   if(heat>=5 && kind==='boss') hpMul *= 1.25;
   if(kind==='goblin') hpMul = FS([1,1.7,2.4,3.1,3.8]);
-  if(heat>=4 && kind==='elite' && !tpl.passive){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; }
+  if(heat>=4 && kind==='elite' && !tpl.passive && !RM.tpls){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; tpls = [tpl, ...tpls.slice(1)]; }
   if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= 0.85;
   hpMul *= endlessMul();
-  const maxHp = RM.maxHp || Math.round(tpl.hp * hpMul);
-  RM.tpl = tpl; RM.maxHp = maxHp; RM.t = kind;
-  const pas = tpl.passive || null;
+  const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (tpls.length>1 ? 0.62 : 1)));
+  RM.tpls = tpls; RM.maxHps = maxHps; RM.t = kind; delete RM.tpl; delete RM.maxHp;
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
-    streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0, enraged:false,
+    bombs:{}, chains:[], weak:[], weakT:0,
+    streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0,
     shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort') + (setOn('iron')?10:0),
     rerolls: 1+(has('dice')?1:0)+(has('goldendice')?1:0)+skill('hands'),
-    enemy:{...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null},
+    enemies: tpls.map((t,i)=>makeEnemy(t, maxHps[i])),
   };
-  markSeen('e', tpl.name);
+  attachEnemy(cb);
+  tpls.forEach(t=>markSeen('e', t.name));
   run.charge = Math.min(ULT().need, run.charge + skill('focus'));
   if(run.floor>1 && kind!=='goblin') addBlocks('stone', Math.min(6,(run.floor-1)*2), true);
-  nextIntent(); dealHand();
-  lastEnemySpr = null;
+  cb.enemies.forEach(e=>nextIntent(e)); dealHand();
+  if(kind!=='goblin') spawnWeak(kind==='elite'||kind==='boss' ? 2 : 1);
+  $('#enemyPanel').dataset.sig = '';
   $('#hint').style.display = (settings.tips && !store.get('rotated', false)) ? '' : 'none';
-  show('combat'); layout(); renderHUD();
-  $('#eArt').className = '';
+  show('combat'); renderEnemies(); layout(); renderHUD();
+  if(cb.enemies.length>1) setTimeout(()=>toast('<b>Two foes!</b><br>Cleared rows hit the left enemy, cleared columns hit the right one.', 'r_combat', 3200), 500);
   if(kind==='boss'){ flash('rgba(160,20,30,.5)'); sfx('rage'); banner(tpl.name, `Guardian of ${floorName()}`, 1800); }
   if(kind==='goblin'){ sfx('flee'); toast('<b>A Treasure Goblin!</b><br>Catch it before it escapes with its loot.', 'goldgoblin', 2600); }
   if(!run.masteryUsed && masteryLevel(run.cls)>=5){ run.masteryUsed = true; run.charge = ULT().need; }
@@ -1577,20 +1588,43 @@ function startCombat(kind, forced){
 }
 function resumeFight(f){
   $('#hint').style.display = (settings.tips && !store.get('rotated', false)) ? '' : 'none';
-  cb = {...f, fx:[], parts:[], beams:[], pops:[], over:false, fled:false, hand:f.hand.map(p=>({...p, rotT:0})), stash: f.stash ? {...f.stash, used:false, rotT:0} : null};
-  if(!cb.enemy.intent) nextIntent();
-  lastEnemySpr = null;
-  show('combat'); layout(); renderHUD();
-  $('#eArt').className = '';
+  const enemies = f.enemies || (f.enemy ? [f.enemy] : []);
+  cb = {...f, enemies, fx:[], parts:[], beams:[], pops:[], over:false, fled:false, hand:f.hand.map(p=>({...p, rotT:0})), stash: f.stash ? {...f.stash, used:false, rotT:0} : null,
+    bombs: f.bombs||{}, chains: f.chains||[], weak: f.weak||[], weakT: f.weakT||0};
+  delete cb.enemy; attachEnemy(cb);
+  cb.enemies.forEach(e=>{ if(!e.intent) nextIntent(e); });
+  $('#enemyPanel').dataset.sig = '';
+  show('combat'); renderEnemies(); layout(); renderHUD();
   toast('<b>Fight resumed</b><br>Right where you left off.', cb.enemy.spr, 2000);
 }
+function makeEnemy(tpl, maxHp){ const pas = tpl.passive || null; return {...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null, enraged:false, dead:false}; }
+function attachEnemy(c){ Object.defineProperty(c, 'enemy', {get(){ return c.enemies.find(x=>!x.dead && x.hp>0) || c.enemies[0]; }, enumerable:false, configurable:true}); return c; }
+const aliveEnemies = () => cb.enemies.filter(e=>!e.dead && e.hp>0);
+function eArt(e){ const i = Math.max(0, cb && cb.enemies ? cb.enemies.indexOf(e || cb.enemy) : 0); return document.querySelector(`#enemyPanel .ecard[data-e="${i}"] .eart`) || document.querySelector('#enemyPanel .eart'); }
+/* ---------- grid hazards ---------- */
+function spawnWeak(n){
+  const empty = []; cb.board.forEach((v,i)=>{ if(!v && !cb.weak.includes(i)) empty.push(i); });
+  shuffle(empty).slice(0,n).forEach(i=>cb.weak.push(i));
+}
+function hazardTick(){
+  const now = performance.now();
+  Object.keys(cb.bombs).forEach(k=>{ const i = +k; if(cb.board[i]!=='bomb'){ delete cb.bombs[k]; return; }
+    cb.bombs[k]--;
+    if(cb.bombs[k]<=0){ delete cb.bombs[k]; cb.board[i] = 'stone'; cb.fx.push({i,type:'bomb',t0:now}); shards(i,'bomb',10);
+      const r = Math.floor(i/N), c = i%N; [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{ const rr=r+dr, cc=c+dc; if(rr>=0&&cc>=0&&rr<N&&cc<N&&!cb.board[rr*N+cc]&&Math.random()<0.5){ cb.board[rr*N+cc]='stone'; cb.fx.push({i:rr*N+cc,type:'stone',t0:now,drop:true}); } });
+      floatText($('#board'), 'BOOM!', '#ff8a3c', true); sfx('blast'); shake(); hitPlayer(bombDmg()); }
+  });
+  cb.chains = cb.chains.filter(ch=>{ ch.t--; return ch.t>0 && cb.board[ch.i]; });
+  const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
+  if(cb.kind!=='goblin' && cb.weak.length < want && ++cb.weakT >= 3){ cb.weakT = 0; spawnWeak(1); }
+}
 const streakStep = () => (has('daggers') ? 0.5 : 0.25) * (has('seerorb') ? 1.5 : 1);
-function nextIntent(){
-  const e = cb.enemy, m = e.moves[e.mi % e.moves.length]; e.mi++;
+function nextIntent(e){
+  e = e || cb.enemy; const m = e.moves[e.mi % e.moves.length]; e.mi++;
   e.intent = {...m, left: Math.max(1, m.t + (has('hourglass')&&m.k!=='flee'?1:0) - (mut('hasty')&&m.k!=='flee'?1:0))};
 }
-function peekIntent(){ const e = cb.enemy; return e.moves[e.mi % e.moves.length]; }
-function intentDamage(it){ return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)) + cb.enemy.rage; }
+function peekIntent(e){ e = e || cb.enemy; return e.moves[e.mi % e.moves.length]; }
+function intentDamage(it, e){ e = e || cb.enemy; return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)) + (e ? e.rage : 0); }
 function addBlocks(type, n, silent){
   const empty = []; cb.board.forEach((v,i)=>{ if(!v) empty.push(i); });
   shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]=type; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type}); });
@@ -1618,13 +1652,14 @@ function place(idx, r, c){
   saveRun();
   if(cb.moves===1) setTimeout(()=>{ const b = cv.getBoundingClientRect(); coach('clear', 'Clear lines', 'Fill a whole row or column. Every block in it fires: swords hit, shields block, hearts heal, coins pay. Drag over the grid to preview the result.', {left:b.left, width:b.width, top:b.top+L.ty, bottom:b.top+L.ty+L.trayH}, true); }, 350);
   else if(cb.moves===4) setTimeout(()=>{ const b = cv.getBoundingClientRect(), B = L.stash; coach('stash', 'Stash', 'Drag a piece into the Stash to save it for later. You can stash once per move.', {left:b.left+B.x, width:B.w, top:b.top+B.y, bottom:b.top+B.y+B.h}, true); }, 350);
-  else if(cb.moves===2) setTimeout(()=>coach('intent', 'Enemy intent', 'This is what the enemy does next, and how many of your moves until it happens.', $('#intent'), false), 350);
+  else if(cb.moves===2) setTimeout(()=>coach('intent', 'Enemy intent', 'This is what the enemy does next, and how many of your moves until it happens.', $('#enemyPanel .intent'), false), 350);
   if(run.charge >= ULT().need) coach('ult', 'Special ready!', 'Your special move is charged. Tap it any time.', $('#ultBtn'), true);
 }
 function fullLines(board){
-  const rows=[], cols=[];
-  for(let r=0;r<N;r++){ let ok=true; for(let c=0;c<N;c++) if(!board[r*N+c]){ok=false;break;} if(ok) rows.push(r); }
-  for(let c=0;c<N;c++){ let ok=true; for(let r=0;r<N;r++) if(!board[r*N+c]){ok=false;break;} if(ok) cols.push(c); }
+  const rows=[], cols=[], ch = (cb && cb.chains && cb.chains.length) ? new Set(cb.chains.map(x=>x.i)) : null;
+  const full = i => board[i] && !(ch && ch.has(i));
+  for(let r=0;r<N;r++){ let ok=true; for(let c=0;c<N;c++) if(!full(r*N+c)){ok=false;break;} if(ok) rows.push(r); }
+  for(let c=0;c<N;c++){ let ok=true; for(let r=0;r<N;r++) if(!full(r*N+c)){ok=false;break;} if(ok) cols.push(c); }
   return {rows, cols};
 }
 const MULT = [0,1,1.5,2,3,3.5,4,4.5,5];
@@ -1667,7 +1702,7 @@ function planClear(board){
   return {set, lines, rows:rows.length, cols:cols.length, rowIdx:rows, colIdx:cols, pure, mult, blasted};
 }
 function computeEffects(board, set, o){
-  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0};
+  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0,bomb:0};
   set.forEach(i=>{ const t = board[i]; if(t) cnt[t]++; });
   const Lv = run.lvl, mult = o.mult, lines = o.lines;
   const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
@@ -1689,6 +1724,8 @@ function computeEffects(board, set, o){
   if(setOn('blood')) hp += lines;
   if(setOn('blast') && lines>=3) dmg += 10;
   if(has('huntersmark')) dmg += 3*lines;
+  let weakHits = 0; if(cb && cb.weak) set.forEach(i=>{ if(cb.weak.includes(i) && board[i]) weakHits++; });
+  dmg += weakHits*weakBonus() + cnt.bomb*5;
   if(has('holysymbol')) dmg += Math.round(cnt.heal*2*mult);
   let perfect = true;
   for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak')))){ perfect = false; break; } }
@@ -1696,7 +1733,7 @@ function computeEffects(board, set, o){
   const e = cb.enemy;
   if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
   if(e.passive && e.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
-  return {dmg, sh, hp, poison, gold, perfect, cnt};
+  return {dmg, sh, hp, poison, gold, perfect, cnt, weakHits};
 }
 function resolveClears(){
   const plan = planClear(cb.board);
@@ -1714,10 +1751,25 @@ function fireCells(set, o){
   const fx = computeEffects(cb.board, set, o);
   const now = performance.now();
   (o.rowIdx||[]).forEach(r=>cb.beams.push({r, t0:now})); (o.colIdx||[]).forEach(c=>cb.beams.push({c, t0:now}));
-  const fly = {sword:[], venom:[], rainbow:[], blast:[], shield:[], heal:[], coin:[]};
-  set.forEach(i=>{ const t = cb.board[i]; if(fly[t]) fly[t].push(cellScreen(i)); });
-  const tgt = {sword:'#eArt', venom:'#eArt', rainbow:'#eArt', blast:'#eArt', shield:'#shieldStat', heal:'#hpFill', coin:'#goldWrap'};
+  const rowS = new Set(o.rowIdx||[]), colS = new Set(o.colIdx||[]);
+  let wRow = 0, wCol = 0;
+  const DMG_T = {sword:1, rainbow:1, blast:1, venom:0.5};
+  const fly = {shield:[], heal:[], coin:[]}, flyL = [], flyR = [];
+  set.forEach(i=>{ const t = cb.board[i]; if(!t) return; const inR = rowS.has(Math.floor(i/N)), inC = colS.has(i%N);
+    if(DMG_T[t]){ if(inR && !inC) wRow += DMG_T[t]; else if(inC && !inR) wCol += DMG_T[t]; else { wRow += DMG_T[t]/2; wCol += DMG_T[t]/2; } (inC && !inR ? flyR : flyL).push([cellScreen(i), TYPES[t].c]); }
+    else if(fly[t]) fly[t].push(cellScreen(i)); });
+  if(!wRow && !wCol){ wRow = (o.rowIdx||[]).length; wCol = (o.colIdx||[]).length; }
+  const al = aliveEnemies(), multi = cb.enemies.length>1 && al.length>1;
+  const tL = multi ? cb.enemies[0] : cb.enemy, tR = multi ? cb.enemies[1] : cb.enemy;
+  flyL.slice(0,10).forEach(([pt,col])=>flyTo([pt], eArt(tL), col)); flyR.slice(0,10).forEach(([pt,col])=>flyTo([pt], eArt(tR), col));
+  const tgt = {shield:'#shieldStat', heal:'#hpFill', coin:'#goldWrap'};
   Object.entries(fly).forEach(([t,pts])=>{ if(pts.length) flyTo(pts.slice(0,10), $(tgt[t]), TYPES[t].c); });
+  /* hazards touched by this clear */
+  const nb = []; set.forEach(i=>{ if(cb.weak.includes(i) && cb.board[i]){ cb.weak = cb.weak.filter(x=>x!==i); nb.push(i); } if(cb.board[i]==='bomb') delete cb.bombs[i]; });
+  if(nb.length){ floatText($('#board'), nb.length>1?`Weak spots x${nb.length}!`:'Weak spot!', '#ffd23f', true); sfx('relic'); }
+  if(cb.chains.length){ const before = cb.chains.length;
+    cb.chains = cb.chains.filter(ch=>{ const r = Math.floor(ch.i/N), c = ch.i%N; return ![[1,0],[-1,0],[0,1],[0,-1],[0,0]].some(([dr,dc])=>{ const rr=r+dr, cc=c+dc; return rr>=0&&cc>=0&&rr<N&&cc<N&&set.has(rr*N+cc); }); });
+    if(cb.chains.length<before){ floatText($('#board'), 'Chains broken!', '#c9d2df'); sfx('armor'); } }
   set.forEach(i=>{
     const t = cb.board[i]; if(!t) return;
     shards(i, t, o.lines>=3?7:5);
@@ -1747,26 +1799,33 @@ function fireCells(set, o){
   if(cb.firstHit && has('ironfist') && fx.dmg>0){ fx.dmg += 15; }
   if(fx.dmg>0) cb.firstHit = false;
   if(lines>=2 && has('emberheart')){ cb.enemy.poison += 3; }
-  if(fx.dmg>0){ damageEnemy(fx.dmg); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
-  if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText($('#eArt'), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
+  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
+  if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText(eArt(), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
   if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
   if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); }
     const over = fx.hp - got; if(over>0 && has('holysymbol')){ cb.shield += over; floatText($('#shieldStat'), `+${over}`, '#a8ceff'); } }
   if(!o.noCharge) cb.lastClear = {dmg:fx.dmg, sh:fx.sh, hp:fx.hp, poison:fx.poison, gold:fx.gold};
   if(fx.gold>0){ run.gold += fx.gold; floatText($('#goldWrap'), `+${fx.gold}`, '#ffe58a'); sfx('coin'); burstAt($('#goldWrap'), ['#f7c936','#ffe58a'], 6); }
 }
-function damageEnemy(n, noThorns, pierce){
-  const e = cb.enemy; let d = n;
+function routeDamage(total, wRow, wCol, multi){
+  if(!multi) return damageEnemy(total);
+  const A = cb.enemies[0], B = cb.enemies[1], sum = (wRow + wCol) || 1;
+  const a = Math.round(total * wRow / sum), b = total - a;
+  if(a>0) damageEnemy(a, false, false, A);
+  if(b>0) damageEnemy(b, false, false, B);
+}
+function damageEnemy(n, noThorns, pierce, target){
+  let e = target || cb.enemy; if(e && (e.dead || e.hp<=0)) e = cb.enemy; let d = n;
   if(e.armor>0 && !pierce){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
   e.hp = Math.max(0, e.hp - d); run.dmg += d; run.bestHit = Math.max(run.bestHit, d);
-  if(cb.kind==='boss' && !cb.phase && e.hp>0 && e.hp<e.maxHp/2){
+  if(cb.kind==='boss' && e===cb.enemies[0] && !cb.phase && e.hp>0 && e.hp<e.maxHp/2){
     cb.phase = 1; e.moves = e.moves.map(m=>({...m, v: m.k==='shuffle'||m.k==='flee' ? m.v : Math.round(m.v*1.2), t: Math.max(2, m.t-1)}));
     e.armor += Math.round(e.maxHp*0.08);
     setTimeout(()=>{ banner('PHASE 2', `${e.name} grows furious`, 1600); flash('rgba(200,20,40,.45)'); sfx('phase'); shake(); buzz(120); renderHUD(); }, 300);
   }
-  if(e.passive && e.passive.id==='enrage' && !cb.enraged && e.hp>0 && e.hp<e.maxHp/2){ cb.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ floatText($('#eArt'), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
+  if(e.passive && e.passive.id==='enrage' && !e.enraged && e.hp>0 && e.hp<e.maxHp/2){ e.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ floatText(eArt(e), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
   if(d>=100) unlock('bighit');
-  const el = $('#eArt');
+  const el = eArt(e); if(!el){ return; }
   floatText(el, d>0?`-${d}`:'Blocked', d>0?'#ff8a8d':'#c9c2d4', d>=25);
   el.classList.add('hitflash'); setTimeout(()=>el.classList.remove('hitflash'),110);
   sfx(d>0?'hit':'armor', d>=25);
@@ -1788,15 +1847,18 @@ function hitPlayer(n, small){
   updateDanger();
 }
 function enemyTick(){
-  const e = cb.enemy;
-  if(e.poison>0){ const p = e.poison; e.hp = Math.max(0, e.hp - p); run.dmg += p; if(!has('gravetome')) e.poison--; floatText($('#eArt'), `-${p}`, '#dcb6ff'); if(e.hp<=0) return; }
+  hazardTick();
+  for(const e of cb.enemies){ if(e.dead || e.hp<=0) continue; enemyAct(e); if(cb.fled || run.hp<=0) break; }
+}
+function enemyAct(e){
+  if(e.poison>0){ const p = e.poison; e.hp = Math.max(0, e.hp - p); run.dmg += p; if(!has('gravetome')) e.poison--; floatText(eArt(e), `-${p}`, '#dcb6ff'); if(e.hp<=0) return; }
   if(e.passive && e.passive.id==='regen' && e.hp<e.maxHp){ e.hp = Math.min(e.maxHp, e.hp+e.passive.v); }
   const it = e.intent;
   it.left--;
   if(it.left===1) sfx('warn');
   if(it.left>0) return;
-  const dmg = intentDamage(it);
-  const art = $('#eArt');
+  const dmg = intentDamage(it, e);
+  const art = eArt(e) || $('#board');
   if(['atk','multi','drain'].includes(it.k)){ bump(art,'lunge'); setTimeout(()=>art.classList.remove('lunge'),400); }
   switch(it.k){
     case 'atk': hitPlayer(dmg); break;
@@ -1818,8 +1880,16 @@ function enemyTick(){
     case 'steal': {
       if(has('glove')){ floatText($('#goldWrap'), 'Guarded!', '#ffe58a'); sfx('block'); break; }
       const took = Math.min(run.gold, it.v); run.gold -= took; floatText($('#goldWrap'), `-${took}`, '#ff8a80'); sfx('steal'); break; }
+    case 'bomb': {
+      const empty = []; cb.board.forEach((t,i)=>{ if(!t) empty.push(i); });
+      shuffle(empty).slice(0, it.v).forEach(i=>{ cb.board[i] = 'bomb'; cb.bombs[i] = 4 + (has('hourglass')?1:0); cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); });
+      floatText($('#board'), `Bombs x${it.v}!`, '#ff8a3c'); sfx('rubble'); break; }
+    case 'chain': {
+      const taken = new Set(cb.chains.map(c=>c.i)), filled = []; cb.board.forEach((t,i)=>{ if(t && !JUNK(t) && !taken.has(i)) filled.push(i); });
+      const pickd = shuffle(filled).slice(0, it.v); pickd.forEach(i=>cb.chains.push({i, t:6}));
+      floatText($('#board'), pickd.length?`Chained x${pickd.length}`:'Nothing to chain', '#c9d2df'); sfx('armor'); break; }
   }
-  nextIntent();
+  nextIntent(e);
 }
 function checkStuck(){
   let guard = 0;
@@ -1829,7 +1899,8 @@ function checkStuck(){
     hitPlayer(Math.round((4 + run.floor*2) * (has('boots')?0.5:1)));
     const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0, has('boots')?3:2);
     const now = performance.now();
-    rows.forEach(([r])=>{ for(let c=0;c<N;c++){ const i=r*N+c; if(cb.board[i]){ shards(i, cb.board[i], 4); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; } } });
+    rows.forEach(([r])=>{ for(let c=0;c<N;c++){ const i=r*N+c; if(cb.board[i]){ shards(i, cb.board[i], 4); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; delete cb.bombs[i]; } } });
+    const cleared = new Set(rows.map(x=>x[0])); cb.chains = cb.chains.filter(ch=>!cleared.has(Math.floor(ch.i/N)));
     cb.streak = 0;
     dealHand();
     if(run.hp<=0) break;
@@ -1838,14 +1909,18 @@ function checkStuck(){
 function checkEnd(){
   if(!cb || cb.over) return true;
   const fight = cb;
-  if(cb.enemy.hp<=0){
-    cb.over = true; run.kills++; markKill(cb.enemy.name); unlock('first'); questAdd('kills', 1); if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
+  const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
+  fresh.forEach(e=>{ e.dead = true; run.kills++; markKill(e.name); unlock('first'); questAdd('kills', 1);
+    if(e.moves.some(m=>m.k==='steal')) unlock('thief');
+    const el = eArt(e); if(el){ el.classList.add('dead'); floatText(el, 'Defeated!', '#ffcf7a', true); burstAt(el, ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30); }
+    sfx('kill'); buzz(40); });
+  if(fresh.length && cb.enemies.some(e=>!e.dead)){ renderHUD(); }
+  if(cb.enemies.every(e=>e.dead)){
+    cb.over = true; if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
     if(cb.kind==='goblin') unlock('goblin');
-    if(cb.enemy.moves.some(m=>m.k==='steal')) unlock('thief');
-    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; if(!cb.tookDmg) unlock('flawless'); if(cb.enemy.spr==='dragon') unlock('dragon'); }
+    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
+    if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
-    $('#eArt').classList.add('dead');
-    floatText($('#eArt'), 'Defeated!', '#ffcf7a', true); sfx('kill'); buzz(40); burstAt($('#eArt'), ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30);
     const kind = cb.kind;
     run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind}; saveRun();
     setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, T(1000)); return true;
@@ -1856,7 +1931,7 @@ function checkEnd(){
   }
   if(cb.fled){
     cb.over = true; renderHUD();
-    $('#eArt').classList.add('flee'); sfx('flee');
+    const fa = eArt(); if(fa) fa.classList.add('flee'); sfx('flee');
     toast('The goblin got away with its loot!', 'goldgoblin');
     run.room = null; saveRun();
     setTimeout(()=>{ if(cb===fight) advance(); }, T(1200)); return true;
@@ -1902,7 +1977,7 @@ function useUlt(){
     fireCells(set, {lines:2, rows:2, cols:0, mult:3, label:'RAMPAGE!', noCharge:true, blasted});
   } else if(run.cls==='necromancer'){
     let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ cb.board[i]='venom'; cb.fx.push({i,type:'venom',t0:now,drop:true}); n++; } });
-    const pz = 6 + 3*(run.floor-1); cb.enemy.poison += pz; floatText($('#eArt'), `+${pz} poison`, '#dcb6ff'); sfx('poison');
+    const pz = 6 + 3*(run.floor-1); cb.enemy.poison += pz; floatText(eArt(), `+${pz} poison`, '#dcb6ff'); sfx('poison');
     if(n) floatText($('#board'), `${n} raised`, '#dcb6ff');
   } else if(run.cls==='alchemist'){
     const cnt = {}; cb.board.forEach(t=>{ if(t && !JUNK(t) && t!=='rainbow') cnt[t]=(cnt[t]||0)+1; });
@@ -1921,24 +1996,23 @@ function useUlt(){
 }
 
 /* ---------- HUD ---------- */
-function enemySheet(){
+function enemySheet(idx){
   if(!cb) return; sfx('click');
-  const e = cb.enemy, m = $('#modal'); m.hidden = false;
-  const moves = e.moves.map((mv,i)=>{ const [ic,val,desc] = intentInfo({...mv}); const cur = ((e.mi-1+e.moves.length) % e.moves.length)===i;
+  const e = cb.enemies[idx||0] || cb.enemy, m = $('#modal'); m.hidden = false;
+  const moves = e.moves.map((mv,i)=>{ const [ic,val,desc] = intentInfo({...mv}, e); const cur = ((e.mi-1+e.moves.length) % e.moves.length)===i;
     return `<div class="troph ${cur?'cur':''}">${img(ic,34)}<div><b>${val} <span class="muted" style="font-size:12px;font-family:var(--body)">${mv.t} turns${cur?' · current':''}</span></b><small>${desc}.</small></div></div>`; }).join('');
   m.innerHTML = `<div class="card" role="dialog" aria-label="${e.name}" style="max-height:84vh;overflow:auto">
     <div class="scene">${img(e.spr,96)}<h2 class="title" style="font-size:24px">${e.name}</h2>
     <p class="muted">${cb.kind==='boss'?'Boss':cb.kind==='elite'?'Elite':cb.kind==='goblin'?'Rare':'Monster'} · ${e.hp} / ${e.maxHp} HP${e.armor?` · ${e.armor} armor`:''}${e.poison?` · ${e.poison} poison`:''}${e.rage?` · +${e.rage} rage`:''}</p></div>
     ${e.passive?`<div class="troph">${img('rage',34)}<div><b>${PASSIVES[e.passive.id].name}</b><small>${PASSIVES[e.passive.id].desc(e.passive.v)}</small></div></div>`:''}
-    ${cb.kind==='boss'?`<div class="troph">${img('r_boss',34)}<div><b>Phase 2</b><small>${cb.phase?'Active: moves are faster and stronger.':'At half HP it gains armor and its moves get faster and stronger.'}</small></div></div>`:''}
+    ${cb.enemies.length>1?`<div class="troph">${img('r_combat',34)}<div><b>${cb.enemies.indexOf(e)===0?'Hit by rows':'Hit by columns'}</b><small>In fights with two foes, cleared rows damage the left one and cleared columns damage the right one.</small></div></div>`:''}
+    ${cb.kind==='boss'&&e===cb.enemies[0]?`<div class="troph">${img('r_boss',34)}<div><b>Phase 2</b><small>${cb.phase?'Active: moves are faster and stronger.':'At half HP it gains armor and its moves get faster and stronger.'}</small></div></div>`:''}
     <h4 style="margin:4px 0 0;font-family:var(--display);font-weight:400;color:var(--torch2)">Move pattern (repeats)</h4>${moves}
     <button class="btn" id="closeBtn">Close</button></div>`;
   $('#closeBtn').onclick = closeSettings; m.onclick = ev=>{ if(ev.target===m) closeSettings(); };
 }
-$('#eArt').addEventListener('click', enemySheet);
-$('#eName').addEventListener('click', enemySheet);
-function intentInfo(it){
-  const d = it.k==='flee' ? 0 : intentDamage(it);
+function intentInfo(it, e){
+  const d = it.k==='flee' ? 0 : intentDamage(it, e);
   switch(it.k){
     case 'atk': return ['sword', `${d}`, `Attacks for ${d}`];
     case 'multi': return ['r_combat', `${d}x${it.n}`, `Attacks ${it.n} times for ${d}`];
@@ -1953,37 +2027,51 @@ function intentInfo(it){
     case 'sap': return ['flame', `-${it.v}`, `Drains ${it.v} charge from your special`];
     case 'shuffle': return ['dice', 'Mix', `Shuffles the pieces in your hand`];
     case 'steal': return ['coin', `-${it.v}`, `Steals up to ${it.v} of your gold`];
+    case 'bomb': return ['bomb', `x${it.v}`, `Plants ${it.v} bomb${it.v>1?'s':''} on your grid. Clear them within 4 moves or each explodes for ${bombDmg()}`];
+    case 'chain': return ['chainicon', `x${it.v}`, `Chains ${it.v} of your blocks. Chained blocks don't count toward clears until you clear a line next to them`];
   }
 }
-let lastEnemySpr = null;
+function renderEnemies(){
+  const P = $('#enemyPanel'), list = cb.enemies, multi = list.length>1;
+  const sig = list.map(e=>e.spr+':'+e.name).join('|') + (multi?'|m':'');
+  if(P.dataset.sig !== sig){
+    P.dataset.sig = sig; P.classList.toggle('multi', multi);
+    P.innerHTML = list.map((e,i)=>`<div class="ecard" data-e="${i}">
+      <div class="eart">${img(e.spr, multi?44:92)}</div>
+      <div class="einfo"><div class="ename"><span class="enm">${e.name}</span><span class="etags"></span></div>
+        <div class="erow"><div class="hpbar ebar"><i class="trail etrail"></i><i class="efill"></i><span class="etext"></span></div><span class="ebadges"></span></div>
+        <div class="intent"></div>${multi?`<div class="lane">${i===0?'Hit by rows':'Hit by columns'}</div>`:''}</div></div>`).join('');
+    P.querySelectorAll('.ecard').forEach(c=>{ const k = +c.dataset.e; c.querySelector('.eart').onclick = ()=>enemySheet(k); c.querySelector('.enm').onclick = ()=>enemySheet(k); });
+  }
+  list.forEach((e,i)=>{
+    const c = P.querySelector(`.ecard[data-e="${i}"]`); if(!c) return;
+    const gone = e.dead || e.hp<=0; c.classList.toggle('gone', gone);
+    let tags = i===0 ? (cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':cb.kind==='goblin'?'<span class="tag" style="background:#7a5608;color:#ffe58a">Rare</span>':'') : '';
+    if(e.passive) tags += `<span class="tag pass">${PASSIVES[e.passive.id].name}</span>`;
+    if(i===0 && cb.phase) tags += '<span class="tag phase">Phase 2</span>';
+    const et = c.querySelector('.etags'); et.innerHTML = tags;
+    const pt = et.querySelector('.pass'); if(pt) pt.onclick = ()=>toast(`<b>${PASSIVES[e.passive.id].name}</b><br>${PASSIVES[e.passive.id].desc(e.passive.v)}`, e.spr);
+    const ep = (100*Math.max(0,e.hp)/e.maxHp)+'%';
+    c.querySelector('.efill').style.width = ep; c.querySelector('.etrail').style.width = ep;
+    c.querySelector('.etext').textContent = `${Math.max(0,e.hp)} / ${e.maxHp}`;
+    let badges = '';
+    if(e.armor>0) badges += `<span class="badge" data-b="armor">${img('armor',multi?18:22)}${e.armor}</span>`;
+    if(e.poison>0) badges += `<span class="badge" data-b="poison" style="color:#dcb6ff">${img('poison',multi?18:22)}${e.poison}</span>`;
+    if(e.rage>0) badges += `<span class="badge" data-b="rage" style="color:#ffb07a">${img('rage',multi?18:22)}${e.rage}</span>`;
+    const eb = c.querySelector('.ebadges'); eb.innerHTML = badges;
+    eb.querySelectorAll('.badge').forEach(b=>b.onclick=()=>{ const k=b.dataset.b;
+      toast(k==='armor'?`<b>Armor</b><br>Absorbs damage before HP.`:k==='poison'?`<b>Poison</b><br>Deals ${e.poison} damage each turn${has('gravetome')?'':', then drops by 1'}.`:`<b>Rage</b><br>Attacks deal +${e.rage} damage.`, k); });
+    const intent = c.querySelector('.intent');
+    if(gone || !e.intent){ intent.innerHTML = ''; intent.classList.remove('urgent'); return; }
+    const [ic,val,desc] = intentInfo(e.intent, e), nx = intentInfo(peekIntent(e), e);
+    intent.innerHTML = `${img(ic,multi?22:28)}<span class="val">${val}</span><span class="cd">${e.intent.left===1?'NEXT':`in ${e.intent.left}`}</span>${e.intent.k==='flee'||multi?'':`<span class="then">then ${img(nx[0],18)}${nx[1]}</span>`}`;
+    intent.classList.toggle('urgent', e.intent.left===1);
+    intent.onclick = ()=>toast(`<b>${e.name}</b><br>${desc} ${e.intent.left===1?'after your next move':`in ${e.intent.left} moves`}.${e.intent.k==='flee'?'':`<br><span class="muted">Then: ${nx[2]}.</span>`}`, ic, 3000);
+  });
+}
 function renderHUD(){
   if(!cb) return;
-  const e = cb.enemy;
-  if(lastEnemySpr !== e.spr){ $('#eArt').innerHTML = img(e.spr, 92); lastEnemySpr = e.spr; }
-  $('#eName').textContent = e.name;
-  let tags = cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':cb.kind==='goblin'?'<span class="tag" style="background:#7a5608;color:#ffe58a">Rare</span>':'';
-  if(e.passive) tags += `<span class="tag pass" id="passTag">${PASSIVES[e.passive.id].name}</span>`;
-  if(cb.phase) tags += '<span class="tag phase">Phase 2</span>';
-  $('#eTags').innerHTML = tags;
-  if(e.passive) $('#passTag').onclick = ()=>toast(`<b>${PASSIVES[e.passive.id].name}</b><br>${PASSIVES[e.passive.id].desc(e.passive.v)}`, e.spr);
-  const ep = (100*e.hp/e.maxHp)+'%';
-  $('#eHpFill').style.width = ep; $('#eHpTrail').style.width = ep;
-  $('#eHpText').textContent = `${e.hp} / ${e.maxHp}`;
-  let badges = '';
-  if(e.armor>0) badges += `<span class="badge" data-b="armor">${img('armor',22)}${e.armor}</span>`;
-  if(e.poison>0) badges += `<span class="badge" data-b="poison" style="color:#dcb6ff">${img('poison',22)}${e.poison}</span>`;
-  if(e.rage>0) badges += `<span class="badge" data-b="rage" style="color:#ffb07a">${img('rage',22)}${e.rage}</span>`;
-  $('#eBadges').innerHTML = badges;
-  $('#eBadges').querySelectorAll('.badge').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.b;
-    toast(k==='armor'?`<b>Armor</b><br>Absorbs damage before HP.`:k==='poison'?`<b>Poison</b><br>Deals ${e.poison} damage each turn, then drops by 1.`:`<b>Rage</b><br>Attacks deal +${e.rage} damage.`, k);
-  });
-  const [ic,val,desc] = intentInfo(e.intent);
-  const nx = intentInfo(peekIntent());
-  const intent = $('#intent');
-  intent.innerHTML = `${img(ic,28)}<span class="val">${val}</span><span class="cd">${e.intent.left===1?'NEXT TURN':`in ${e.intent.left}`}</span>${e.intent.k==='flee'?'':`<span class="then">then ${img(nx[0],18)}${nx[1]}</span>`}`;
-  intent.classList.toggle('urgent', e.intent.left===1);
-  intent.onclick = ()=>toast(`<b>${e.name}</b><br>${desc} ${e.intent.left===1?'after your next move':`in ${e.intent.left} moves`}.${e.intent.k==='flee'?'':`<br><span class="muted">Then: ${nx[2]}.</span>`}`, ic, 3000);
+  renderEnemies();
   $('#shieldText').textContent = cb.shield;
   const m = cb.streak*streakStep();
   $('#streakText').textContent = m ? `+${fmt(m)}` : '-';
@@ -2145,6 +2233,7 @@ function frame(){
     else { rrect(x+2,y+2,cs-4,cs-4,cs*0.18); ctx.fillStyle = (r+c)%2 ? TH.a : TH.b; ctx.fill(); }
   }
   const now = performance.now();
+  drawHazards(now);
   if(drag && drag.valid){
     const p = pieceAt(drag.idx);
     const pulse = 0.22 + 0.12*Math.sin(now/90);
@@ -2205,6 +2294,25 @@ function frame(){
     ctx.restore();
   });
   cb.parts = cb.parts.filter(q=>q.life>0 && q.y<H+40);
+}
+
+function drawHazards(now){
+  const {cs,bx,by} = L;
+  cb.weak.forEach(i=>{ const r = Math.floor(i/N), c = i%N, x = bx+c*cs+cs/2, y = by+r*cs+cs/2, pulse = 0.5+0.5*Math.sin(now/220 + i);
+    ctx.save(); ctx.lineWidth = Math.max(2, cs*0.07); ctx.strokeStyle = `rgba(255,210,63,${0.55+0.4*pulse})`;
+    ctx.beginPath(); ctx.arc(x, y, cs*(0.3+0.04*pulse), 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); [[0,-1],[0,1],[-1,0],[1,0]].forEach(([dx,dy])=>{ ctx.moveTo(x+dx*cs*0.2, y+dy*cs*0.2); ctx.lineTo(x+dx*cs*0.44, y+dy*cs*0.44); }); ctx.stroke();
+    if(!cb.board[i]){ ctx.fillStyle = `rgba(255,210,63,${0.12+0.1*pulse})`; ctx.beginPath(); ctx.arc(x,y,cs*0.28,0,Math.PI*2); ctx.fill(); }
+    ctx.restore(); });
+  cb.chains.forEach(ch=>{ const r = Math.floor(ch.i/N), c = ch.i%N, x = bx+c*cs, y = by+r*cs;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, cs*0.12);
+    [['#120c16',1.5],['#b8c2cf',0]].forEach(([col,ex])=>{ ctx.strokeStyle = col; ctx.lineWidth = Math.max(3, cs*0.12)+ex*2; ctx.beginPath(); ctx.moveTo(x+cs*0.15,y+cs*0.15); ctx.lineTo(x+cs*0.85,y+cs*0.85); ctx.moveTo(x+cs*0.85,y+cs*0.15); ctx.lineTo(x+cs*0.15,y+cs*0.85); ctx.stroke(); });
+    ctx.restore(); });
+  Object.entries(cb.bombs).forEach(([k,v])=>{ const i = +k, r = Math.floor(i/N), c = i%N, x = bx+c*cs+cs*0.74, y = by+r*cs+cs*0.26, rad = cs*0.22;
+    ctx.save(); ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.fillStyle = v<=1 ? (Math.sin(now/90)>0?'#ff3b3b':'#ffd23f') : '#ff8a3c'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#120c16'; ctx.stroke();
+    ctx.fillStyle = '#120c16'; ctx.font = `${Math.round(rad*1.4)}px 'Lilita One', system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(v), x, y+1);
+    ctx.restore(); });
 }
 
 /* ================= dungeon atmosphere & screen effects ================= */

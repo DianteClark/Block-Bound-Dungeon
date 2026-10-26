@@ -137,14 +137,33 @@ html.lock #app{position:fixed;top:0;left:0;right:0;margin:0 auto;height:var(--ap
 #combat > *{flex-shrink:0}
 #enemyPanel{display:flex;gap:10px;align-items:center;padding:8px 12px 8px 8px;overflow:hidden;position:relative}
 #enemyPanel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 90% at 14% 60%, rgba(255,140,60,.12), transparent 70%);pointer-events:none}
-#eArt{width:96px;height:96px;display:grid;place-items:center;position:relative;flex:none}
-#eArt::after{content:'';position:absolute;bottom:6px;left:18px;right:18px;height:10px;border-radius:50%;background:rgba(0,0,0,.5);filter:blur(2px);z-index:-1}
-#eArt .stk{animation:bob 2.4s ease-in-out infinite}
+.eart{width:96px;height:96px;display:grid;place-items:center;position:relative;flex:none}
+.eart::after{content:'';position:absolute;bottom:6px;left:18px;right:18px;height:10px;border-radius:50%;background:rgba(0,0,0,.5);filter:blur(2px);z-index:-1}
+.eart .stk{animation:bob 2.4s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-#eArt.lunge .stk{animation:lunge .35s ease-out}
+.eart.lunge .stk{animation:lunge .35s ease-out}
 @keyframes lunge{0%{transform:none}35%{transform:translate(14px,6px) scale(1.15) rotate(6deg)}100%{transform:none}}
-#eArt.dead .stk{animation:peel .8s ease-in forwards}
+.eart.dead .stk{animation:peel .8s ease-in forwards}
 @keyframes peel{0%{transform:none}30%{transform:rotate(-10deg) scale(1.1)}100%{transform:translate(30px,-60px) rotate(40deg) scale(.4);opacity:0}}
+.ecard{display:flex;gap:10px;align-items:center;flex:1;min-width:0;position:relative;transition:opacity .4s, filter .4s}
+#enemyPanel.multi{gap:6px;padding:6px}
+#enemyPanel.multi .ecard{display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto auto;gap:3px 6px;align-items:center;background:rgba(0,0,0,.18);border-radius:12px;padding:5px 6px}
+#enemyPanel.multi .einfo{display:contents}
+#enemyPanel.multi .eart{width:44px;height:44px;grid-row:1 / span 2;grid-column:1}
+#enemyPanel.multi .eart::after{left:8px;right:8px;bottom:0}
+#enemyPanel.multi .ename{grid-column:2;grid-row:1;font-size:14px;flex-wrap:nowrap;min-width:0}
+#enemyPanel.multi .enm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#enemyPanel.multi .etags{display:none}
+#enemyPanel.multi .erow{grid-column:2;grid-row:2;min-width:0}
+#enemyPanel.multi .ebar{height:16px;font-size:11px}
+#enemyPanel.multi .intent{grid-column:1 / span 2;grid-row:3;justify-self:start;padding:0 7px 0 2px}
+#enemyPanel.multi .intent .val{font-size:15px}
+#enemyPanel.multi .intent .cd{font-size:11px}
+#enemyPanel.multi .lane{grid-column:1 / span 2;grid-row:3;justify-self:end;align-self:center;writing-mode:horizontal-tb;line-height:1.1;text-align:right;max-width:52px}
+.ecard.gone{opacity:.35;filter:grayscale(1)}
+.ecard.gone .intent{display:none}
+.lane{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center}
+.ebadges{display:flex;gap:4px}
 .einfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;position:relative}
 .ename{font-family:var(--display);font-size:20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1}
 .tag{font-size:10px;padding:2px 6px;border-radius:6px;background:#5a2a6a;color:#f2d7ff;font-family:var(--body);font-weight:800;text-transform:uppercase;letter-spacing:.4px}
@@ -153,11 +172,11 @@ html.lock #app{position:fixed;top:0;left:0;right:0;margin:0 auto;height:var(--ap
 .erow{display:flex;gap:6px;align-items:center}
 .ebar > i{background:linear-gradient(#d9a8ff,#9a4fe0 55%,#6f2fb0)}
 .badge{display:flex;align-items:center;gap:1px;font-family:var(--display);font-size:15px;padding:0 6px 0 0;border-radius:8px;background:var(--panel2);white-space:nowrap;cursor:pointer}
-#intent{display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--panel2);border:2px solid var(--line);border-radius:10px;padding:1px 9px 1px 2px;align-self:flex-start}
-#intent .val{font-family:var(--display);font-size:19px}
-#intent .cd{color:var(--muted);font-size:12px;font-weight:600}
-#intent.urgent{border-color:var(--sword);animation:pulse 1s infinite}
-#intent.urgent .cd{color:#ff9a9d;font-weight:800}
+.intent{display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--panel2);border:2px solid var(--line);border-radius:10px;padding:1px 9px 1px 2px;align-self:flex-start}
+.intent .val{font-family:var(--display);font-size:19px}
+.intent .cd{color:var(--muted);font-size:12px;font-weight:600}
+.intent.urgent{border-color:var(--sword);animation:pulse 1s infinite}
+.intent.urgent .cd{color:#ff9a9d;font-weight:800}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(229,72,77,0)}50%{box-shadow:0 0 14px rgba(229,72,77,.8)}}
 #playerPanel{display:flex;gap:7px;align-items:center}
 .stat{display:flex;align-items:center;gap:2px;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:1px 10px 1px 2px;font-family:var(--display);font-size:19px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.4)}
@@ -213,7 +232,7 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
 #combat.enter #enemyPanel{animation:dropIn .5s cubic-bezier(.2,1.4,.4,1)}
 #combat.enter #board{animation:fade .5s ease}
 @keyframes dropIn{from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:none}}
-#eArt.flee .stk{animation:flee .8s ease-in forwards}
+.eart.flee .stk{animation:flee .8s ease-in forwards}
 @keyframes flee{to{transform:translateX(220px) rotate(20deg);opacity:0}}
 #fxc{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:75}
 #banner{position:fixed;inset:0;z-index:72;display:grid;place-items:center;pointer-events:none}
@@ -264,17 +283,17 @@ body.danger #atmo .vig{background:radial-gradient(ellipse 85% 75% at 50% 45%, tr
 .heatsel .mid b{font-family:var(--display);font-weight:400;font-size:20px;display:block;color:#ff8a80}
 .heatsel .mid small{color:var(--muted);font-size:12px}
 .relicrow{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
-#intent .then{display:flex;align-items:center;gap:2px;opacity:.6;font-size:11px;color:var(--muted);margin-left:2px;padding-left:6px;border-left:2px solid var(--line)}
+.intent .then{display:flex;align-items:center;gap:2px;opacity:.6;font-size:11px;color:var(--muted);margin-left:2px;padding-left:6px;border-left:2px solid var(--line)}
 .pips{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
 .pips i{width:12px;height:6px;border-radius:3px;background:#3a3046;border:1px solid #5a4c6a}
 .pips i.on{background:#7ff0ff;border-color:#c8fbff;box-shadow:0 0 6px #7ff0ff}
 .choice.locked .ic .stk{filter:brightness(0) opacity(.55)}
 .choice.locked{border-style:dashed}
 @media (max-height:720px){
-  #eArt{width:78px;height:78px}
+  .eart{width:78px;height:78px}
   #enemyPanel{padding:6px 10px 6px 6px}
   .ename{font-size:18px}
-  #intent .val{font-size:17px}
+  .intent .val{font-size:17px}
   #ultBtn{width:48px;height:48px}
   .rb-top{font-size:16px}
 }
@@ -320,7 +339,7 @@ body.rm .float{animation:floatfade .9s ease-out forwards!important}
 .mnode .token{position:absolute;left:50%;top:-30px;transform:translateX(-50%);animation:bob 1.6s ease-in-out infinite;pointer-events:none}
 .starttoken{display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--display);color:var(--torch2);font-size:15px;margin-bottom:-4px}
 .starttoken .stk{animation:bob 1.6s ease-in-out infinite}
-#eArt,#eName{cursor:pointer}
+.eart,.enm{cursor:pointer}
 .troph.cur{border-color:var(--torch);box-shadow:0 0 10px rgba(255,157,60,.5)}
 #comboStat.hot{border-color:#ff8a3c;box-shadow:0 0 12px rgba(255,138,60,.7),0 3px 0 rgba(0,0,0,.4);animation:hot 0.9s ease-in-out infinite}
 @keyframes hot{0%,100%{transform:none}50%{transform:scale(1.06)}}
@@ -415,17 +434,7 @@ button.setpill{font:inherit;font-family:var(--display);font-size:14px}
   <main id="view"></main>
 
   <section id="combat" hidden>
-    <div id="enemyPanel">
-      <div id="eArt"></div>
-      <div class="einfo">
-        <div class="ename"><span id="eName"></span><span id="eTags"></span></div>
-        <div class="erow">
-          <div class="hpbar ebar"><i class="trail" id="eHpTrail"></i><i id="eHpFill"></i><span id="eHpText"></span></div>
-          <span id="eBadges" style="display:flex;gap:4px"></span>
-        </div>
-        <div id="intent"></div>
-      </div>
-    </div>
+    <div id="enemyPanel"></div>
     <div id="playerPanel">
       <span class="stat" id="shieldStat"><span id="shieldIcon"></span><span id="shieldText">0</span></span>
       <span class="stat" id="comboStat"><span id="flameIcon"></span><span id="streakText">-</span></span>
