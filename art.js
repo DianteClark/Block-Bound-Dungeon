@@ -537,6 +537,16 @@ const ART = {
 const SVG_CACHE = {};
 /* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
+  b_crown:{base:'crown', m:[0.6,0.1,0.3,0.05, 0.1,0.3,0.2,0, 0.5,0.1,0.6,0.05], over:[['acc_horns',0.7,15,-6]]},
+  b_engine:{base:'gear', m:[1.2,0,0,0.12, 0,0.3,0,0, 0,0,0.3,0]},
+  b_heart:{base:'heart', m:[0.6,0.2,0.2,0.05, 0.2,0.5,0.2,0.05, 0.3,0.2,0.6,0.08], under:['acc_crystals']},
+  b_blade:{base:'sword', m:[0.6,0.2,0.3,0.15, 0.2,0.7,0.3,0.2, 0.2,0.3,0.9,0.25]},
+  b_lotus:{base:'clover', m:[0.3,0,0.2,0.02, 0,0.2,0.1,0, 0.3,0,0.5,0.06], under:[['acc_runes',1,0,0]]},
+  b_box:{base:'r_treasure', m:[0.5,0.1,0.4,0.05, 0.1,0.3,0.2,0, 0.4,0.1,0.7,0.06], under:['acc_flames']},
+  b_maiden:{base:'armor', m:[0.8,0,0,0.05, 0,0.6,0,0, 0,0,0.6,0], over:['acc_skulls']},
+  b_midas:{base:'glove', m:[1,0.2,0,0.08, 0.7,0.3,0,0.04, 0.1,0.1,0,0]},
+  b_banner:{base:'drum', hue:240, under:['acc_flames']},
+  b_stone:{base:'gem', m:[1.2,0,0,0.15, 0,0.4,0,0, 0,0,0.3,0], under:[['acc_halo',1,0,4]]},
   pet_bat1:{base:'bat', m:[1.1,0,0,0.12, 0,0.4,0,0, 0,0,0.5,0.04], under:['acc_cape']},
   pet_bat2:{base:'bat', m:[0.5,0.1,0.4,0.05, 0.1,0.2,0.3,0, 0.4,0.1,0.8,0.08], bs:[0.88,6,12], under:['acc_horns'], over:[['acc_crown',0.36,32,-4]]},
   pet_slime1:{base:'slime', hue:200, bs:[0.9,5,10], over:[['acc_horns',0.9,5,6]]},
