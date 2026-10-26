@@ -31,7 +31,7 @@ const Sound = (() => {
     const nd = noiseBuf.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i] = Math.random()*2-1;
     return true;
   }
-  function unlock(){ if(!init()) return; if(ctx.state==='suspended') ctx.resume(); Music.kick(); Amb.start(); }
+  function unlock(){ if(!init()) return; if(ctx.state!=='running'){ try{ ctx.resume().then(()=>{ Music.resync(); }).catch(()=>{}); }catch(e){} } Music.kick(); Amb.start(); }
 
   /* ---------- primitives ---------- */
   function tone(o){
@@ -173,9 +173,11 @@ const Sound = (() => {
       if(!this.timer) this.timer = setInterval(()=>this.tick(), 50);
     },
     kick(){ if(this.want && this.mode!==this.want) this.set(this.want); },
+    resync(){ if(ctx && this.next < ctx.currentTime) this.next = ctx.currentTime + 0.1; },
     tick(){
       if(!ctx || this.mode==='off' || !MODES[this.mode]) return;
       const M = MODES[this.mode], spb = 60/M.tempo/4;
+      if(this.next < ctx.currentTime - 0.3) this.next = ctx.currentTime + 0.05;
       while(this.next < ctx.currentTime + 0.2){ this.play(this.step, this.next, M, spb); this.next += spb; this.step++; }
     },
     play(s, t, M, spb){
@@ -220,7 +222,9 @@ const Sound = (() => {
     },
   };
 
-  document.addEventListener('visibilitychange', ()=>{ if(!ctx) return; try{ if(document.hidden) ctx.suspend(); else ctx.resume(); }catch(e){} });
+  const wake = ()=>{ if(!ctx || document.hidden) return; try{ if(ctx.state!=='running') ctx.resume().then(()=>Music.resync()).catch(()=>{}); }catch(e){} Music.resync(); };
+  document.addEventListener('visibilitychange', ()=>{ if(!ctx) return; try{ if(document.hidden) ctx.suspend(); else wake(); }catch(e){} });
+  window.addEventListener('pageshow', wake); window.addEventListener('focus', wake);
   function setVolume(kind, v){
     vol[kind] = v; if(!ctx) return;
     if(kind==='sfx') sfxBus.gain.value = v;

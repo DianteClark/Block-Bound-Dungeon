@@ -241,7 +241,7 @@ const RELICS = {
   vampcape:{name:'Vampire Cape', spr:'vampcape', desc:'Whenever an enemy attacks you, it loses 2 HP.', r:2},
   warhorn:{name:'War Horn', spr:'warhorn', desc:'Elites and bosses start with 15% less HP.', r:2},
   bluelantern:{name:'Spirit Lantern', spr:'bluelantern', desc:'Earn 2 extra Soul Shards for every room you enter.', r:1},
-  packrat:{name:'Packrat\'s Pouch', spr:'packrat', desc:'Placing a piece from your Stash gives 4 shield.', r:1},
+  packrat:{name:'Packrat\'s Pouch', spr:'packrat', desc:'Placing a piece that waited in your Stash for at least one move gives 4 shield.', r:1},
   compass:{name:'Hunter\'s Compass', spr:'compass', desc:'Elite and boss rewards offer one more relic to choose from.', r:2},
   goldendice:{name:'Golden Dice', spr:'goldendice', desc:'+1 hand reroll each fight. Every reroll also gives 5 gold.', r:2},
   prayerbeads:{name:'Prayer Beads', spr:'prayerbeads', desc:'Missing a clear only lowers your combo streak by 1 instead of resetting it.', r:0, starter:true},
@@ -873,6 +873,7 @@ function bindChoices(fn){
 function scene(spr, title, text){ return `<div class="scene"><div class="art">${img(spr, 112)}</div><h2 class="title">${title}</h2>${text?`<p class="muted">${text}</p>`:''}</div>`; }
 function blockChip(type){ return `<img class="blk" src="${blockCanvas(type, 44).toDataURL()}" alt="">`; }
 document.addEventListener('pointerdown', ()=>Sound.unlock(), {capture:true});
+document.addEventListener('touchend', ()=>Sound.unlock(), {capture:true, passive:true});
 
 /* ---------- coach marks (first-time tips) ---------- */
 function coach(id, title, text, el, above){
@@ -1990,7 +1991,7 @@ const PERKS = {
   scav:{name:'Scavenger', spr:'satchel', max:3, desc:'+6 gold after every fight.'},
   medic:{name:'Bandages', spr:'potion_health', max:3, desc:'Heal 5 after every fight.'},
   defuse:{name:'Bomb Squad', spr:'bomb', max:1, desc:'Enemy bombs explode for half damage.'},
-  stasher:{name:'Packrat', spr:'bagicon', max:2, desc:'Stashing a piece gives 3 shield.'},
+  stasher:{name:'Packrat', spr:'bagicon', max:2, desc:'Placing a piece that waited in your Stash for a move gives 3 shield.'},
   weak:{name:'Keen Eye', spr:'weakspot', max:2, desc:'Weak spots deal +50% bonus damage.'},
   charged:{name:'Battle Trance', spr:'orb', max:2, desc:'Start every fight with 2 special charge.'},
   purist:{name:'Purist', spr:'gem', max:2, desc:'Pure lines add another +0.25 to the multiplier.'},
@@ -2046,7 +2047,10 @@ function place(idx, r, c){
   const fromStash = idx===STASH;
   const now0 = performance.now();
   p.cells.forEach(([dr,dc])=>{ const i = (r+dr)*N + c+dc; cb.board[i] = p.type; cb.pops.push({i, t0:now0}); });
-  if(fromStash){ cb.stash = null; run.stashPlays = (run.stashPlays||0)+1; unlock('stasher'); if(has('packrat')){ cb.shield += 4; floatText($('#shieldStat'), '+4', '#a8ceff'); } }
+  if(fromStash){ const waited = p.at!=null && cb.moves > p.at; cb.stash = null; run.stashPlays = (run.stashPlays||0)+1; unlock('stasher');
+    const bonus = waited ? (has('packrat')?4:0) + 3*pk('stasher') : 0;
+    if(bonus){ cb.shield += bonus; floatText($('#shieldStat'), `+${bonus}`, '#a8ceff'); }
+    else if(has('packrat') || pk('stasher')) floatText($('#shieldStat'), 'Not aged yet', '#8a7f99'); }
   else p.used = true;
   cb.stashUsed = false; selPotion = -1; cb.moves++;
   sfx('place'); buzz(8);
@@ -2698,14 +2702,16 @@ function trayRect(i){
   return {s, x: L.hx + i*slotW + (slotW - p.w*s)/2, y: ty + (trayH - p.h*s)/2};
 }
 const inStash = (x,y) => { const B = L.stash; return B && x>=B.x-6 && x<=B.x+B.w+6 && y>=B.y-6 && y<=B.y+B.h+6; };
+/* a drop goes to the stash only when the finger is well inside it, or when the piece can't land on the grid */
+const wantsStash = d => d && d.idx!==STASH && inStash(d.x, d.y) && (!d.valid || (d.y >= L.stash.y + L.stash.h*0.35 && d.x >= L.stash.x + 8 && d.x <= L.stash.x + L.stash.w - 4));
 function stashPiece(i){
   const p = cb.hand[i]; if(!p || p.used) return;
   if(cb.stashUsed){ sfx('invalid'); toast('You can stash once per move. Place a piece first.', 'packrat'); return; }
   const old = cb.stash;
-  cb.stash = {...p, used:false, rotT:performance.now()};
+  cb.stash = {...p, used:false, rotT:performance.now(), at:cb.moves};
   if(old) cb.hand[i] = {...old, used:false, rotT:performance.now()}; else p.used = true;
   cb.stashUsed = true; sfx('pick'); buzz(10);
-  if(pk('stasher')){ cb.shield += 3*pk('stasher'); floatText($('#shieldStat'), `+${3*pk('stasher')}`, '#a8ceff'); }
+
   if(cb.hand.every(x=>x.used)) dealHand();
   checkStuck(); if(!checkEnd()){ renderHUD(); saveRun(); }
 }
@@ -2808,7 +2814,7 @@ function frame(){
     }
   });
   rrect(4, ty-2, W-8, trayH+4, 14); ctx.fillStyle = 'rgba(255,255,255,.035)'; ctx.fill();
-  { const B = L.stash, hot = drag && drag.idx!==STASH && inStash(drag.x, drag.y);
+  { const B = L.stash, hot = wantsStash(drag);
     ctx.save(); rrect(B.x, B.y, B.w, B.h, 12); ctx.fillStyle = hot ? 'rgba(255,207,122,.18)' : 'rgba(0,0,0,.28)'; ctx.fill();
     ctx.setLineDash([6,5]); ctx.lineWidth = 2; ctx.strokeStyle = hot ? '#ffcf7a' : cb.stashUsed ? '#3a3046' : '#5a4c6a'; ctx.stroke(); ctx.setLineDash([]);
     ctx.font = `13px 'Lilita One', system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = hot ? '#ffcf7a' : '#8a7f99';
@@ -2852,6 +2858,7 @@ function drawHazards(now){
     ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, cs*0.12);
     [['#120c16',1.5],['#b8c2cf',0]].forEach(([col,ex])=>{ ctx.strokeStyle = col; ctx.lineWidth = Math.max(3, cs*0.12)+ex*2; ctx.beginPath(); ctx.moveTo(x+cs*0.15,y+cs*0.15); ctx.lineTo(x+cs*0.85,y+cs*0.85); ctx.moveTo(x+cs*0.85,y+cs*0.15); ctx.lineTo(x+cs*0.15,y+cs*0.85); ctx.stroke(); });
     ctx.restore(); });
+  Object.keys(cb.bombs).forEach(k=>{ if(cb.board[+k]!=='bomb') delete cb.bombs[k]; });
   Object.entries(cb.bombs).forEach(([k,v])=>{ const i = +k, r = Math.floor(i/N), c = i%N, x = bx+c*cs+cs*0.74, y = by+r*cs+cs*0.26, rad = cs*0.22;
     ctx.save(); ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.fillStyle = v<=1 ? (Math.sin(now/90)>0?'#ff3b3b':'#ffd23f') : '#ff8a3c'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#120c16'; ctx.stroke();
@@ -2993,7 +3000,7 @@ cv.addEventListener('pointermove', e=>{
 cv.addEventListener('pointerup', ()=>{
   if(drag){ const d = drag; drag = null; press = null;
     if(!cb || cb.over) return;
-    if(d.idx!==STASH && inStash(d.x, d.y)) return stashPiece(d.idx);
+    if(wantsStash(d)) return stashPiece(d.idx);
     if(d.valid) place(d.idx, d.r, d.c); else if(d.y < L.ty) sfx('invalid');
     return; }
   if(press){ const i = press.idx; press = null; const p = cb && pieceAt(i); if(cb && !cb.over && p && !p.used) rotatePiece(i); }
