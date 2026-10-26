@@ -31,15 +31,22 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 
 - **20 heroes.** Knight, Rogue and Mage from the start; unlock the Berserker, Necromancer, Alchemist, Paladin, Ranger, Bard, Monk, Druid, Samurai, Pirate, Witch, Tinkerer, Vampire, Gladiator, Shaman, Cryomancer and Beastmaster through play or with Soul Shards. Each has a starter relic, a block bag and a special of their own.
 - **Block bag.** Your pieces are drawn from a bag of blocks you curate during the run: hire blocks at the merchant, refine them at the forge or campfire, and pick up new block types from relics.
+- **Empowered blocks.** Upgrade a block type to its + version at the Forge, the Enchanter's Altar or as a rare reward: Sword+ pierces armor, Shield+ carries shield into the next fight, Heart+ overheals into shield, and more.
+- **Boss relics.** After every boss, choose one cursed treasure: big power with a real downside (Glass Blade, Black Lotus, Pandora's Box, Titan's Heart...).
+- **Hero relics.** Every hero has two relics of their own, unlocked at Mastery 2 and 4, that only appear in that hero's runs.
 - **Levels and perks.** Win fights to earn XP. Each level up lets you pick 1 of 3 perks (24 in all) for the rest of the run. Tap your hero icon to see them.
 - **Hero Mastery.** Every hero levels up as you play them, unlocking perks up to Mastery 5.
-- **Pets.** Adopt a companion in a Beast Den: Bat Familiar, Pet Slime, Shell Buddy, Friendly Wisp, Lucky Rat, Weaver or Ember Imp. Pets act on their own every few moves.
+- **Pets.** Adopt a companion in a Beast Den, at the merchant or from a mysterious egg. Pets act on their own every few moves, earn XP from fights and **evolve twice** (Bat Familiar to Vampire Bat to Night Terror, and so on), learning a trick of your choice at each stage. Feed them treats to speed it up.
 - **5 floors with a branching map.** Choose your route down through fights, elites, campfires, merchants, treasure, mystery events, Beast Dens and Forges to the boss at the bottom of each floor.
 - **30 unique bosses.** Each floor's guardian is picked from six, and every one has its own art and signature mechanic: the Bone King raises minions, the Slime Queen splits, the Pharaoh pours sand that falls down your grid, the Obsidian Golem turns immune to rows or columns, the Firebird is reborn, the Glacier Queen pushes ice up from below, the Demon Lord flips your grid, the Doom Watcher marks a line you must clear in time, and many more. The map shows which boss awaits.
+- **Elite modifiers.** Elites roll a random trait: Shielded, Vampiric, Splitting, Hasty, Giant, Explosive or Crumbling.
+- **A secret final boss.** Beat floor 5 at Heat 3+, holding a complete relic set, or without drinking a single potion, and a sealed gate opens to the Dungeon Heart. Defeat it for the true ending.
 - **Daily Challenge.** One shared dungeon per day with a fixed hero, map and mutators. Score points, beat your best, and earn bonus Soul Shards on your first finish.
+- **Weekly Challenge.** A tougher shared dungeon every week with special rules such as Straight Lines, No Hearts or Pack Hunters.
 - **Mutators.** Optional run twists such as Glass Cannon, Hasty Foes or Teetotaler; harder mutators earn more Soul Shards.
 - **Relic Sets.** Relics belong to six families (Gold, Blood, Arcane, Iron, Blast and Wild). Hold three from one family to unlock its set bonus.
-- **Bazaar.** Spend Soul Shards on cosmetics: 7 block skins (Candy, Jelly, Rune, Gem, Neon, Gilded), 8 clear bursts (Sparks, Confetti, Bubbles, Starfall, Embers, Petals, Jackpot), 6 projectile trails and 12 board themes.
+- **Bazaar.** Spend Soul Shards on cosmetics: block skins, clear bursts, projectile trails and board themes. Some items can only be earned by unlocking trophies.
+- **Run card.** Share a picture of your run from the end screen: hero, stats, bosses defeated and relics.
 - **Endless Depths.** After beating the Demon Lord, keep descending through ever-harder floors.
 - **Treasure Goblins** sometimes appear in place of a fight. Catch them before they run off with their loot.
 - **Heat levels.** Winning unlocks Heat 1 to 5, each adding a new challenge.
@@ -47,13 +54,14 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **Skill Tree.** Every run earns Soul Shards. Spend them on 10 permanent upgrades such as Vitality, Quick Hands, Focus and Treasure Sense.
 - **59 relics**, **9 potions** (tap a potion twice to drink it), **Blast blocks** that set off everything around them, and permanent block upgrades.
 - **20 mystery events** (including a Fortune Teller who can change your floor boss), merchants with mystery boxes and pets for sale,, and campfires where you can rest, train, upgrade or meditate to charge your special.
-- **Codex** of every monster, boss, relic, perk and pet you've discovered, and **37 trophies** to unlock.
+- **Codex** of every monster, boss, relic, perk and pet you've discovered, and **43 trophies** to unlock.
 - **First-fight tips** walk new players through the basics (replay them from Settings).
 - **Daily Quests.** Three new quests every day, each worth Soul Shards, plus a bonus for finishing all three.
 - **Journal** of your recent runs and lifetime records.
 - **Auto-save.** Your run is saved constantly, even mid-fight, so you can close the app any time and continue exactly where you left off.
 - **Settings** (gear icon): music, sound effect and ambience volume; screen shake, flashes, reduce motion, high-contrast blocks and damage numbers; game speed, left-handed layout, vibration and tips; **backup and restore codes** to move your progress between devices; abandon run and reset all data.
 - **Sound.** Every action has its own synthesized sound, music shifts between menu, map, shop, campfire, combat, boss and Endless moods with crossfades, and a dungeon ambience layer adds wind, dripping water and campfire crackle.
+- **Game feel.** Every floor has its own music, bosses squash and flinch under big hits, killing blows play out in slow motion, and combo streaks get a growing announcer.
 - **Effects.** Cleared blocks launch projectiles at their targets, cleared lines flash with light beams, placed blocks pop in, and your hero marks your spot on the map. Tap an enemy to see its full move pattern.
 
 ## Files
