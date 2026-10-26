@@ -651,13 +651,15 @@ function openRelics(){
   const m = $('#modal'); m.hidden = false;
   m.innerHTML = `<div class="card" role="dialog" aria-label="Relics" style="max-height:80vh;overflow:auto">
     <div class="row"><h2 class="title" style="font-size:24px">Relics (${run.relics.length})</h2>${img('r_treasure',34)}</div>
-    <div class="setrow">${Object.entries(SETS).map(([k,S])=>{ const n = setCount(k); return n ? `<span class="setpill ${n>=3?'on':''}" style="--sc:${S.col}" data-s="${k}">${S.name} ${Math.min(n,3)}/3</span>` : ''; }).join('')}</div>
+    <div class="setrow">${Object.entries(SETS).map(([k,S])=>{ const n = setCount(k); return n ? `<button class="setpill ${n>=3?'on':''}" style="--sc:${S.col}" data-s="${k}">${S.name} ${Math.min(n,3)}/3</button>` : ''; }).join('')}</div>
+    <div id="setInfo">${Object.entries(SETS).filter(([k])=>setOn(k)).map(([k,S])=>`<div class="setinfo" style="--sc:${S.col}"><b>${S.name} set bonus active</b>${S.bonus}</div>`).join('')}</div>
     ${run.relics.map(id=>{ const R = RELICS[id], sk = setOf(id); return `<div class="troph">${img(R.spr,40)}<div><b>${R.name}${sk?` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name}</span>`:''}</b><small>${R.desc}</small></div></div>`; }).join('')}
     <div class="troph">${img(ULT().spr,40)}<div><b>Special: ${ULT().name}</b><small>${ULT().desc} Needs ${ULT().need} lines.</small></div></div>
     ${run.pet&&PETS[run.pet]?`<div class="troph">${img(PETS[run.pet].spr,40)}<div><b>Pet: ${PETS[run.pet].name}</b><small>${PETS[run.pet].desc}</small></div></div>`:''}
     <button class="btn" id="closeBtn">Close</button></div>`;
   $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
-  m.querySelectorAll('.setpill').forEach(p=>p.onclick=()=>{ const S = SETS[p.dataset.s]; toast(`<b>${S.name} set (${Math.min(3,setCount(p.dataset.s))}/3)</b><br>${S.bonus}`, 'r_treasure', 3200); });
+  m.querySelectorAll('.setpill').forEach(p=>p.onclick=()=>{ const k = p.dataset.s, S = SETS[k], n = setCount(k); sfx('click');
+    $('#setInfo').innerHTML = `<div class="setinfo" style="--sc:${S.col}"><b>${S.name} set ${Math.min(3,n)}/3 ${n>=3?'(active)':`(${3-n} more to activate)`}</b>${S.bonus}<small>${S.relics.map(id=>RELICS[id]?`${RELICS[id].name}${run.relics.includes(id)?' (owned)':''}`:'').filter(Boolean).join(' · ')}</small></div>`; });
 }
 function potionTap(i){
   const id = run.potions[i], P = POTIONS[id]; if(!P) return;
@@ -875,13 +877,22 @@ function titleScreen(){
     if(store.get('save', null) && db.dataset.armed!=='1'){ db.dataset.armed = '1'; sfx('warn'); toast('Starting the Daily Challenge replaces your saved run. Tap again to start.', 'calendar', 3000); return; }
     const D = dailyInfo(); sfx('door'); newRun(D.cls, {daily:D.key, muts:D.muts}); };
   checkThemeUnlocks();
+  bindQuests();
+  checkHeroUnlocks();
+}
+function refreshQuestCard(){
+  const old = $('#view .questcard'); if(!old) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = questCard(); old.replaceWith(tmp.firstElementChild);
+  const sk = $('#skillBtn small'); if(sk) sk.innerHTML = `${img('shard',14)} ${soulShards()}`;
+  bindQuests();
+}
+function bindQuests(){
   $('#view').querySelectorAll('.qclaim').forEach(b=>b.onclick=()=>{
     const q = quests(), id = b.dataset.q; if(q.claimed[id] || (q.prog[id]||0) < QUESTS[id].goal) return;
     q.claimed[id] = 1; store.set('quests', q); store.set('shards', soulShards()+QUEST_REWARD);
-    sfx('claim'); burstAt(b, ['#7ff0ff','#c8fbff','#fff'], 20); setTimeout(titleScreen, 250);
+    sfx('claim'); burstAt(b, ['#7ff0ff','#c8fbff','#fff'], 20); floatText(b, `+${QUEST_REWARD}`, '#c8fbff'); refreshQuestCard();
   });
-  const qb = $('#qbonus'); if(qb) qb.onclick = ()=>{ const q = quests(); if(q.bonus) return; q.bonus = true; store.set('quests', q); store.set('shards', soulShards()+QUEST_BONUS); unlock('questor'); sfx('trophy'); confetti(50); setTimeout(titleScreen, 300); };
-  checkHeroUnlocks();
+  const qb = $('#qbonus'); if(qb) qb.onclick = ()=>{ const q = quests(); if(q.bonus) return; q.bonus = true; store.set('quests', q); store.set('shards', soulShards()+QUEST_BONUS); unlock('questor'); sfx('trophy'); confetti(50); refreshQuestCard(); };
 }
 function checkThemeUnlocks(){
   const seenT = store.get('themesSeen', {stone:1}); let fresh = null;
@@ -2075,7 +2086,7 @@ function frame(){
   }
   const now = performance.now();
   if(drag && drag.valid){
-    const p = cb.hand[drag.idx];
+    const p = pieceAt(drag.idx);
     const pulse = 0.22 + 0.12*Math.sin(now/90);
     if(drag.plan){
       ctx.fillStyle = `rgba(255,207,122,${pulse})`;
