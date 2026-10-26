@@ -172,7 +172,7 @@ const CLASSES = {
     ult:{name:'Stampede', need:6, spr:'whistle', desc:'Your pet acts 3 times in a row.'},
     unlock:{text:'Play 10 runs', cost:200, ok:s=>s.runs>=10}},
 };
-function ULT(){ const u = CLASSES[run.cls].ult; return {...u, need: Math.max(3, u.need - (has('spellbook')?2:0) - (has('bloodengine')?3:0) - (run.ultBonus||0))}; }
+function ULT(){ const u = CLASSES[run.cls].ult; return {...u, need: Math.max(3, u.need - rv('spellbook',[2,3,4]) - rv('bloodengine',[3,3,4]) - (run.ultBonus||0))}; }
 const heroRelicOpen = id => { const R = RELICS[id]; return !!R && !!R.hero && masteryLevel(R.hero) >= (R.mlv||2); };
 const isUnlocked = id => !CLASSES[id].unlock || !!(store.get('heroes', {})[id]);
 function checkHeroUnlocks(){
@@ -191,84 +191,84 @@ const HEAT = [
 ];
 
 const RELICS = {
-  oath:{name:'Oath Shield', spr:'oath', desc:'Shield blocks give +1. Start every fight with 6 shield.', r:0, starter:true},
-  daggers:{name:'Twin Daggers', spr:'daggers', desc:'Combo streaks build twice as fast. Coin blocks give +1 gold.', r:0, starter:true},
-  orb:{name:'Arcane Orb', spr:'orb', desc:'Rainbow blocks appear. Clearing 3+ lines at once deals +8 damage.', r:0, starter:true},
-  whetstone:{name:'Whetstone', spr:'whetstone', desc:'Sword blocks deal +1 damage.', r:1},
-  tower:{name:'Tower Shield', spr:'shield', desc:'Shield blocks give +1 shield.', r:1},
-  fang:{name:'Vampire Fang', spr:'fang', desc:'Heal 2 for every line you clear.', r:1},
-  idol:{name:'Golden Idol', spr:'idol', desc:'Coin blocks give +1 extra gold.', r:1},
-  chainmail:{name:'Chainmail', spr:'chainmail', desc:'Start every fight with 8 shield.', r:1},
-  thickskin:{name:'Turtle Shell', spr:'turtle', desc:'Take 1 less damage from every hit.', r:1},
-  feather:{name:'Feather Charm', spr:'feather', desc:'Small pieces show up far more often.', r:1},
-  magnet:{name:'Gold Magnet', spr:'magnet', desc:'+40% gold from fight rewards.', r:1},
-  cauldron:{name:'Witch\'s Cauldron', spr:'cauldron', desc:'+1 potion slot. Gain a random potion now.', r:1, onGet(){ run.potionSlots++; givePotion(); }},
-  clover:{name:'Lucky Clover', spr:'clover', desc:'Merchant prices are 20% lower.', r:1},
-  hearth:{name:'Hearthstone', spr:'r_rest', desc:'Campfires heal 50% more and also give +4 max HP.', r:1},
-  powder:{name:'Black Powder', spr:'bomb', desc:'Clearing 3+ lines at once deals +12 damage.', r:2},
-  hourglass:{name:'Hourglass', spr:'hourglass', desc:'Enemy actions take 1 extra turn to arrive.', r:2},
-  sledge:{name:'Sledgehammer', spr:'hammer', desc:'Cleared rubble and ice deal 4 damage each.', r:2},
-  spikes:{name:'Spiked Pauldrons', spr:'spikes', desc:'When an attack hits your shield, deal 5 damage back.', r:2},
-  drum:{name:'War Drum', spr:'drum', desc:'Your combo streak never drops below 2 stacks.', r:2},
-  crossed:{name:'Crossed Blades', spr:'r_combat', desc:'Clearing a row and a column together deals +8 damage.', r:2},
-  dice:{name:'Loaded Dice', spr:'dice', desc:'+1 hand reroll each fight.', r:2},
-  toxin:{name:'Toxic Gland', spr:'potion_venom', desc:'Venom blocks appear. Each one poisons the enemy when cleared.', r:2},
-  ring:{name:'Ring of Echoes', spr:'ring', desc:'Your first clear each fight has its multiplier doubled.', r:2},
-  battery:{name:'Soul Lantern', spr:'flame', desc:'Your hero special charges 50% faster.', r:2},
-  satchel:{name:'Bomb Satchel', spr:'satchel', desc:'Blast blocks appear. When cleared they also fire every block around them.', r:2},
-  mirror:{name:'Mirror Shield', spr:'mirror', desc:'The first enemy attack each fight is fully blocked.', r:2},
-  leech:{name:'Leech Blade', spr:'leech', desc:'Heal 1 HP for every 8 damage you deal with clears.', r:2},
-  prism:{name:'Prism Shard', spr:'gem', desc:'Rainbow blocks appear: they slash, block and heal at once.', r:3},
-  phoenix:{name:'Phoenix Feather', spr:'phoenix', desc:'The first time you would die, revive at 50% HP.', r:3},
-  bloodpact:{name:'Blood Pact', spr:'drop', desc:'Sword blocks deal +2 damage. Lose 10 max HP on pickup.', r:3, onGet(){ run.maxHp=Math.max(10,run.maxHp-10); run.hp=Math.min(run.hp,run.maxHp); }},
-  crown:{name:'Miser\'s Crown', spr:'crown', desc:'After each fight, gain 10% interest on your gold (max 15).', r:3},
-  purist:{name:'Purity Sigil', spr:'gem', desc:'Pure lines (all one block type) give +1 multiplier instead of +0.5.', r:3},
-  scythe:{name:'Reaper\'s Scythe', spr:'axe', desc:'Clears deal 50% more damage to enemies below 30% HP.', r:3},
-  bloodlust:{name:'Bloodlust', spr:'bloodaxe', desc:'Sword blocks deal +1 damage for every 20% HP you are missing. Hearts heal 1 less.', r:0, starter:true},
-  gravetome:{name:'Grave Tome', spr:'gravetome', desc:'Venom blocks appear. Poison on enemies never wears off.', r:0, starter:true},
-  philflask:{name:'Philosopher\'s Flask', spr:'philflask', desc:'+1 potion slot. Brew a random potion after every fight.', r:0, starter:true, onGet(){ run.potionSlots++; }},
-  warmcloak:{name:'Warm Cloak', spr:'warmcloak', desc:'Ice shatters completely when cleared instead of leaving rubble.', r:1},
-  stoneward:{name:'Stone Ward', spr:'stoneward', desc:'Immune to Petrify: enemies can\'t turn your blocks to stone.', r:2},
-  souljar:{name:'Soul Jar', spr:'souljar', desc:'Earn 50% more Soul Shards this run.', r:1},
-  holysymbol:{name:'Holy Symbol', spr:'holy', desc:'Heart blocks also deal 2 damage. Healing past full HP becomes shield.', r:0, starter:true},
-  huntersmark:{name:'Hunter\'s Mark', spr:'mark', desc:'Pure lines give +1 multiplier instead of +0.5. Clears deal +3 damage per line.', r:0, starter:true},
-  glove:{name:'Thief\'s Glove', spr:'glove', desc:'Gain 10 extra gold after every fight. Enemies can\'t steal from you.', r:1},
-  boots:{name:'Iron Boots', spr:'boots', desc:'Cave-ins deal half damage and clear 3 rows instead of 2.', r:1},
-  spellbook:{name:'Spellbook', spr:'spellbook', desc:'Your hero special needs 2 fewer lines to charge.', r:2},
-  bloodgem:{name:'Bloodstone', spr:'bloodgem', desc:'Heal 5 HP after every fight.', r:1},
-  tidecharm:{name:'Tide Charm', spr:'tidecharm', desc:'Gain 3 shield whenever you place a piece without clearing a line.', r:1},
-  ironfist:{name:'Iron Gauntlet', spr:'ironfist', desc:'Your first damaging clear each fight deals +15 damage.', r:1},
-  seerorb:{name:'Seer\'s Orb', spr:'seerorb', desc:'Combo streak bonuses are 50% stronger.', r:2},
-  vampcape:{name:'Vampire Cape', spr:'vampcape', desc:'Whenever an enemy attacks you, it loses 2 HP.', r:2},
-  warhorn:{name:'War Horn', spr:'warhorn', desc:'Elites and bosses start with 15% less HP.', r:2},
-  bluelantern:{name:'Spirit Lantern', spr:'bluelantern', desc:'Earn 2 extra Soul Shards for every room you enter.', r:1},
-  packrat:{name:'Packrat\'s Pouch', spr:'packrat', desc:'Placing a piece that waited in your Stash for at least one move gives 4 shield.', r:1},
-  compass:{name:'Hunter\'s Compass', spr:'compass', desc:'Elite and boss rewards offer one more relic to choose from.', r:2},
-  goldendice:{name:'Golden Dice', spr:'goldendice', desc:'+1 hand reroll each fight. Every reroll also gives 5 gold.', r:2},
-  prayerbeads:{name:'Prayer Beads', spr:'prayerbeads', desc:'Missing a clear only lowers your combo streak by 1 instead of resetting it.', r:0, starter:true},
-  seedpod:{name:'Seed Pod', spr:'seedpod', desc:'Start every fight with 3 heart blocks on your grid. Heart blocks heal +1.', r:0, starter:true},
-  katana:{name:'Katana', spr:'katana', desc:'Clearing exactly one line deals +8 damage.', r:0, starter:true},
-  doubloon:{name:'Cursed Doubloon', spr:'doubloon', desc:'Coin blocks also deal 1 damage each and give +1 gold.', r:0, starter:true},
-  hexcharm:{name:'Hex Charm', spr:'hexcharm', desc:'Enemies start every fight with 5 poison.', r:0, starter:true},
-  gearbox:{name:'Gearbox', spr:'gearbox', desc:'Blast blocks deal +4 damage.', r:0, starter:true},
-  bloodchalice:{name:'Blood Chalice', spr:'bloodchalice', desc:'Heal 1 for every 6 damage your clears deal.', r:0, starter:true},
-  laurel:{name:'Victor\'s Laurel', spr:'laurel', desc:'+2 max HP for every foe you defeat.', r:0, starter:true},
-  totem:{name:'Spirit Totem', spr:'totem', desc:'Every 4 moves, a random block on your grid turns Rainbow.', r:0, starter:true},
-  frostshard:{name:'Frost Shard', spr:'frostshard', desc:'Ice never cracks into rubble, and ice in your clears deals 4 damage each.', r:0, starter:true},
-  whistle:{name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) setPet(pick(Object.keys(PETS))); }},
-  cursedcrown:{name:'Cursed Crown', spr:'b_crown', boss:true, r:4, desc:'Gain 60 gold now. Coins give 50% more gold. Enemies have 10% more HP.', onGet(){ run.gold += 60; }},
-  bloodengine:{name:'Blood Engine', spr:'b_engine', boss:true, r:4, desc:'Your special needs 3 fewer lines, but using it costs 4 HP.'},
-  titanheart:{name:'Titan\'s Heart', spr:'b_heart', boss:true, r:4, desc:'+30 max HP. All healing is 30% weaker.', onGet(){ run.maxHp += 30; run.hp += 30; }},
-  glassblade:{name:'Glass Blade', spr:'b_blade', boss:true, r:4, desc:'Sword blocks deal +3 damage. -15 max HP.', onGet(){ run.maxHp = Math.max(10, run.maxHp-15); run.hp = Math.min(run.hp, run.maxHp); }},
-  blacklotus:{name:'Black Lotus', spr:'b_lotus', boss:true, r:4, desc:'Start every fight with your special fully charged, but with no hand rerolls.'},
-  pandora:{name:'Pandora\'s Box', spr:'b_box', boss:true, r:4, desc:'Gain 2 random relics now. Enemies start every fight with 3 rage.', onGet(){ setTimeout(()=>{ relicOffers(2).forEach(id=>gainRelic(id)); renderRunbar(); saveRun(); }, 50); }},
-  ironmaiden:{name:'Iron Maiden', spr:'b_maiden', boss:true, r:4, desc:'Start every fight with 25 shield. Shield blocks give 1 less.'},
-  midas:{name:'Midas Touch', spr:'b_midas', boss:true, r:4, desc:'Coin blocks give double gold. Heart blocks heal 1 less.'},
-  stormbanner:{name:'Storm Banner', spr:'b_banner', boss:true, r:4, desc:'Your clears deal 20% more damage. Enemies start every fight with 10 armor.'},
-  philstone:{name:'Philosopher\'s Stone', spr:'b_stone', boss:true, r:4, desc:'Empower 2 random block types in your bag. -10 max HP.', onGet(){ shuffle(plusable()).slice(0,2).forEach(t=>empower(t)); run.maxHp = Math.max(10, run.maxHp-10); run.hp = Math.min(run.hp, run.maxHp); }},
-  lute:{name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +8 shield and heal 5.', r:0, starter:true},
-  phial:{name:'Bottomless Phial', spr:'phial', desc:'The first potion you drink in each fight is not used up.', r:3},
-  emberheart:{name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
+  oath:{tiers:['Shield blocks give +1. Start every fight with 6 shield.','Shield blocks give +1. Start every fight with 10 shield.','Shield blocks give +2. Start every fight with 14 shield.'], name:'Oath Shield', spr:'oath', desc:'Shield blocks give +1. Start every fight with 6 shield.', r:0, starter:true},
+  daggers:{tiers:['Combo streaks build twice as fast. Coin blocks give +1 gold.','Combo streaks build 2.4x as fast. Coin blocks give +1 gold.','Combo streaks build 3x as fast. Coin blocks give +2 gold.'], name:'Twin Daggers', spr:'daggers', desc:'Combo streaks build twice as fast. Coin blocks give +1 gold.', r:0, starter:true},
+  orb:{tiers:['Rainbow blocks appear. Clearing 3+ lines at once deals +8 damage.','Rainbow blocks appear. Clearing 3+ lines at once deals +14 damage.','Rainbow blocks appear. Clearing 2+ lines at once deals +20 damage.'], name:'Arcane Orb', spr:'orb', desc:'Rainbow blocks appear. Clearing 3+ lines at once deals +8 damage.', r:0, starter:true},
+  whetstone:{tiers:['Sword blocks deal +1 damage.','Sword blocks deal +2 damage.','Sword blocks deal +3 damage.'], name:'Whetstone', spr:'whetstone', desc:'Sword blocks deal +1 damage.', r:1},
+  tower:{tiers:['Shield blocks give +1 shield.','Shield blocks give +2 shield.','Shield blocks give +3 shield.'], name:'Tower Shield', spr:'shield', desc:'Shield blocks give +1 shield.', r:1},
+  fang:{tiers:['Heal 2 for every line you clear.','Heal 3 for every line you clear.','Heal 4 for every line you clear.'], name:'Vampire Fang', spr:'fang', desc:'Heal 2 for every line you clear.', r:1},
+  idol:{tiers:['Coin blocks give +1 extra gold.','Coin blocks give +2 extra gold.','Coin blocks give +3 extra gold.'], name:'Golden Idol', spr:'idol', desc:'Coin blocks give +1 extra gold.', r:1},
+  chainmail:{tiers:['Start every fight with 8 shield.','Start every fight with 12 shield.','Start every fight with 18 shield.'], name:'Chainmail', spr:'chainmail', desc:'Start every fight with 8 shield.', r:1},
+  thickskin:{tiers:['Take 1 less damage from every hit.','Take 2 less damage from every hit.','Take 3 less damage from every hit.'], name:'Turtle Shell', spr:'turtle', desc:'Take 1 less damage from every hit.', r:1},
+  feather:{tiers:['Small pieces show up far more often.','Small pieces show up even more often.','Small pieces show up even more often. +1 hand reroll each fight.'], name:'Feather Charm', spr:'feather', desc:'Small pieces show up far more often.', r:1},
+  magnet:{tiers:['+40% gold from fight rewards.','+60% gold from fight rewards.','+90% gold from fight rewards.'], name:'Gold Magnet', spr:'magnet', desc:'+40% gold from fight rewards.', r:1},
+  cauldron:{tiers:['+1 potion slot. Gain a random potion now.','+1 potion slot. Elite and boss fights brew a potion.','+1 potion slot. Elite and boss fights brew a potion, and other fights have a 25% chance.'], name:'Witch\'s Cauldron', spr:'cauldron', desc:'+1 potion slot. Gain a random potion now.', r:1, onGet(){ run.potionSlots++; givePotion(); }},
+  clover:{tiers:['Merchant prices are 20% lower.','Merchant prices are 30% lower.','Merchant prices are 40% lower.'], name:'Lucky Clover', spr:'clover', desc:'Merchant prices are 20% lower.', r:1},
+  hearth:{tiers:['Campfires heal 50% more and also give +4 max HP.','Campfires heal 80% more and also give +6 max HP.','Campfires heal 120% more and also give +8 max HP.'], name:'Hearthstone', spr:'r_rest', desc:'Campfires heal 50% more and also give +4 max HP.', r:1},
+  powder:{tiers:['Clearing 3+ lines at once deals +12 damage.','Clearing 3+ lines at once deals +18 damage.','Clearing 3+ lines at once deals +26 damage.'], name:'Black Powder', spr:'bomb', desc:'Clearing 3+ lines at once deals +12 damage.', r:2},
+  hourglass:{tiers:['Enemy actions take 1 extra turn to arrive.','Enemy actions take 1 extra turn. Bombs tick 1 slower.','Enemy actions take 1 extra turn, and every enemy\'s first move takes 2. Bombs tick 1 slower.'], name:'Hourglass', spr:'hourglass', desc:'Enemy actions take 1 extra turn to arrive.', r:2},
+  sledge:{tiers:['Cleared rubble and ice deal 4 damage each.','Cleared rubble and ice deal 6 damage each.','Cleared rubble, ice and webs deal 8 damage each.'], name:'Sledgehammer', spr:'hammer', desc:'Cleared rubble and ice deal 4 damage each.', r:2},
+  spikes:{tiers:['When an attack hits your shield, deal 5 damage back.','When an attack hits your shield, deal 8 damage back.','When an attack hits your shield, deal 12 damage back.'], name:'Spiked Pauldrons', spr:'spikes', desc:'When an attack hits your shield, deal 5 damage back.', r:2},
+  drum:{tiers:['Your combo streak never drops below 2 stacks.','Your combo streak never drops below 3 stacks.','Your combo streak never drops below 4 stacks.'], name:'War Drum', spr:'drum', desc:'Your combo streak never drops below 2 stacks.', r:2},
+  crossed:{tiers:['Clearing a row and a column together deals +8 damage.','Clearing a row and a column together deals +14 damage.','Clearing a row and a column together deals +20 damage.'], name:'Crossed Blades', spr:'r_combat', desc:'Clearing a row and a column together deals +8 damage.', r:2},
+  dice:{tiers:['+1 hand reroll each fight.','+1 hand reroll each fight. Rerolls give 2 shield.','+2 hand rerolls each fight. Rerolls give 2 shield.'], name:'Loaded Dice', spr:'dice', desc:'+1 hand reroll each fight.', r:2},
+  toxin:{tiers:['Venom blocks appear. Each one poisons the enemy when cleared.','Venom blocks appear and poison for 1 extra each.','Venom blocks appear and poison for 2 extra each.'], name:'Toxic Gland', spr:'potion_venom', desc:'Venom blocks appear. Each one poisons the enemy when cleared.', r:2},
+  ring:{tiers:['Your first clear each fight has its multiplier doubled.','Your first clear each fight has its multiplier x2.5.','Your first clear each fight has its multiplier tripled.'], name:'Ring of Echoes', spr:'ring', desc:'Your first clear each fight has its multiplier doubled.', r:2},
+  battery:{tiers:['Your hero special charges 50% faster.','Your hero special charges 75% faster.','Your hero special charges twice as fast.'], name:'Soul Lantern', spr:'flame', desc:'Your hero special charges 50% faster.', r:2},
+  satchel:{tiers:['Blast blocks appear. When cleared they also fire every block around them.','Blast blocks appear and deal +2 damage.','Blast blocks appear and deal +4 damage.'], name:'Bomb Satchel', spr:'satchel', desc:'Blast blocks appear. When cleared they also fire every block around them.', r:2},
+  mirror:{tiers:['The first enemy attack each fight is fully blocked.','The first enemy attack each fight is blocked and half of it bounces back.','The first two enemy attacks each fight are blocked and half bounces back.'], name:'Mirror Shield', spr:'mirror', desc:'The first enemy attack each fight is fully blocked.', r:2},
+  leech:{tiers:['Heal 1 HP for every 8 damage you deal with clears.','Heal 1 HP for every 6 damage you deal with clears.','Heal 1 HP for every 4 damage you deal with clears.'], name:'Leech Blade', spr:'leech', desc:'Heal 1 HP for every 8 damage you deal with clears.', r:2},
+  prism:{tiers:['Rainbow blocks appear: they slash, block and heal at once.','Rainbow blocks appear and deal +1 damage each.','Rainbow blocks appear and deal +2 damage each.'], name:'Prism Shard', spr:'gem', desc:'Rainbow blocks appear: they slash, block and heal at once.', r:3},
+  phoenix:{tiers:['The first time you would die, revive at 50% HP.','The first time you would die, revive at 65% HP.','The first time you would die, revive at 80% HP.'], name:'Phoenix Feather', spr:'phoenix', desc:'The first time you would die, revive at 50% HP.', r:3},
+  bloodpact:{tiers:['Sword blocks deal +2 damage. Lose 10 max HP on pickup.','Sword blocks deal +3 damage.','Sword blocks deal +4 damage.'], name:'Blood Pact', spr:'drop', desc:'Sword blocks deal +2 damage. Lose 10 max HP on pickup.', r:3, onGet(){ run.maxHp=Math.max(10,run.maxHp-10); run.hp=Math.min(run.hp,run.maxHp); }},
+  crown:{tiers:['After each fight, gain 10% interest on your gold (max 15).','After each fight, gain 10% interest on your gold (max 25).','After each fight, gain 15% interest on your gold (max 40).'], name:'Miser\'s Crown', spr:'crown', desc:'After each fight, gain 10% interest on your gold (max 15).', r:3},
+  purist:{tiers:['Pure lines give +1 multiplier instead of +0.5.','Pure lines give +1.25 multiplier.','Pure lines give +1.5 multiplier.'], name:'Purity Sigil', spr:'gem', desc:'Pure lines (all one block type) give +1 multiplier instead of +0.5.', r:3},
+  scythe:{tiers:['Clears deal 50% more damage to enemies below 30% HP.','Clears deal 75% more damage to enemies below 30% HP.','Clears deal double damage to enemies below 40% HP.'], name:'Reaper\'s Scythe', spr:'axe', desc:'Clears deal 50% more damage to enemies below 30% HP.', r:3},
+  bloodlust:{tiers:['Sword blocks deal +1 damage for every 20% HP you are missing. Hearts heal 1 less.','Sword blocks deal +1.5 damage for every 20% HP you are missing. Hearts heal 1 less.','Sword blocks deal +2 damage for every 20% HP you are missing.'], name:'Bloodlust', spr:'bloodaxe', desc:'Sword blocks deal +1 damage for every 20% HP you are missing. Hearts heal 1 less.', r:0, starter:true},
+  gravetome:{tiers:['Venom blocks appear. Poison on enemies never wears off.','Poison never wears off, and enemies start every fight with 3 poison.','Poison never wears off, and enemies start every fight with 6 poison.'], name:'Grave Tome', spr:'gravetome', desc:'Venom blocks appear. Poison on enemies never wears off.', r:0, starter:true},
+  philflask:{tiers:['+1 potion slot. Brew a random potion after every fight.','+1 potion slot. Brew a potion after every fight, two after elites and bosses.','+1 potion slot. Brew two potions after every fight.'], name:'Philosopher\'s Flask', spr:'philflask', desc:'+1 potion slot. Brew a random potion after every fight.', r:0, starter:true, onGet(){ run.potionSlots++; }},
+  warmcloak:{tiers:['Ice shatters completely when cleared instead of leaving rubble.','Ice shatters when cleared and gives 2 shield each.','Ice shatters when cleared, gives 2 shield and deals 3 damage each.'], name:'Warm Cloak', spr:'warmcloak', desc:'Ice shatters completely when cleared instead of leaving rubble.', r:1},
+  stoneward:{tiers:['Immune to Petrify: enemies can\'t turn your blocks to stone.','Immune to Petrify and Hex.','Immune to Petrify, Hex and Chains.'], name:'Stone Ward', spr:'stoneward', desc:'Immune to Petrify: enemies can\'t turn your blocks to stone.', r:2},
+  souljar:{tiers:['Earn 50% more Soul Shards this run.','Earn 75% more Soul Shards this run.','Earn double Soul Shards this run.'], name:'Soul Jar', spr:'souljar', desc:'Earn 50% more Soul Shards this run.', r:1},
+  holysymbol:{tiers:['Heart blocks also deal 2 damage. Healing past full HP becomes shield.','Heart blocks also deal 3 damage. Overhealing becomes shield.','Heart blocks also deal 4 damage. Overhealing becomes shield.'], name:'Holy Symbol', spr:'holy', desc:'Heart blocks also deal 2 damage. Healing past full HP becomes shield.', r:0, starter:true},
+  huntersmark:{tiers:['Pure lines give +1 multiplier instead of +0.5. Clears deal +3 damage per line.','Pure lines give +1 multiplier. Clears deal +5 damage per line.','Pure lines give +1 multiplier. Clears deal +7 damage per line.'], name:'Hunter\'s Mark', spr:'mark', desc:'Pure lines give +1 multiplier instead of +0.5. Clears deal +3 damage per line.', r:0, starter:true},
+  glove:{tiers:['Gain 10 extra gold after every fight. Enemies can\'t steal from you.','Gain 15 extra gold after every fight. Enemies can\'t steal from you.','Gain 25 extra gold after every fight. Enemies can\'t steal from you.'], name:'Thief\'s Glove', spr:'glove', desc:'Gain 10 extra gold after every fight. Enemies can\'t steal from you.', r:1},
+  boots:{tiers:['Cave-ins deal half damage and clear 3 rows instead of 2.','Cave-ins deal half damage and clear 3 rows.','Cave-ins deal no damage and clear 4 rows.'], name:'Iron Boots', spr:'boots', desc:'Cave-ins deal half damage and clear 3 rows instead of 2.', r:1},
+  spellbook:{tiers:['Your hero special needs 2 fewer lines to charge.','Your hero special needs 3 fewer lines.','Your hero special needs 4 fewer lines.'], name:'Spellbook', spr:'spellbook', desc:'Your hero special needs 2 fewer lines to charge.', r:2},
+  bloodgem:{tiers:['Heal 5 HP after every fight.','Heal 8 HP after every fight.','Heal 12 HP after every fight.'], name:'Bloodstone', spr:'bloodgem', desc:'Heal 5 HP after every fight.', r:1},
+  tidecharm:{tiers:['Gain 3 shield whenever you place a piece without clearing a line.','Gain 5 shield whenever you place a piece without clearing.','Gain 7 shield whenever you place a piece without clearing.'], name:'Tide Charm', spr:'tidecharm', desc:'Gain 3 shield whenever you place a piece without clearing a line.', r:1},
+  ironfist:{tiers:['Your first damaging clear each fight deals +15 damage.','Your first damaging clear each fight deals +25 damage.','Your first damaging clear each fight deals +40 damage.'], name:'Iron Gauntlet', spr:'ironfist', desc:'Your first damaging clear each fight deals +15 damage.', r:1},
+  seerorb:{tiers:['Combo streak bonuses are 50% stronger.','Combo streak bonuses are 75% stronger.','Combo streak bonuses are twice as strong.'], name:'Seer\'s Orb', spr:'seerorb', desc:'Combo streak bonuses are 50% stronger.', r:2},
+  vampcape:{tiers:['Whenever an enemy attacks you, it loses 2 HP.','Whenever an enemy attacks you, it loses 4 HP.','Whenever an enemy attacks you, it loses 6 HP.'], name:'Vampire Cape', spr:'vampcape', desc:'Whenever an enemy attacks you, it loses 2 HP.', r:2},
+  warhorn:{tiers:['Elites and bosses start with 15% less HP.','Elites and bosses start with 20% less HP.','Elites and bosses start with 25% less HP.'], name:'War Horn', spr:'warhorn', desc:'Elites and bosses start with 15% less HP.', r:2},
+  bluelantern:{tiers:['Earn 2 extra Soul Shards for every room you enter.','Earn 3 extra Soul Shards for every room.','Earn 4 extra Soul Shards for every room.'], name:'Spirit Lantern', spr:'bluelantern', desc:'Earn 2 extra Soul Shards for every room you enter.', r:1},
+  packrat:{tiers:['Placing a piece that waited in your Stash for at least one move gives 4 shield.','A piece that waited in your Stash gives 7 shield.','A piece that waited in your Stash gives 10 shield.'], name:'Packrat\'s Pouch', spr:'packrat', desc:'Placing a piece that waited in your Stash for at least one move gives 4 shield.', r:1},
+  compass:{tiers:['Elite and boss rewards offer one more relic to choose from.','Elite and boss rewards offer one more relic.','Elite and boss rewards offer two more relics.'], name:'Hunter\'s Compass', spr:'compass', desc:'Elite and boss rewards offer one more relic to choose from.', r:2},
+  goldendice:{tiers:['+1 hand reroll each fight. Every reroll also gives 5 gold.','+1 hand reroll each fight. Rerolls give 8 gold.','+1 hand reroll each fight. Rerolls give 12 gold.'], name:'Golden Dice', spr:'goldendice', desc:'+1 hand reroll each fight. Every reroll also gives 5 gold.', r:2},
+  prayerbeads:{tiers:['Missing a clear only lowers your combo streak by 1.','Missing a clear lowers your streak by 1 and gives 2 shield.','Missing a clear never lowers your combo streak.'], name:'Prayer Beads', spr:'prayerbeads', desc:'Missing a clear only lowers your combo streak by 1 instead of resetting it.', r:0, starter:true},
+  seedpod:{tiers:['Start every fight with 3 heart blocks on your grid. Heart blocks heal +1.','Start with 4 heart blocks on your grid. Hearts heal +1.','Start with 6 heart blocks on your grid. Hearts heal +2.'], name:'Seed Pod', spr:'seedpod', desc:'Start every fight with 3 heart blocks on your grid. Heart blocks heal +1.', r:0, starter:true},
+  katana:{tiers:['Clearing exactly one line deals +8 damage.','Clearing exactly one line deals +12 damage.','Clearing exactly one line deals +18 damage.'], name:'Katana', spr:'katana', desc:'Clearing exactly one line deals +8 damage.', r:0, starter:true},
+  doubloon:{tiers:['Coin blocks also deal 1 damage each and give +1 gold.','Coin blocks deal 2 damage each and give +1 gold.','Coin blocks deal 3 damage each and give +2 gold.'], name:'Cursed Doubloon', spr:'doubloon', desc:'Coin blocks also deal 1 damage each and give +1 gold.', r:0, starter:true},
+  hexcharm:{tiers:['Enemies start every fight with 5 poison.','Enemies start every fight with 8 poison.','Enemies start every fight with 12 poison.'], name:'Hex Charm', spr:'hexcharm', desc:'Enemies start every fight with 5 poison.', r:0, starter:true},
+  gearbox:{tiers:['Blast blocks deal +4 damage.','Blast blocks deal +6 damage.','Blast blocks deal +9 damage.'], name:'Gearbox', spr:'gearbox', desc:'Blast blocks deal +4 damage.', r:0, starter:true},
+  bloodchalice:{tiers:['Heal 1 for every 6 damage your clears deal.','Heal 1 for every 5 damage your clears deal.','Heal 1 for every 4 damage your clears deal.'], name:'Blood Chalice', spr:'bloodchalice', desc:'Heal 1 for every 6 damage your clears deal.', r:0, starter:true},
+  laurel:{tiers:['+2 max HP for every foe you defeat.','+3 max HP for every foe you defeat.','+4 max HP for every foe you defeat.'], name:'Victor\'s Laurel', spr:'laurel', desc:'+2 max HP for every foe you defeat.', r:0, starter:true},
+  totem:{tiers:['Every 4 moves, a random block on your grid turns Rainbow.','Every 3 moves, a random block turns Rainbow.','Every 3 moves, two random blocks turn Rainbow.'], name:'Spirit Totem', spr:'totem', desc:'Every 4 moves, a random block on your grid turns Rainbow.', r:0, starter:true},
+  frostshard:{tiers:['Ice never cracks into rubble, and ice in your clears deals 4 damage each.','Ice never cracks, and ice in your clears deals 6 damage each.','Ice never cracks, and ice in your clears deals 8 damage each.'], name:'Frost Shard', spr:'frostshard', desc:'Ice never cracks into rubble, and ice in your clears deals 4 damage each.', r:0, starter:true},
+  whistle:{tiers:['Start with a random pet. Your pet charges faster.','Start with a random pet. Your pet charges even faster.','Start with a random pet. Your pet charges much faster.'], name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) setPet(pick(Object.keys(PETS))); }},
+  cursedcrown:{tiers:['Gain 60 gold now. Coins give 50% more gold. Enemies have 10% more HP.','Coins give 75% more gold. Enemies have 10% more HP.','Coins give double gold. Enemies have 10% more HP.'], name:'Cursed Crown', spr:'b_crown', boss:true, r:4, desc:'Gain 60 gold now. Coins give 50% more gold. Enemies have 10% more HP.', onGet(){ run.gold += 60; }},
+  bloodengine:{tiers:['Your special needs 3 fewer lines, but using it costs 4 HP.','Your special needs 3 fewer lines and costs 3 HP.','Your special needs 4 fewer lines and costs 2 HP.'], name:'Blood Engine', spr:'b_engine', boss:true, r:4, desc:'Your special needs 3 fewer lines, but using it costs 4 HP.'},
+  titanheart:{tiers:['+30 max HP. All healing is 30% weaker.','+30 max HP. Healing is 20% weaker.','+30 max HP. Healing is 10% weaker.'], name:'Titan\'s Heart', spr:'b_heart', boss:true, r:4, desc:'+30 max HP. All healing is 30% weaker.', onGet(){ run.maxHp += 30; run.hp += 30; }},
+  glassblade:{tiers:['Sword blocks deal +3 damage. -15 max HP.','Sword blocks deal +4 damage.','Sword blocks deal +6 damage.'], name:'Glass Blade', spr:'b_blade', boss:true, r:4, desc:'Sword blocks deal +3 damage. -15 max HP.', onGet(){ run.maxHp = Math.max(10, run.maxHp-15); run.hp = Math.min(run.hp, run.maxHp); }},
+  blacklotus:{tiers:['Start every fight with your special fully charged, but with no hand rerolls.','Special fully charged each fight, 1 hand reroll.','Special fully charged each fight, 2 hand rerolls.'], name:'Black Lotus', spr:'b_lotus', boss:true, r:4, desc:'Start every fight with your special fully charged, but with no hand rerolls.'},
+  pandora:{tiers:['Gain 2 random relics now. Enemies start every fight with 3 rage.','Enemies start every fight with 2 rage.','Enemies start every fight with 1 rage.'], name:'Pandora\'s Box', spr:'b_box', boss:true, r:4, desc:'Gain 2 random relics now. Enemies start every fight with 3 rage.', onGet(){ setTimeout(()=>{ relicOffers(2).forEach(id=>gainRelic(id)); renderRunbar(); saveRun(); }, 50); }},
+  ironmaiden:{tiers:['Start every fight with 25 shield. Shield blocks give 1 less.','Start every fight with 35 shield. Shield blocks give 1 less.','Start every fight with 50 shield. Shield blocks give 1 less.'], name:'Iron Maiden', spr:'b_maiden', boss:true, r:4, desc:'Start every fight with 25 shield. Shield blocks give 1 less.'},
+  midas:{tiers:['Coin blocks give double gold. Heart blocks heal 1 less.','Coin blocks give 2.5x gold. Hearts heal 1 less.','Coin blocks give triple gold. Hearts heal 1 less.'], name:'Midas Touch', spr:'b_midas', boss:true, r:4, desc:'Coin blocks give double gold. Heart blocks heal 1 less.'},
+  stormbanner:{tiers:['Your clears deal 20% more damage. Enemies start every fight with 10 armor.','Clears deal 30% more damage. Enemies start with 10 armor.','Clears deal 40% more damage. Enemies start with 10 armor.'], name:'Storm Banner', spr:'b_banner', boss:true, r:4, desc:'Your clears deal 20% more damage. Enemies start every fight with 10 armor.'},
+  philstone:{onUp(){ shuffle(plusable()).slice(0,1).forEach(t=>empower(t)); }, tiers:['Empower 2 random block types in your bag. -10 max HP.','Each tier up empowers another random block type.','Each tier up empowers another random block type.'], name:'Philosopher\'s Stone', spr:'b_stone', boss:true, r:4, desc:'Empower 2 random block types in your bag. -10 max HP.', onGet(){ shuffle(plusable()).slice(0,2).forEach(t=>empower(t)); run.maxHp = Math.max(10, run.maxHp-10); run.hp = Math.min(run.hp, run.maxHp); }},
+  lute:{tiers:['Every 3rd clear in a row strikes a chord: +8 shield and heal 5.','Every 3rd clear in a row: +12 shield and heal 7.','Every 3rd clear in a row: +16 shield and heal 10.'], name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +8 shield and heal 5.', r:0, starter:true},
+  phial:{tiers:['The first potion you drink in each fight is not used up.','The first potion you drink in each fight is not used up.','The first two potions you drink in each fight are not used up.'], name:'Bottomless Phial', spr:'phial', desc:'The first potion you drink in each fight is not used up.', r:3},
+  emberheart:{tiers:['Clearing 2+ lines at once also poisons the enemy for 3.','Clearing 2+ lines at once poisons for 5.','Clearing 2+ lines at once poisons for 8.'], name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
 };
 
 const POTIONS = {
@@ -623,6 +623,7 @@ const ACH = {
   decorator:{name:'Interior Decorator', desc:'Unlock a new board theme.', spr:'palette'},
   evolve:{name:'It\'s Evolving!', desc:'Evolve a pet.', spr:'pet_bat1'},
   evolve2:{name:'Final Form', desc:'Evolve a pet to its final form.', spr:'pet_bat2'},
+  relic3:{name:'Masterwork', desc:'Raise a relic to Tier III.', spr:'hammer'},
   empower:{name:'Empowered', desc:'Upgrade a block type to its + version.', spr:'anvil'},
   bossrelic:{name:'Cursed Treasure', desc:'Take a boss relic.', spr:'b_crown'},
   weekly:{name:'Weekly Warrior', desc:'Finish a Weekly Challenge.', spr:'trophy'},
@@ -759,8 +760,57 @@ const soulShards = () => +store.get('shards', 0);
 /* ================= run state & persistence ================= */
 let run = null, cb = null, drag = null, press = null, selPotion = -1, screenName = 'title';
 const has = id => !!run && run.relics.includes(id);
+/* relic tiers: I-III. rt = current tier (0 if not equipped), rv picks a value per tier */
+const rt = id => has(id) ? Math.max(1, Math.min(3, ((run.rlv||{})[id]) || 1)) : 0;
+const rv = (id, a) => { const t = rt(id); return t ? a[t-1] : 0; };
+const ROMAN = ['', 'I', 'II', 'III'];
+const RELIC_XP = [0, 8, 24];
+function relicDesc(id, t){ const R = RELICS[id]; if(!R) return ''; t = t || rt(id) || 1; return R.tiers ? R.tiers[t-1] : R.desc; }
+function relicUp(id, quiet){
+  run.rlv = run.rlv || {}; const t = rt(id) || 1; if(t>=3) return false;
+  run.rlv[id] = t+1; run.rxp = run.rxp || {}; run.rxp[id] = Math.max(run.rxp[id]||0, RELIC_XP[t]);
+  const R = RELICS[id]; if(R.onUp) R.onUp(t+1);
+  if(run.rlv[id]===3) unlock('relic3');
+  if(!quiet){ setTimeout(()=>{ sfx('levelup'); toast(`<b>${R.name} reached Tier ${ROMAN[t+1]}!</b><br>${relicDesc(id, t+1)}`, R.spr, 3800); }, 600); }
+  return true;
+}
+const SATCHEL_MAX = 3;
+const relicCap = () => Math.min(16, 6 + (run.slotBonus||0));
+const equippedCount = () => run.relics.filter(id=>!(RELICS[id]||{}).starter).length;
+function checkRelicCap(){
+  if(!run || equippedCount() <= relicCap()) return false;
+  if(!$('#modal').hidden && $('#modal').dataset.kind==='cap') return true;
+  const m = $('#modal'); m.hidden = false; m.dataset.kind = 'cap';
+  const list = run.relics.filter(id=>!RELICS[id].starter), newest = list[list.length-1];
+  const satFull = (run.satchel||[]).length >= SATCHEL_MAX;
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Relic slots full" style="max-height:84vh;overflow:auto">
+    <h2 class="title" style="font-size:22px;margin:0">Relic slots full (${equippedCount()}/${relicCap()})</h2>
+    <p class="muted" style="font-size:13px;margin:4px 0 8px">Choose a relic to put away. ${satFull?`Your satchel is full, so it will be sold for gold.`:`It goes into your satchel (${(run.satchel||[]).length}/${SATCHEL_MAX}) and can be swapped back at a campfire.`}</p>
+    ${list.map(id=>{ const R = RELICS[id]; return `<button class="choice capc ${id===newest?'newr':''}" data-id="${id}"><span class="ic">${img(R.spr,40)}</span><span><b>${R.name} <span class="tierpip">${ROMAN[rt(id)]}</span>${id===newest?' <span class="rar rar3">New</span>':''}</b><small>${relicDesc(id)}</small></span>${satFull?`<span class="price">${img('coin',18)}${Math.round(relicPrice(id)/3)}</span>`:''}</button>`; }).join('')}</div>`;
+  m.onclick = null;
+  m.querySelectorAll('.capc').forEach(b=>b.onclick = ()=>{ const id = b.dataset.id; stowRelic(id); m.dataset.kind = ''; m.hidden = true; sfx('click'); renderRunbar(); saveRun(); setTimeout(checkRelicCap, 50); });
+  return true;
+}
+function stowRelic(id){
+  run.relics = run.relics.filter(x=>x!==id); run.satchel = run.satchel || [];
+  if(run.satchel.length < SATCHEL_MAX){ run.satchel.push(id); toast(`<b>${RELICS[id].name}</b> goes into your satchel.`, RELICS[id].spr); }
+  else { const gp = Math.round(relicPrice(id)/3); run.gold += gp; toast(`<b>${RELICS[id].name}</b> sold for ${gp} gold.`, 'coin'); }
+}
+function satchelModal(){
+  const m = $('#modal'); m.hidden = false; m.dataset.kind = 'satchel';
+  const sat = run.satchel || [];
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Relic satchel" style="max-height:84vh;overflow:auto">
+    <h2 class="title" style="font-size:22px;margin:0">Relic satchel</h2>
+    <p class="muted" style="font-size:13px;margin:4px 0 8px">Equipped ${equippedCount()}/${relicCap()}. Tap a stowed relic to equip it${equippedCount()>=relicCap()?' (you will then choose one to put away)':''}.</p>
+    ${sat.length ? sat.map(id=>{ const R = RELICS[id]; return `<button class="choice satc" data-id="${id}"><span class="ic">${img(R.spr,40)}</span><span><b>${R.name} <span class="tierpip">${ROMAN[rt2(id)]}</span></b><small>${relicDesc(id, rt2(id))}</small></span></button>`; }).join('') : '<p class="center muted">Your satchel is empty.</p>'}
+    <button class="btn ghost" id="satClose">Done</button></div>`;
+  m.querySelectorAll('.satc').forEach(b=>b.onclick = ()=>{ const id = b.dataset.id; run.satchel = run.satchel.filter(x=>x!==id); run.relics.push(id); sfx('relic'); m.hidden = true; m.dataset.kind = ''; renderRunbar(); saveRun(); setTimeout(()=>{ if(!checkRelicCap()) satchelModal(); }, 60); });
+  $('#satClose').onclick = ()=>{ m.hidden = true; m.dataset.kind = ''; sfx('click'); };
+}
+const rt2 = id => Math.max(1, Math.min(3, ((run.rlv||{})[id]) || 1));
+function relicFightXP(){ run.rxp = run.rxp || {}; run.relics.forEach(id=>{ run.rxp[id] = (run.rxp[id]||0) + 1; const t = rt(id); if(t<3 && run.rxp[id] >= RELIC_XP[t]) relicUp(id); }); }
 const hpEl = () => $('#hpFill').parentElement;
-function heal(n){ if(has('titanheart')) n = Math.round(n*0.7); run.hp = Math.min(run.maxHp, run.hp + n); }
+function heal(n){ if(has('titanheart')) n = Math.round(n*rv('titanheart',[0.7,0.8,0.9])); run.hp = Math.min(run.maxHp, run.hp + n); }
 /* The save always describes exactly where you are:
    run.room = the room you're inside (null on the map), with its contents locked in,
    run.room.fight = a full snapshot of an in-progress fight, run.room.reward = a pending reward screen. */
@@ -845,6 +895,7 @@ function gainRelic(id){
   if(sk && before<3 && setCount(sk)>=3) setTimeout(()=>{ sfx('trophy'); toast(`<b>${SETS[sk].name} set complete!</b><br>${SETS[sk].bonus}`, R.spr, 3600); unlock('setbonus'); }, 900);
   markSeen('r', id);
   if(run.relics.length>=10) unlock('relics10');
+  setTimeout(checkRelicCap, 120);
   if(run.relics.length>=15) unlock('relics15');
   renderRunbar(); toast(`<b>${R.name}</b><br>${R.desc}`, R.spr); sfx('relic');
 }
@@ -892,8 +943,10 @@ const HERO_RELICS = {
   bm_collar:{hero:'beastmaster', mlv:2, name:'Spiked Collar', base:'whistle', desc:'Your pet earns 1 extra XP from every fight.', onKill(){ if(cb && cb.enemies.every(e=>e.hp<=0)) gainPetXP(1); }},
   bm_horn:{hero:'beastmaster', mlv:4, name:'Hunting Horn', base:'whistle', desc:'Your pet acts once at the start of every fight.', onFight(){ setTimeout(()=>{ if(cb && !cb.over && run.pet){ petFire(); renderHUD(); } }, 700); }},
 };
-Object.entries(HERO_RELICS).forEach(([id,H])=>{ RELICS[id] = {...H, spr:id, r:5}; });
-function relicHook(name, ...args){ (run && run.relics || []).forEach(id=>{ const R = RELICS[id]; if(R && R[name]) try{ R[name](...args); }catch(e){ console.error(e); } }); }
+Object.entries(HERO_RELICS).forEach(([id,H])=>{ RELICS[id] = {...H, spr:id, r:5, tiers:[H.desc, H.desc+' (50% stronger)', H.desc+' (twice as strong)']}; });
+Object.values(RELICS).forEach(R=>{ if(R.tiers) R.desc = R.tiers[0]; });
+let HOOKN = 0;
+function relicHook(name, ...args){ (run && run.relics || []).forEach(id=>{ const R = RELICS[id]; if(!R || !R[name]) return; const t = rt(id); const reps = t>=3 ? 2 : t===2 ? 1 + (HOOKN++ % 2) : 1; for(let k=0;k<reps;k++) try{ R[name](...args); }catch(e){ console.error(e); } }); }
 const relicPrice = id => ({0:50, 1:55, 2:80, 3:115, 4:150, 5:90})[(RELICS[id]||{}).r] || 70;
 function relicOffers(n, minR=1){
   const free = Object.keys(RELICS).filter(id=>!has(id) && !RELICS[id].starter && !RELICS[id].boss && (!RELICS[id].hero || (RELICS[id].hero===run.cls && heroRelicOpen(id))));
@@ -922,7 +975,7 @@ function givePotion(id){
 function checkDeath(){
   if(run.hp > 0) return false;
   if(has('phoenix') && !run.phoenixUsed){
-    run.phoenixUsed = true; run.hp = Math.round(run.maxHp/2);
+    run.phoenixUsed = true; run.hp = Math.round(run.maxHp*rv('phoenix',[0.5,0.65,0.8]));
     flash('rgba(255,180,60,.6)'); sfx('ult');
     toast('<b>Phoenix Feather</b><br>You rise from the ashes!', 'phoenix');
     renderRunbar(); return false;
@@ -968,13 +1021,14 @@ function renderRunbar(){
     if(id){ b.innerHTML = img(POTIONS[id].spr, 26); b.onclick = ()=>potionTap(i); }
     pb.appendChild(b);
   }
-  const rc = $('#relicCount'); rc.textContent = `${run.relics.length}`; rc.onclick = openRelics;
+  const rc = $('#relicCount'); rc.textContent = `${equippedCount()}/${relicCap()}`; rc.onclick = openRelics;
+  if(screenName!=='combat' && equippedCount() > relicCap()) setTimeout(checkRelicCap, 200);
   const bar = $('#relicBar'); bar.innerHTML = '';
   run.relics.forEach(id=>{
-    const R = RELICS[id]; const b = document.createElement('button');
+    const R = RELICS[id]; if(!R) return; const b = document.createElement('button');
     b.className = 'relic'+(id==='phoenix'&&run.phoenixUsed?' used':'');
-    b.innerHTML = img(R.spr, 26); b.setAttribute('aria-label', R.name);
-    b.onclick = ()=>toast(`<b>${R.name}</b><br>${R.desc}`, R.spr);
+    const t = rt(id); b.innerHTML = img(R.spr, 26) + (t>1?`<i class="rtier t${t}">${ROMAN[t]}</i>`:''); b.setAttribute('aria-label', R.name);
+    b.onclick = ()=>toast(`<b>${R.name} <span class="tierpip">${ROMAN[t]}</span></b><br>${relicDesc(id)}${t<3?`<br><span class="muted">Tier ${ROMAN[t+1]} in ${Math.max(0, RELIC_XP[t]-((run.rxp||{})[id]||0))} more won fight(s), or at a Forge.</span>`:''}`, R.spr, 3200);
     bar.appendChild(b);
   });
   updateDanger();
@@ -1011,10 +1065,11 @@ function openRelics(){
   if(!run) return; sfx('click');
   const m = $('#modal'); m.hidden = false;
   m.innerHTML = `<div class="card" role="dialog" aria-label="Relics" style="max-height:80vh;overflow:auto">
-    <div class="row"><h2 class="title" style="font-size:24px">Relics (${run.relics.length})</h2>${img('r_treasure',34)}</div>
+    <div class="row"><h2 class="title" style="font-size:24px">Relics ${equippedCount()}/${relicCap()}</h2>${img('r_treasure',34)}</div>
+    <p class="muted" style="font-size:12px;margin:0">Relics grow to Tier II and III as you win fights with them equipped, or at a Forge. Your hero's starter relic is free.${(run.satchel||[]).length?` Satchel: ${run.satchel.map(id=>RELICS[id].name).join(', ')}.`:''}</p>
     <div class="setrow">${Object.entries(SETS).map(([k,S])=>{ const n = setCount(k); return n ? `<button class="setpill ${n>=3?'on':''}" style="--sc:${S.col}" data-s="${k}">${S.name} ${Math.min(n,3)}/3</button>` : ''; }).join('')}</div>
     <div id="setInfo">${Object.entries(SETS).filter(([k])=>setOn(k)).map(([k,S])=>`<div class="setinfo" style="--sc:${S.col}"><b>${S.name} set bonus active</b>${S.bonus}</div>`).join('')}</div>
-    ${run.relics.map(id=>{ const R = RELICS[id], sk = setOf(id); return `<div class="troph">${img(R.spr,40)}<div><b>${R.name}${sk?` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name}</span>`:''}</b><small>${R.desc}</small></div></div>`; }).join('')}
+    ${run.relics.map(id=>{ const R = RELICS[id], sk = setOf(id); return `<div class="troph">${img(R.spr,40)}<div><b>${R.name} <span class="tierpip">${ROMAN[rt(id)]}</span>${R.starter?' <span class="muted" style="font-size:11px">free slot</span>':''}${sk?` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name}</span>`:''}</b><small>${relicDesc(id)}${rt(id)<3?`<br><span style="color:#c8fbff">Next: ${relicDesc(id, rt(id)+1)} (${Math.max(0, RELIC_XP[rt(id)]-((run.rxp||{})[id]||0))} more wins)</span>`:''}</small></div></div>`; }).join('')}
     <div class="troph">${img(ULT().spr,40)}<div><b>Special: ${ULT().name}</b><small>${ULT().desc} Needs ${ULT().need} lines.</small></div></div>
     ${run.pet&&PETS[run.pet]?`<div class="troph">${img(petForm().spr,40)}<div><b>Pet: ${petForm().name}${petTier()<2?` <span class="muted" style="font-size:12px">XP ${run.petXp||0}/${PET_EVO[petTier()]}</span>`:''}</b><small>${petDesc(run.pet)}</small></div></div>`:''}
     <button class="btn" id="closeBtn">Close</button></div>`;
@@ -1028,7 +1083,7 @@ function potionTap(i){
   if(!inFight && !P.any){ toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Use it during a fight.</span>`, P.spr); return; }
   if(selPotion !== i){ selPotion = i; renderRunbar(); toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Tap again to drink.</span>`, P.spr); return; }
   selPotion = -1;
-  if(inFight && has('phial') && !cb.phialUsed){ cb.phialUsed = true; floatText($('#potionBar'), 'Refilled!', '#ffb3e6'); }
+  if(inFight && has('phial') && (cb.phialUsed||0) < (rt('phial')>=3?2:1)){ cb.phialUsed = (cb.phialUsed||0)+1; floatText($('#potionBar'), 'Refilled!', '#ffb3e6'); }
   else run.potions.splice(i,1);
   bumpStats(s=>s.potions++); questAdd('potions', 1); run.drank = (run.drank||0)+1;
   sfx('potion'); P.use();
@@ -1569,6 +1624,8 @@ function advance(){
     if(run.floor===FLOORS+1 && !run.won){ if(!run.secretDone && !run.daily && secretWhy().length){ run.floor = FLOORS; run.room = {t:'gate'}; saveRun(); return gateScreen(); } return endScreen(true); }
     questAdd('floor', run.floor);
     if(run.floor>=FLOORS+3) unlock('endless');
+    if(run.floor===FLOORS+1){ run.slotBonus = (run.slotBonus||0)+4; setTimeout(()=>toast(`<b>+4 relic slots</b><br>The depths let you carry more. You can equip ${relicCap()} relics.`, 'r_treasure', 3600), 2600); }
+    else if(run.floor>FLOORS+1 && (run.floor-FLOORS-1)%2===0 && relicCap()<16){ run.slotBonus = (run.slotBonus||0)+1; setTimeout(()=>toast(`<b>+1 relic slot</b>`, 'r_treasure'), 2600); }
     if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3'); if(run.floor===4) unlock('floor4'); if(run.floor===5) unlock('floor5');
     run.map = run.daily ? withSeed(runSeed(run.floor), genMap) : genMap(); run.path = [];
     heal(Math.round(run.maxHp*0.3));
@@ -1593,18 +1650,20 @@ function gateScreen(){
 /* ================= non-combat rooms ================= */
 function restScreen(){
   show('rest');
-  const amt = Math.round(run.maxHp*0.35*(has('hearth')?1.5:1));
+  const amt = Math.round(run.maxHp*0.35*(has('hearth')?rv('hearth',[1.5,1.8,2.2]):1));
   const R = run.room; if(!R.up){ R.up = pick(Object.keys(UPGRADES)); saveRun(); }
   const up = R.up; const U = UPGRADES[up], C = ULT();
   view(`${scene('r_rest','Campfire','The fire crackles. You have time for one thing.')}
-    ${choiceBtn({id:'heal',spr:'heal_icon',name:'Rest',desc:`Heal ${amt} HP.${has('hearth')?' +4 max HP.':''}`})}
+    ${choiceBtn({id:'heal',spr:'heal_icon',name:'Rest',desc:`Heal ${amt} HP.${has('hearth')?` +${rv('hearth',[4,6,8])} max HP.`:''}`})}
     ${choiceBtn({id:'train',spr:'heart',name:'Train',desc:'+8 max HP.'})}
     ${choiceBtn({id:'up',spr:U.spr,name:U.name,desc:U.desc+' (permanent)'})}
     ${choiceBtn({id:'med',spr:C.spr,name:'Meditate',desc:`Start your next fight with ${C.name} fully charged.`, disabled: run.charge>=C.need})}
-    ${choiceBtn({id:'cut',spr:'bagicon',name:'Declutter',desc:'Remove 2 blocks of one type from your bag.', disabled: bagSize()-2 < BAG_MIN})}`);
+    ${choiceBtn({id:'cut',spr:'bagicon',name:'Declutter',desc:'Remove 2 blocks of one type from your bag.', disabled: bagSize()-2 < BAG_MIN})}
+    ${(run.satchel||[]).length ? `<button class="btn ghost" id="satBtn">${img('satchel',22)} Swap relics (free)</button>` : ''}`);
+  const sbn = $('#satBtn'); if(sbn) sbn.onclick = ()=>{ sfx('click'); satchelModal(); };
   bindChoices(id=>{
     if(id==='cut') return chooseBlock('Declutter', 'Pick a block type to remove 2 of.', removableTypes(), t=>{ if(!t) return restScreen(); bagRemove(t, Math.min(2, run.bag[t])); sfx('anvil'); toast(`<b>Removed ${TYPES[t].name} blocks</b><br>${bagSize()} blocks left in your bag.`, 'bagicon'); advance(); });
-    if(id==='heal'){ heal(amt); if(has('hearth')){ run.maxHp+=4; run.hp+=4; } sfx('heal'); }
+    if(id==='heal'){ heal(amt); if(has('hearth')){ const hh = rv('hearth',[4,6,8]); run.maxHp+=hh; run.hp+=hh; } sfx('heal'); }
     else if(id==='train'){ run.maxHp+=8; run.hp+=8; sfx('armor'); }
     else if(id==='up'){ run.lvl[up]++; sfx('armor'); }
     else { run.charge = C.need; sfx('ult'); }
@@ -1624,7 +1683,7 @@ function treasureScreen(){
 }
 function shopScreen(){
   show('shop');
-  const disc = (has('clover') ? 0.8 : 1) * (mut('rush') ? 1.5 : 1) * (rule('rich') ? 1.5 : 1), P = x => Math.round(x*disc);
+  const disc = (has('clover') ? rv('clover',[0.8,0.7,0.6]) : 1) * (mut('rush') ? 1.5 : 1) * (rule('rich') ? 1.5 : 1), P = x => Math.round(x*disc);
   const R = run.room;
   if(!R.shop){ R.shop = {
     stock: relicOffers(3).map(id=>({id, price:P(relicPrice(id)+rand(-5,5)), sold:false})),
@@ -1686,6 +1745,16 @@ function denScreen(){
   bindChoices(k=>{ if(k==='treat'){ gainPetXP(2); sfx('heal'); toast(`<b>${cur.name}</b><br>+2 pet XP${run.petEvo?'. It is ready to evolve after your next fight!':''}`, cur.spr); return advance(); } setPet(k); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[k].name}</b> joins you!`, PETS[k].spr); advance(); });
   $('#leaveBtn').onclick = ()=>{ sfx('click'); advance(); };
 }
+const temperCost = t => t===2 ? 45 : 90;
+const temperable = () => run.relics.filter(id=>RELICS[id] && rt(id)<3 && run.gold >= temperCost(rt(id)+1));
+function chooseTemper(done){
+  const m = $('#modal'); m.hidden = false; m.dataset.kind = 'temper';
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Temper a relic" style="max-height:84vh;overflow:auto"><h2 class="title" style="font-size:22px;margin:0">Temper a Relic</h2><p class="muted" style="font-size:13px">You have ${run.gold} gold.</p>
+    ${temperable().map(id=>{ const R = RELICS[id], t = rt(id); return `<button class="choice tmp" data-id="${id}"><span class="ic">${img(R.spr,40)}</span><span><b>${R.name} ${ROMAN[t]} to ${ROMAN[t+1]}</b><small>${relicDesc(id, t+1)}</small></span><span class="price">${img('coin',18)}${temperCost(t+1)}</span></button>`; }).join('')}
+    <button class="btn ghost" id="tmpX">Cancel</button></div>`;
+  m.querySelectorAll('.tmp').forEach(b=>b.onclick = ()=>{ const id = b.dataset.id, c = temperCost(rt(id)+1); if(run.gold < c) return; run.gold -= c; relicUp(id); sfx('anvil'); m.hidden = true; m.dataset.kind = ''; renderRunbar(); saveRun(); done(true); });
+  $('#tmpX').onclick = ()=>{ m.hidden = true; m.dataset.kind = ''; done(false); };
+}
 function forgeScreen(){
   show('forge');
   const R = run.room; if(!R.forge){ R.forge = {ups: shuffle(Object.keys(UPGRADES)).slice(0,2)}; saveRun(); }
@@ -1693,6 +1762,7 @@ function forgeScreen(){
   view(`${scene('anvil','The Forge','The anvil glows white-hot. Choose what to forge.')}
     ${R.forge.ups.map(k=>choiceBtn({id:'t:'+k, spr:UPGRADES[k].spr, name:'Temper: '+UPGRADES[k].name, desc:UPGRADES[k].desc.replace('+1','+2')+' (permanent)'})).join('')}
     ${choiceBtn({id:'r:'+(low||''), spr:low?RELICS[low].spr:'r_treasure', name:'Reforge', desc: low ? `Melt down your ${RELICS[low].name} and forge a relic of higher rarity.` : 'You have no relic to reforge.', disabled:!low})}
+    ${choiceBtn({id:'q:temper', spr:'hammer', name:'Temper a Relic', desc: temperable().length ? `Raise one relic a tier. Costs ${temperCost(2)} gold for Tier II, ${temperCost(3)} for Tier III.` : 'No relic can be tempered right now.', disabled: !temperable().length})}
     ${choiceBtn({id:'p:plus', spr:'anvil', name:'Empower', desc: plusable().length ? 'Upgrade one block type to its + version (Sword+ pierces armor, Heart+ overheals into shield...).' : 'Every block type in your bag is already empowered.', disabled:!plusable().length})}
     ${choiceBtn({id:'b:bag', spr:'bagicon', name:'Refine', desc:'Remove 3 blocks of one type from your bag.', disabled: bagSize()-1 < BAG_MIN})}
     ${choiceBtn({id:'s:'+(low||''), spr:'coin', name:'Smelt', desc: low ? `Melt down your ${RELICS[low].name} for ${30+25*RELICS[low].r} gold.` : 'You have no relic to smelt.', disabled:!low})}
@@ -1700,6 +1770,7 @@ function forgeScreen(){
   bindChoices(key=>{
     const [k,id] = key.split(':');
     if(k==='p') return choosePlus('Empower', ok=>{ if(!ok) return forgeScreen(); advance(); });
+    if(k==='q') return chooseTemper(ok=>{ if(!ok) return forgeScreen(); advance(); });
     if(k==='b') return chooseBlock('Refine', 'Pick a block type to remove up to 3 of.', removableTypes(), t=>{ if(!t) return forgeScreen(); let n = 0; while(n<3 && bagRemove(t,1)) n++; sfx('anvil'); toast(`<b>Removed ${n} ${TYPES[t].name} block${n===1?'':'s'}</b>`, 'bagicon'); advance(); });
     if(k==='t'){ run.lvl[id] += 2; sfx('anvil'); toast(`<b>${UPGRADES[id].name} x2</b><br>${UPGRADES[id].desc.replace('+1','+2')}`, UPGRADES[id].spr); }
     else if(k==='r' && id){ const rr = RELICS[id].r; run.relics = run.relics.filter(x=>x!==id); const [nid] = relicOffers(1, Math.min(3, rr+1)); if(nid) gainRelic(nid); sfx('blast'); }
@@ -1829,28 +1900,29 @@ function rewardScreen(kind){
   if(!RW.offers) rollReward(RW, kind);
   const fresh = !RW.shown; RW.shown = true; saveRun();
   if(fresh){ setTimeout(()=>burstAt($('#goldWrap'), ['#f7c936','#ffe58a','#fff'], 22), 150); if(kind==='boss') setTimeout(()=>confetti(80), 100); }
-  const offers = RW.offers.map(o=> o.boon ? {...BOONS.find(b=>b.id===o.id)} : {id:o.id, ...RELICS[o.id]}).filter(o=>o.name);
+  const offers = RW.offers.map(o=> o.boon ? {...BOONS.find(b=>b.id===o.id)} : o.up ? (RELICS[o.up] && has(o.up) && rt(o.up)<3 ? {id:o.id, spr:RELICS[o.up].spr, name:`Upgrade: ${RELICS[o.up].name} to Tier ${ROMAN[rt(o.up)+1]}`, desc:relicDesc(o.up, rt(o.up)+1)} : {}) : {id:o.id, ...RELICS[o.id]}).filter(o=>o.name);
   const title = kind==='boss'?'Boss defeated!':kind==='goblin'?'Caught it!':'Victory!';
   view(`${scene(kind==='boss'?'r_boss':kind==='goblin'?'goldgoblin':'r_treasure', title, `+${RW.g} gold.${RW.extra} Choose a reward:`)}
     ${offers.map(o=>choiceBtn(o)).join('')}
     <button class="btn ghost" id="skipBtn">Skip</button>`);
   bindChoices(id=>{ const b = BOONS.find(x=>x.id===id);
     if(b && b.choose) return b.apply(ok=>{ if(ok) advance(); else rewardScreen(kind); });
-    if(b){ b.apply(); sfx('heal'); } else gainRelic(id); advance(); });
+    if(b){ b.apply(); sfx('heal'); } else if(id.startsWith('up:')){ relicUp(id.slice(3)); sfx('anvil'); } else gainRelic(id); advance(); });
   $('#skipBtn').onclick = ()=>{ sfx('click'); advance(); };
 }
 function rollReward(RW, kind){
   let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*Math.min(run.floor,FLOORS):rand(10,18);
-  if(has('magnet')) g = Math.round(g*1.4);
+  if(has('magnet')) g = Math.round(g*rv('magnet',[1.4,1.6,1.9]));
   if(mut('rush')) g *= 2;
-  if(has('glove')) g += 10;
+  if(has('glove')) g += rv('glove',[10,15,25]);
   run.gold += g;
   let extra = '';
-  if(has('crown')){ const i = Math.min(15, Math.floor(run.gold/10)); run.gold += i; extra += ` +${i} interest.`; }
+  if(has('crown')){ const i = Math.min(rv('crown',[15,25,40]), Math.floor(run.gold*rv('crown',[0.1,0.1,0.15]))); run.gold += i; extra += ` +${i} interest.`; }
   if(Math.random() < (kind==='combat'?0.35:0.5)){ const p = givePotion(); if(p) extra += ` Found a ${POTIONS[p].name}!`; }
-  if(has('philflask')){ const p = givePotion(); if(p) extra += ` Brewed a ${POTIONS[p].name}.`; }
+  if(has('philflask')){ const nb = rt('philflask')>=3 || (rt('philflask')===2 && kind!=='combat') ? 2 : 1; for(let k=0;k<nb;k++){ const p = givePotion(); if(p) extra += ` Brewed a ${POTIONS[p].name}.`; } }
+  if(rt('cauldron')>=2 && (kind!=='combat' || (rt('cauldron')>=3 && Math.random()<0.25))){ const p = givePotion(); if(p) extra += ` The cauldron brewed a ${POTIONS[p].name}.`; }
   if(skill('mend')){ const h = Math.round(run.maxHp*0.05*skill('mend')); heal(h); extra += ` Recovered ${h} HP.`; }
-  if(has('bloodgem')){ heal(5); extra += ' Bloodstone heals 5.'; }
+  if(has('bloodgem')){ const bh = rv('bloodgem',[5,8,12]); heal(bh); extra += ` Bloodstone heals ${bh}.`; }
   if(setOn('wild')){ heal(6); extra += ' Wild set heals 6.'; }
   if(setOn('gold')){ const b = Math.round(g*0.2); run.gold += b; g += b; }
   questAdd('gold', g);
@@ -1860,8 +1932,13 @@ function rollReward(RW, kind){
     let guard = 0;
     while(offers.length<3 && guard++<50){ const b = weighted(pool.map(x=>[x,x.w])); if(!offers.some(o=>o.id===b.id)) offers.push({id:b.id, boon:true}); }
     if(Math.random()<(kind==='goblin'?1:0.3)){ const [id]=relicOffers(1); if(id) offers[2] = {id}; }
+    const upc = run.relics.filter(id=>RELICS[id] && rt(id)<3);
+    if(run.floor>=3 && upc.length && Math.random()<0.3){ const u = pick(upc); offers[1] = {id:'up:'+u, up:u}; }
   } else {
-    offers = relicOffers(3+(skill('sense')?1:0)+(has('compass')?1:0), kind==='boss'?2:1).map(id=>({id}));
+    offers = relicOffers(3+(skill('sense')?1:0)+rv('compass',[1,1,2]), kind==='boss'?2:1).map(id=>({id}));
+    const ups = shuffle(run.relics.filter(id=>RELICS[id] && rt(id)<3));
+    const nUp = Math.min(ups.length, (offers.length<2 ? 2 : 0) + (run.floor>=4 ? 1 : 0) + (run.floor>FLOORS ? 1 : 0));
+    for(let k=0;k<nUp;k++){ const slot = offers.length>2 ? offers.length-1-k : offers.length; offers[slot] = {id:'up:'+ups[k], up:ups[k]}; }
   }
   Object.assign(RW, {g, extra, offers});
   renderRunbar();
@@ -1925,8 +2002,8 @@ function endScreen(won, secret){
     const mh = store.get('heat',0);
     if(run.heat>=mh && mh<HEAT.length-1){ store.set('heat', mh+1); heatMsg = `<p class="center" style="color:#ff8a80;font-family:var(--display);font-size:18px">${HEAT[mh+1].name} unlocked!</p>`; }
   }
-  let earned = (secret?120:0) + run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0) + Math.max(0, run.floor-FLOORS-1)*20 + (has('bluelantern')?2*(run.rooms||0):0);
-  earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?1.5:1) * mutBonus(run.muts));
+  let earned = (secret?120:0) + run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0) + Math.max(0, run.floor-FLOORS-1)*20 + rv('bluelantern',[2,3,4])*(run.rooms||0);
+  earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?rv('souljar',[1.5,1.75,2]):1) * mutBonus(run.muts));
   earned = Math.max(0, earned - (run.awarded||0)); run.awarded = (run.awarded||0) + earned; run.killsCounted = run.kills;
   const mBefore = masteryLevel(run.cls); const mm = store.get('mastery', {}); mm[run.cls] = (mm[run.cls]||0) + earned; store.set('mastery', mm);
   const mAfter = masteryLevel(run.cls);
@@ -2016,7 +2093,7 @@ function rollType(){
 function shapeWeight(s){
   const n = s.cells.length;
   let w = n<=2?0.9 : n<=4?1.3 : n<=5?1.0 : 0.5;
-  if(has('feather')){ if(n<=3) w*=2.4; if(n>=6) w*=0.4; }
+  if(has('feather')){ const ft = rt('feather'); if(n<=3) w*=[0,2.4,3,3.4][ft]; if(n>=6) w*=[0,0.4,0.3,0.25][ft]; }
   if(mut('heavy')){ if(n>=5) w*=2.4; if(n<=2) w*=0.4; }
   return w;
 }
@@ -2065,7 +2142,7 @@ function startCombat(kind, forced){
   if(heat>=5 && kind==='boss') hpMul *= 1.25;
   if(kind==='goblin') hpMul = FS([1,1.7,2.4,3.1,3.8]);
   if(heat>=4 && kind==='elite' && !tpl.passive && !RM.tpls){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; tpls = [tpl, ...tpls.slice(1)]; }
-  if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= 0.85;
+  if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= rv('warhorn',[0.85,0.8,0.75]);
   hpMul *= endlessMul();
   if(kind==='elite' && RM.mod==null){ RM.mod = run.daily ? withSeed(runSeed(`m${run.floor}-${RM.r}-${RM.i}`), ()=>pick(Object.keys(MODS))) : pick(Object.keys(MODS)); }
   if(kind==='elite' && RM.mod) tpls = tpls.map((t,i)=>i===0 ? {...t, mod:RM.mod} : t);
@@ -2075,20 +2152,22 @@ function startCombat(kind, forced){
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
     bombs:{}, chains:[], weak:[], weakT:0, webs:{}, silence:0,
-    streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0,
-    shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort') + (setOn('iron')?10:0) + 6*pk('guard'),
-    rerolls: 1+(has('dice')?1:0)+(has('goldendice')?1:0)+skill('hands')+pk('hands'),
+    streak: rv('drum',[2,3,4]) + skill('momentum'), tookDmg:false, mirror:has('mirror') ? (rt('mirror')>=3?2:1) : 0, moves:0,
+    shield: rv('chainmail',[8,12,18]) + rv('oath',[6,10,14]) + 4*skill('fort') + (setOn('iron')?10:0) + 6*pk('guard'),
+    rerolls: 1+rv('dice',[1,1,2])+(has('goldendice')?1:0)+(rt('feather')>=3?1:0)+skill('hands')+pk('hands'),
     enemies: tpls.map((t,i)=>makeEnemy(t, maxHps[i])),
   };
   attachEnemy(cb);
   if(run.carry){ cb.shield += run.carry; run.carry = 0; }
   relicHook('onFight');
-  if(has('ironmaiden')) cb.shield += 25;
-  if(has('blacklotus')){ run.charge = ULT().need; cb.rerolls = 0; }
-  if(has('pandora')) cb.enemies.forEach(e=>{ e.rage += 3; });
+  if(has('ironmaiden')) cb.shield += rv('ironmaiden',[25,35,50]);
+  if(has('blacklotus')){ run.charge = ULT().need; cb.rerolls = rt('blacklotus')-1; }
+  if(has('pandora')) cb.enemies.forEach(e=>{ e.rage += rv('pandora',[3,2,1]); });
   if(has('stormbanner')) cb.enemies.forEach(e=>{ e.armor += 10; });
-  if(has('hexcharm')) cb.enemies.forEach(e=>{ if(!e.rare) e.poison += 5; });
-  if(has('seedpod') && kind!=='goblin') addBlocks('heal', 3, true);
+  if(has('hexcharm')) cb.enemies.forEach(e=>{ if(!e.rare) e.poison += rv('hexcharm',[5,8,12]); });
+  if(rt('gravetome')>=2) cb.enemies.forEach(e=>{ if(!e.rare) e.poison += rv('gravetome',[0,3,6]); });
+  if(rt('hourglass')>=3) cb.enemies.forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left++; });
+  if(has('seedpod') && kind!=='goblin') addBlocks('heal', rv('seedpod',[3,4,6]), true);
   if(pk('charged')) run.charge = Math.min(ULT().need, run.charge + 2*pk('charged'));
   tpls.forEach(t=>markSeen('e', t.name));
   run.charge = Math.min(ULT().need, run.charge + skill('focus'));
@@ -2187,7 +2266,7 @@ const SIG = {
     hitPlayer(d); let n = 0; cb.board.forEach((t,i)=>{ if(t==='heal'){ zap(i,4); n++; } });
     if(n){ e.hp = Math.min(e.maxHp, e.hp + 6*n); floatText(eArt(e), `+${6*n}`, '#86e6a8'); } }},
   hex:{ic:'bones', info:it=>[`x${it.v}`, `Hexes ${it.v} piece${it.v>1?'s':''} in your hand into rubble`], act(e,it){
-    if(has('stoneward')){ floatText($('#board'), 'Warded!', '#c9c2d4'); sfx('block'); return; }
+    if(rt('stoneward')>=2){ floatText($('#board'), 'Warded!', '#c9c2d4'); sfx('block'); return; }
     shuffle(cb.hand.filter(p=>!p.used && p.type!=='stone')).slice(0,it.v).forEach(p=>{ p.type = 'stone'; p.rotT = performance.now(); });
     floatText($('#board'), 'Hexed!', '#86e6a8', true); sfx('petrify'); }},
   haunt:{ic:'ghost', info:it=>[`x${it.v}`, `Swaps your rows around ${it.v} time${it.v>1?'s':''}`], act(e,it){
@@ -2267,11 +2346,11 @@ function hazardTick(){
   if(cb.silence>0) cb.silence--;
   relicHook('onMove');
   if(cb.turret>0 && aliveEnemies().length){ cb.turret--; const tg = aliveEnemies()[0]; damageEnemy(5 + 2*Math.min(run.floor,8), true, false, tg); floatText($('#ultBtn'), 'Turret!', '#ffd23f'); sfx('hit'); }
-  if(has('totem') && cb.moves && cb.moves%4===0){ const cand = liveCells().filter(i=>cb.board[i]!=='rainbow'); if(cand.length){ const i = pick(cand); cb.board[i] = 'rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); floatText($('#board'), 'Spirit!', '#f0d6ff'); } }
+  if(has('totem') && cb.moves && cb.moves%rv('totem',[4,3,3])===0){ for(let k=0;k<(rt('totem')>=3?2:1);k++){ const cand = liveCells().filter(i=>cb.board[i]!=='rainbow'); if(cand.length){ const i = pick(cand); cb.board[i] = 'rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); } } floatText($('#board'), 'Spirit!', '#f0d6ff'); }
   const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
   if(cb.kind!=='goblin' && cb.weak.length < want && ++cb.weakT >= 3){ cb.weakT = 0; spawnWeak(1); }
 }
-const streakStep = () => ((has('daggers') ? 0.5 : 0.25) + 0.1*pk('rhythm')) * (has('seerorb') ? 1.5 : 1);
+const streakStep = () => ((has('daggers') ? rv('daggers',[0.5,0.6,0.75]) : 0.25) + 0.1*pk('rhythm')) * (has('seerorb') ? rv('seerorb',[1.5,1.75,2]) : 1);
 /* ---------- in-run levels & perks ---------- */
 const PERKS = {
   tough:{name:'Toughness', spr:'heart', max:5, desc:'+8 max HP and heal 8.', apply(){ run.maxHp += 8; heal(8); }},
@@ -2348,7 +2427,7 @@ function place(idx, r, c){
   const now0 = performance.now();
   p.cells.forEach(([dr,dc])=>{ const i = (r+dr)*N + c+dc; cb.board[i] = p.type; cb.pops.push({i, t0:now0}); });
   if(fromStash){ const waited = p.at!=null && cb.moves > p.at; cb.stash = null; run.stashPlays = (run.stashPlays||0)+1; unlock('stasher');
-    const bonus = waited ? (has('packrat')?4:0) + 3*pk('stasher') : 0;
+    const bonus = waited ? rv('packrat',[4,7,10]) + 3*pk('stasher') : 0;
     if(bonus){ cb.shield += bonus; floatText($('#shieldStat'), `+${bonus}`, '#a8ceff'); }
     else if(has('packrat') || pk('stasher')) floatText($('#shieldStat'), 'Not aged yet', '#8a7f99'); }
   else p.used = true;
@@ -2358,7 +2437,7 @@ function place(idx, r, c){
   resolveClears();
   if(checkEnd()) return;
   if(run.pet){ petTick(); if(cb.petT===0) questAdd('pets', 1); if(checkEnd()) return; }
-  if(!cb.lastCleared && has('tidecharm')){ cb.shield += 3; floatText($('#shieldStat'), '+3', '#a8ceff'); }
+  if(!cb.lastCleared && has('tidecharm')){ const tc = rv('tidecharm',[3,5,7]); cb.shield += tc; floatText($('#shieldStat'), `+${tc}`, '#a8ceff'); }
   enemyTick();
   if(checkEnd()) return;
   if(cb.hand.every(x=>x.used)) dealHand();
@@ -2410,8 +2489,8 @@ function planClear(board){
   let pure = 0;
   rows.forEach(r=>{ if(isPure(board, [...Array(N).keys()].map(c=>r*N+c))) pure++; });
   cols.forEach(c=>{ if(isPure(board, [...Array(N).keys()].map(r=>r*N+c))) pure++; });
-  let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*((has('purist')||has('huntersmark'))?1:0.5) + pure*0.25*pk('purist');
-  if(cb.firstClear && has('ring')) mult *= 2;
+  let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*(has('purist') ? rv('purist',[1,1.25,1.5]) : has('huntersmark') ? 1 : 0.5) + pure*0.25*pk('purist');
+  if(cb.firstClear && has('ring')) mult *= rv('ring',[2,2.5,3]);
   if(cb.doubleNext) mult *= 2;
   const set = lineCells(rows, cols);
   const blasted = expandBlast(board, set);
@@ -2421,54 +2500,56 @@ function computeEffects(board, set, o){
   const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0,bomb:0,web:0};
   set.forEach(i=>{ const t = board[i]; if(t) cnt[t]++; });
   const Lv = run.lvl, mult = o.mult, lines = o.lines;
-  const swordVal = 2 + Lv.sword + pk('sharp') + (has('glassblade')?3:0) + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
-  let shieldVal = Math.max(1, 2 + Lv.shield + pk('sturdy') + (has('tower')?1:0) + (has('oath')?1:0) - (has('ironmaiden')?1:0));
+  const swordVal = 2 + Lv.sword + pk('sharp') + rv('glassblade',[3,4,6]) + rv('whetstone',[1,2,3]) + rv('bloodpact',[2,3,4]) + (mut('glass')?2:0);
+  let shieldVal = Math.max(1, 2 + Lv.shield + pk('sturdy') + rv('tower',[1,2,3]) + rv('oath',[1,1,2]) - (has('ironmaiden')?1:0));
   if(mut('frail')) shieldVal = Math.max(1, Math.floor(shieldVal/2));
-  let healVal = Math.max(1, 2 + Lv.heal + pk('mend') + (has('seedpod')?1:0) - (has('midas')?1:0));
+  let healVal = Math.max(1, 2 + Lv.heal + pk('mend') + rv('seedpod',[1,1,2]) - (has('midas')?1:0));
   let swordBonus = 0;
-  if(has('bloodlust')){ swordBonus = Math.floor((1 - Math.max(0,run.hp)/run.maxHp)*5); healVal = Math.max(1, healVal-1); }
-  const coinVal = 1 + Lv.coin + pk('greed') + (has('doubloon')?1:0) + (has('idol')?1:0) + (has('daggers')?1:0) + (setOn('gold')?2:0);
+  if(has('bloodlust')){ swordBonus = Math.floor((1 - Math.max(0,run.hp)/run.maxHp)*5*rv('bloodlust',[1,1.5,2])); if(rt('bloodlust')<3) healVal = Math.max(1, healVal-1); }
+  const coinVal = 1 + Lv.coin + pk('greed') + rv('doubloon',[1,1,2]) + rv('idol',[1,2,3]) + rv('daggers',[1,1,2]) + (setOn('gold')?2:0);
   const rb = cnt.rainbow * (plusOn('rainbow') ? 2 : 1);
-  let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + rb*2 + cnt.blast*(3 + (plusOn('blast')?5:0)) + (plusOn('coin')?cnt.coin*2:0)) * mult * (has('stormbanner')?1.2:1));
+  let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + rb*2 + cnt.blast*(3 + (plusOn('blast')?5:0) + rv('satchel',[0,2,4])) + cnt.rainbow*rv('prism',[0,1,2]) + (plusOn('coin')?cnt.coin*2:0)) * mult * (has('stormbanner')?rv('stormbanner',[1.2,1.3,1.4]):1));
   let sh  = Math.round((cnt.shield*shieldVal + rb) * mult);
   let hp  = Math.round((cnt.heal*healVal + rb) * mult);
   const poison = Math.round(cnt.venom * mult * (plusOn('venom')?2:1)) + pk('toxic');
-  const gold = Math.round(cnt.coin*coinVal*(has('midas')?2:1)*(has('cursedcrown')?1.5:1));
-  if(has('sledge')) dmg += (cnt.stone+cnt.ice)*4;
+  const gold = Math.round(cnt.coin*coinVal*(has('midas')?rv('midas',[2,2.5,3]):1)*(has('cursedcrown')?rv('cursedcrown',[1.5,1.75,2]):1));
+  if(has('sledge')) dmg += (cnt.stone+cnt.ice+(rt('sledge')>=3?cnt.web:0))*rv('sledge',[4,6,8]);
+  if(rt('warmcloak')>=2){ sh += cnt.ice*2; if(rt('warmcloak')>=3) dmg += cnt.ice*3; }
   dmg += (cnt.stone+cnt.ice+cnt.web)*2*pk('wrecker');
-  if(has('katana') && lines===1) dmg += 8;
-  if(has('doubloon')) dmg += cnt.coin;
-  if(has('gearbox')) dmg += cnt.blast*4;
-  if(has('frostshard')) dmg += cnt.ice*4;
+  if(has('katana') && lines===1) dmg += rv('katana',[8,12,18]);
+  if(has('doubloon')) dmg += cnt.coin*rv('doubloon',[1,2,3]);
+  if(has('gearbox')) dmg += cnt.blast*rv('gearbox',[4,6,9]);
+  if(has('frostshard')) dmg += cnt.ice*rv('frostshard',[4,6,8]);
   if(cb && cb.firstClear && pk('opener')) dmg += 10*pk('opener');
-  if(lines>=3){ if(has('powder')) dmg += 12; if(has('orb')) dmg += 8; }
-  if(has('crossed') && o.rows && o.cols) dmg += 8;
-  if(has('fang')) hp += 2*lines;
+  if(lines>=3 && has('powder')) dmg += rv('powder',[12,18,26]);
+  if(has('orb') && lines >= (rt('orb')>=3?2:3)) dmg += rv('orb',[8,14,20]);
+  if(has('crossed') && o.rows && o.cols) dmg += rv('crossed',[8,14,20]);
+  if(has('fang')) hp += rv('fang',[2,3,4])*lines;
   if(setOn('blood')) hp += lines;
   if(setOn('blast') && lines>=3) dmg += 10;
-  if(has('huntersmark')) dmg += 3*lines;
+  if(has('huntersmark')) dmg += rv('huntersmark',[3,5,7])*lines;
   let weakHits = 0; if(cb && cb.weak) set.forEach(i=>{ if(cb.weak.includes(i) && board[i]) weakHits++; });
   dmg += Math.round(weakHits*weakBonus()*(1+0.5*pk('weak'))) + cnt.bomb*5;
-  if(has('holysymbol')) dmg += Math.round(cnt.heal*2*mult);
+  if(has('holysymbol')) dmg += Math.round(cnt.heal*rv('holysymbol',[2,3,4])*mult);
   let perfect = true;
   for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak') && !has('frostshard')))){ perfect = false; break; } }
   if(perfect) dmg += 20 + 10*(run.floor-1) + 25*pk('finisher');
   const e = cb.enemy;
-  if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
+  if(has('scythe') && e.hp < e.maxHp*(rt('scythe')>=3?0.4:0.3)) dmg = Math.round(dmg*rv('scythe',[1.5,1.75,2]));
   if(e.passive && e.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
   const RR = {dmg, sh, hp, poison, gold};
-  run.relics.forEach(id=>{ const f = RELICS[id] && RELICS[id].eff; if(f) f(cnt, o, RR); });
+  run.relics.forEach(id=>{ const f = RELICS[id] && RELICS[id].eff; if(!f) return; const before = {...RR}; f(cnt, o, RR); const k = [1,1,1.5,2][rt(id)]; if(k>1) for(const key in RR) RR[key] = Math.round(before[key] + (RR[key]-before[key])*k); });
   return {dmg:RR.dmg, sh:RR.sh, hp:RR.hp, poison:RR.poison, gold:RR.gold, perfect, cnt, weakHits, pierce: cnt.sword>0 && plusOn('sword')};
 }
 function resolveClears(){
   const plan = planClear(cb.board);
   cb.lastCleared = !!plan;
-  if(!plan){ cb.streak = has('prayerbeads') ? Math.max(has('drum')?2:0, cb.streak-1) : has('drum') ? 2 : 0; return; }
+  if(!plan){ const floor0 = rv('drum',[2,3,4]); if(has('prayerbeads')){ if(rt('prayerbeads')<3) cb.streak = Math.max(floor0, cb.streak-1); if(rt('prayerbeads')>=2 && cb.streak>0){ cb.shield += 2; } } else cb.streak = Math.max(floor0, 0); return; }
   cb.doubleNext = false; cb.firstClear = false;
   fireCells(plan.set, plan);
   cb.streak++;
   if(cb.streak>=2){ setTimeout(()=>sfx('combo', cb ? cb.streak : 2), 120); announce(cb.streak); }
-  if(has('lute') && cb.streak>0 && cb.streak%3===0){ cb.shield += 8; heal(5); floatText($('#shieldStat'), '+8', '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
+  if(has('lute') && cb.streak>0 && cb.streak%3===0){ const ls = rv('lute',[8,12,16]); cb.shield += ls; heal(rv('lute',[5,7,10])); floatText($('#shieldStat'), `+${ls}`, '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
   if(setOn('arcane') && plan.lines>=2) run.charge = Math.min(ULT().need, run.charge+1);
 }
 /* fires every block in `set`, clears them, applies all effects */
@@ -2508,7 +2589,7 @@ function fireCells(set, o){
   if(o.pure){ unlock('pure'); bumpStats(s=>s.pures=(s.pures||0)+o.pure); questAdd('pures', o.pure); }
   if(fx.perfect) unlock('perfect');
   const C = ULT();
-  if(!o.noCharge) run.charge = Math.min(C.need, run.charge + lines*(has('battery')?1.5:1));
+  if(!o.noCharge) run.charge = Math.min(C.need, run.charge + lines*(has('battery')?rv('battery',[1.5,1.75,2]):1));
 
   const boardEl = $('#board');
   sfx('clear', lines, mult); buzz(lines>=2?30:15);
@@ -2521,12 +2602,12 @@ function fireCells(set, o){
   }
   if(o.pure) sfx('pure');
   if(lines>=3 || mult>=3){ shake(); flash('rgba(255,180,80,.35)'); }
-  if(cb.firstHit && has('ironfist') && fx.dmg>0){ fx.dmg += 15; }
+  if(cb.firstHit && has('ironfist') && fx.dmg>0){ fx.dmg += rv('ironfist',[15,25,40]); }
   if(fx.dmg>0) cb.firstHit = false;
-  if(lines>=2 && has('emberheart')){ cb.enemy.poison += 3; }
+  if(lines>=2 && has('emberheart')){ cb.enemy.poison += rv('emberheart',[3,5,8]); }
   setTimeout(()=>{ if(cb && !cb.over) relicHook('onClear', fx, o); }, 0);
   cb.enemies.forEach(e=>{ if(e.intent && e.intent.k==='doom' && e.intent.line && !e.intent.broken){ const L2 = e.intent.line; if((L2.r!=null && (o.rowIdx||[]).includes(L2.r)) || (L2.c!=null && (o.colIdx||[]).includes(L2.c))){ e.intent.broken = true; floatText($('#board'), 'Doom line cleared!', '#ffd23f', true); sfx('relic'); } } });
-  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi, {pure:o.pure, perfect:fx.perfect, pierce:fx.pierce}); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } if(has('bloodchalice') && fx.dmg>=6){ const lh = Math.floor(fx.dmg/6); heal(lh); setTimeout(()=>floatText(hpEl(), `+${lh}`, '#ff8a9a'), 150); } }
+  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi, {pure:o.pure, perfect:fx.perfect, pierce:fx.pierce}); if(has('leech') && fx.dmg>=rv('leech',[8,6,4])){ const lh = Math.floor(fx.dmg/rv('leech',[8,6,4])); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } if(has('bloodchalice') && fx.dmg>=rv('bloodchalice',[6,5,4])){ const lh = Math.floor(fx.dmg/rv('bloodchalice',[6,5,4])); heal(lh); setTimeout(()=>floatText(hpEl(), `+${lh}`, '#ff8a9a'), 150); } }
   if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText(eArt(), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
   if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
   if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); }
@@ -2570,11 +2651,11 @@ function damageEnemy(n, noThorns, pierce, target){
   if(!noThorns && d>0 && e.passive && e.passive.id==='thorns' && e.hp>0) hitPlayer(e.passive.v, true);
 }
 function hitPlayer(n, small){
-  if(cb.mirror && !small){ cb.mirror = false; floatText(hpEl(), 'Reflected!', '#a8ceff'); sfx('block'); return; }
-  if(has('vampcape') && !small && cb.enemy.hp>0){ cb.enemy.hp = Math.max(1, cb.enemy.hp-2); }
-  let v = n; if(has('thickskin')) v = Math.max(0, v-1);
+  if(cb.mirror && !small){ cb.mirror = (+cb.mirror||1)-1; floatText(hpEl(), 'Reflected!', '#a8ceff'); sfx('block'); if(rt('mirror')>=2 && cb.enemy && cb.enemy.hp>0) damageEnemy(Math.round(n/2), true); return; }
+  if(has('vampcape') && !small && cb.enemy.hp>0){ cb.enemy.hp = Math.max(1, cb.enemy.hp-rv('vampcape',[2,4,6])); }
+  let v = n; if(has('thickskin')) v = Math.max(0, v-rv('thickskin',[1,2,3]));
   const absorbed = Math.min(cb.shield, v); cb.shield -= absorbed; v -= absorbed;
-  if(absorbed>0 && has('spikes')) damageEnemy(5, true);
+  if(absorbed>0 && has('spikes')) damageEnemy(rv('spikes',[5,8,12]), true);
   if(absorbed>0 && pk('thorns') && !small) damageEnemy(3*pk('thorns'), true);
   const wasSafe = run.hp/run.maxHp > 0.3;
   run.hp -= v;
@@ -2624,9 +2705,10 @@ function enemyAct(e){
       const took = Math.min(run.gold, it.v); run.gold -= took; floatText($('#goldWrap'), `-${took}`, '#ff8a80'); sfx('steal'); break; }
     case 'bomb': {
       const empty = []; cb.board.forEach((t,i)=>{ if(!t) empty.push(i); });
-      shuffle(empty).slice(0, it.v).forEach(i=>{ cb.board[i] = 'bomb'; cb.bombs[i] = 4 + (has('hourglass')?1:0); cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); });
+      shuffle(empty).slice(0, it.v).forEach(i=>{ cb.board[i] = 'bomb'; cb.bombs[i] = 4 + (rt('hourglass')>=2?1:0); cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); });
       floatText($('#board'), `Bombs x${it.v}!`, '#ff8a3c'); sfx('rubble'); break; }
     case 'chain': {
+      if(rt('stoneward')>=3){ floatText($('#board'), 'Warded!', '#c9c2d4'); sfx('block'); break; }
       const taken = new Set(cb.chains.map(c=>c.i)), filled = []; cb.board.forEach((t,i)=>{ if(t && !JUNK(t) && !taken.has(i)) filled.push(i); });
       const pickd = shuffle(filled).slice(0, it.v); pickd.forEach(i=>cb.chains.push({i, t:6}));
       floatText($('#board'), pickd.length?`Chained x${pickd.length}`:'Nothing to chain', '#c9d2df'); sfx('armor'); break; }
@@ -2646,8 +2728,8 @@ function checkStuck(){
   while(!cb.over && !cb.hand.some(p=>!p.used && fitsAnyRot(p)) && !(cb.stash && fitsAnyRot(cb.stash)) && guard++<5){
     toast('<b>Cave-in!</b> No room to move. The ceiling collapses.', 'rock');
     sfx('cavein'); flash('rgba(120,100,90,.5)');
-    hitPlayer(Math.round((4 + run.floor*2) * (has('boots')?0.5:1)));
-    const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0, has('boots')?3:2);
+    hitPlayer(Math.round((4 + run.floor*2) * (has('boots')?[1,0.5,0.5,0][rt('boots')]:1)));
+    const rows = [...Array(N).keys()].map(r=>[r, cb.board.slice(r*N,r*N+N).filter(Boolean).length]).sort((a,b)=>b[1]-a[1]).slice(0, has('boots')?(rt('boots')>=3?4:3):2);
     const now = performance.now();
     rows.forEach(([r])=>{ for(let c=0;c<N;c++){ const i=r*N+c; if(cb.board[i]){ shards(i, cb.board[i], 4); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; delete cb.bombs[i]; } } });
     const cleared = new Set(rows.map(x=>x[0])); cb.chains = cb.chains.filter(ch=>!cleared.has(Math.floor(ch.i/N)));
@@ -2666,7 +2748,7 @@ function checkEnd(){
     e.didSplitDeath = true; const m = makeEnemy({name:`${e.name.replace(/^The /,'')} Shard`, spr:e.spr, minion:true, moves:e.moves.map(x=>({...x, v: x.k==='shuffle'||x.k==='flee' ? x.v : Math.round(x.v*0.6)}))}, Math.round(e.maxHp*0.35));
     nextIntent(m); m.intent.left++; cb.enemies[1] = m; setTimeout(()=>{ renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
-  fresh.forEach(e=>{ e.dead = true; run.kills++; relicHook('onKill', e); if(has('laurel')){ run.maxHp += 2; run.hp += 2; } markKill(e.name); unlock('first'); questAdd('kills', 1);
+  fresh.forEach(e=>{ e.dead = true; run.kills++; relicHook('onKill', e); if(has('laurel')){ const lh = rv('laurel',[2,3,4]); run.maxHp += lh; run.hp += lh; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
     if(e.minion) unlock('minion');
     const el = eArt(e); if(el){ el.classList.add('dead'); floatText(el, 'Defeated!', '#ffcf7a', true); burstAt(el, ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30); }
@@ -2684,6 +2766,8 @@ function checkEnd(){
     const xp = {combat:10, elite:20, boss:32, goblin:8}[kind] || 10;
     gainXP(xp + (cb.enemies.length>1 ? 6 : 0));
     gainPetXP({combat:1, elite:2, boss:3, goblin:1}[kind] || 1);
+    relicFightXP();
+    if(kind==='boss' && (run.floor===2 || run.floor===4)){ run.slotBonus = (run.slotBonus||0)+1; setTimeout(()=>toast(`<b>+1 relic slot</b><br>You can now equip ${relicCap()} relics.`, 'r_treasure', 3000), 1800); }
     run.carry = plusOn('shield') ? Math.min(30, Math.floor(cb.shield/2)) : 0;
     if(kind==='boss') run.bossRelic = 1;
     if(pk('scav')) run.gold += 6*pk('scav');
@@ -2714,7 +2798,7 @@ function useUlt(){
   if(run.charge < C.need){ toast(`<b>${C.name}</b><br>${C.desc}<br><span class="muted">Charge: ${Math.floor(run.charge)}/${C.need} lines cleared.</span>`, C.spr); return; }
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   run.charge = 0; sfx('ult'); flash('rgba(255,200,120,.5)'); buzz(60); questAdd('ults', 1);
-  if(has('bloodengine')){ run.hp = Math.max(1, run.hp-4); floatText(hpEl(), '-4', '#ff6a6f'); }
+  if(has('bloodengine')){ const bc = rv('bloodengine',[4,3,2]); run.hp = Math.max(1, run.hp-bc); floatText(hpEl(), `-${bc}`, '#ff6a6f'); }
   floatText($('#board'), C.name.toUpperCase()+'!', '#ffcf7a', true);
   const now = performance.now();
   if(run.cls==='knight'){
@@ -2908,7 +2992,8 @@ $('#gearBtn').innerHTML = img('gear',26);
 $('#rerollBtn').onclick = ()=>{
   if(!cb || cb.rerolls<=0 || cb.over) return;
   cb.rerolls--; sfx('rotate');
-  if(has('goldendice')){ run.gold += 5; floatText($('#goldWrap'), '+5', '#ffe58a'); }
+  if(has('goldendice')){ const gd = rv('goldendice',[5,8,12]); run.gold += gd; floatText($('#goldWrap'), `+${gd}`, '#ffe58a'); }
+  if(rt('dice')>=2){ cb.shield += 2; }
   cb.hand = cb.hand.map(p=>p.used?p:newPiece());
   checkStuck();
   if(!checkEnd()){ renderHUD(); saveRun(); }
