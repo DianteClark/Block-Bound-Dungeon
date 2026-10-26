@@ -324,6 +324,27 @@ const ART = {
   t_net: () => ART.acc_web() + c(50,50,10,'#c98a4b'),
   t_darts: () => [[-30,'#45c674'],[0,'#a259e6'],[30,'#45c674']].map(([d,col])=>`<g transform="rotate(${d} 50 80)">`+ln('M50 80 L50 20','#c9c2d4',4)+p('M44 26 L50 6 L56 26Z','#e4ebf3')+p('M42 70 L50 62 L58 70 L58 84 L42 84Z',col)+`</g>`).join(''),
   t_caltrops: () => [[30,40],[66,34],[48,68]].map(([x,y])=>p(star(x,y,16,6,4),'#8a94a8')+cn(x,y,3,'#c9c2d4')).join(''),
+
+  /* ---------- category frames: every trophy, perk, intent... gets its own framed icon ---------- */
+  frame_medal: () => p('M28 0 L44 0 L52 30 L38 36Z','#ef5258') + pn('M36 0 L44 0 L50 26 L46 28Z','#b8323a') + p('M72 0 L56 0 L48 30 L62 36Z','#4a98ff') + pn('M64 0 L56 0 L50 26 L54 28Z','#1c4c99')
+    + c(50,60,38,'#f7c936') + pn('M50 22 A38 38 0 0 1 50 98 A30 30 0 0 0 50 22Z','#c99a0f') + c(50,60,38,'none') + c(50,60,29,'#2a1e10') + hl(30,40,4,9,-30,.5),
+  frame_perk: () => p('M50 2 L92 26 L92 74 L50 98 L8 74 L8 26Z','#4a98ff') + pn('M50 2 L92 26 L92 74 L50 98Z','#2f6fd0') + po('M50 2 L92 26 L92 74 L50 98 L8 74 L8 26Z') + p('M50 14 L82 32 L82 68 L50 86 L18 68 L18 32Z','#14203a') + p(star(50,4,7,3),'#ffd23f'),
+  frame_boon: () => r(6,6,88,88,24,'#45c674') + pn('M94 30 L94 70 C94 84 84 94 70 94 L50 94 C70 80 80 60 80 40 C80 26 76 14 70 6 C84 6 94 16 94 30Z','#2a9a58') + r(6,6,88,88,24,'none') + r(16,16,68,68,16,'#12301e'),
+  frame_upgrade: () => p('M30 4 L70 4 L96 30 L96 70 L70 96 L30 96 L4 70 L4 30Z','#a9b4c4') + pn('M70 4 L96 30 L96 70 L70 96 L50 96 L50 4Z','#7d8899') + po('M30 4 L70 4 L96 30 L96 70 L70 96 L30 96 L4 70 L4 30Z') + p('M34 14 L66 14 L86 34 L86 66 L66 86 L34 86 L14 66 L14 34Z','#20262f') + [[12,50],[88,50],[50,9],[50,91]].map(([x,y])=>cn(x,y,2.4,'#4a5262')).join(''),
+  frame_skill: () => r(10,2,80,96,16,'#8a3fd1') + pn('M90 18 L90 82 C90 91 83 98 74 98 L60 98 C76 86 80 60 80 40 C80 22 76 10 70 2 L74 2 C83 2 90 9 90 18Z','#6a2c9e') + r(10,2,80,96,16,'none') + r(18,12,64,76,10,'#24123a') + [[18,8],[82,8],[18,92],[82,92]].map(([x,y])=>cn(x,y,3,'#c77dff')).join(''),
+  frame_quest: () => r(8,16,84,68,6,'#e8d4b0') + pn('M60 16 L92 16 L92 84 L60 84 C70 70 72 30 60 16Z','#d4bc94') + r(8,16,84,68,6,'none') + e(10,50,7,36,'#c9a878') + e(90,50,7,36,'#c9a878') + r(20,22,60,56,4,'#f6ecd6'),
+  frame_intent: () => c(50,50,46,'#ff8a3c') + pn('M50 4 A46 46 0 0 1 50 96 A38 38 0 0 0 50 4Z','#c95a1a') + c(50,50,46,'none') + c(50,50,37,'#2a1210'),
+  frame_trick: () => c(50,50,44,'#3ac8b8') + pn('M50 6 A44 44 0 0 1 50 94 A36 36 0 0 0 50 6Z','#1f8a7e') + c(50,50,44,'none') + c(50,50,35,'#0f2a28') + [[14,14],[86,14],[14,86],[86,86]].map(([x,y])=>c(x,y,6,'#3ac8b8')).join(''),
+  frame_curse: () => p('M50 2 L98 50 L50 98 L2 50Z','#a8203a') + pn('M50 2 L98 50 L50 98Z','#7a1028') + po('M50 2 L98 50 L50 98 L2 50Z') + p('M50 16 L84 50 L50 84 L16 50Z','#24060e'),
+  frame_rule: () => p('M14 6 L86 6 L86 66 L50 96 L14 66Z','#c77dff') + pn('M50 6 L86 6 L86 66 L50 96Z','#8a3fd1') + po('M14 6 L86 6 L86 66 L50 96 L14 66Z') + p('M24 16 L76 16 L76 62 L50 84 L24 62Z','#22103a'),
+  frame_mut: () => p(star(50,50,48,40,12),'#ff9d3c') + c(50,50,36,'#2a1a10'),
+  frame_opt: () => c(50,50,46,'#a0703a') + pn('M50 4 A46 46 0 0 1 50 96 A38 38 0 0 0 50 4Z','#7a5228') + c(50,50,46,'none') + c(50,50,38,'#2e1e10'),
+  frame_ult: () => p(star(50,50,49,36,14),'#ffd23f') + pn(star(50,50,40,30,14),'#ffb020') + c(50,50,33,'#3a240a'),
+  /* ---------- generic action icons ---------- */
+  i_leave: () => r(26,10,48,84,6,'#6b4426') + pn('M50 10 L74 10 L74 94 L50 94Z','#5a3820') + r(26,10,48,84,6,'none') + r(34,18,32,70,4,'#2a1a10') + p('M34 18 L58 26 L58 92 L34 88Z','#a0703a') + c(52,56,3,'#f7c936') + ln('M80 56 L96 56 M88 48 L96 56 L88 64','#86e6a8',4),
+  acc_collar: () => p('M28 76 C40 84 60 84 72 76 L72 84 C60 92 40 92 28 84Z','#ef5258') + c(50,90,6,'#f7c936') + cn(50,90,2,'#c99a0f'),
+  ev_egg: () => e(50,58,30,38,'#f3ead6') + pn('M50 20 C72 20 80 44 80 60 C80 80 66 96 50 96 C64 84 70 70 70 56 C70 40 62 26 50 20Z','#d9ccb0') + e(50,58,30,38,'none') + [[38,44,5],[60,36,4],[62,66,6],[40,76,4],[54,54,3]].map(([x,y,r2])=>cn(x,y,r2,'#8a6aa8')).join('') + hl(38,34,5,9,-25,.6) + ln('M30 96 C40 88 60 88 70 96','#8a6a4a',5),
+  ev_cart: () => p('M10 40 L90 40 L82 72 L18 72Z','#a0703a') + pn('M60 40 L90 40 L82 72 L56 72Z','#7a5228') + po('M10 40 L90 40 L82 72 L18 72Z') + ink('M24 48 L76 48 M22 58 L78 58',3) + c(28,80,10,'#6b4426') + cn(28,80,3,K) + c(72,80,10,'#6b4426') + cn(72,80,3,K) + r(30,22,18,18,3,'#c98a4b') + r(52,26,16,14,3,'#e8d4b0') + scaled(0.32, 60, 4, ()=>ART.potion_health()),
   /* ---------- floor bosses (new) ---------- */
   vampirelord: () => p('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z','#a8203a') + pn('M68 58 L86 44 L92 96 L72 96Z','#7a1028') + po('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z')
     + p('M26 96 L30 66 L50 74 L70 66 L74 96Z','#2a2233') + p('M44 70 L50 90 L56 70Z','#f3ead6') + c(50,84,4.5,'#f7c936')
@@ -549,6 +570,41 @@ const ART = {
 const SVG_CACHE = {};
 /* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
+  ev_fountain:{base:'pool', hue:160, over:[['acc_spores',1,0,0]]},
+  ev_sparring:{base:'dummy', hue:30, over:[['daggers',0.42,56,4]]},
+  ev_smith:{base:'anvil', hue:200, over:[['hammer',0.45,52,-4]]},
+  ev_altar:{base:'shrine', hue:240, under:['acc_runes']},
+  ev_stray:{base:'rat', hue:30, over:['acc_collar']},
+  ev_peddler:{base:'goblin', hue:60, over:[['bagicon',0.42,54,52]]},
+  ev_brew:{base:'cauldron', hue:100, under:['acc_spores']},
+  ev_idol:{base:'idol', m:[0.5,0.2,0.4,0.05, 0.2,0.3,0.4,0.02, 0.4,0.2,0.7,0.06], under:['acc_flames']},
+  ev_gambler:{base:'goblin', hue:300, over:[['dice',0.4,56,54]]},
+  ev_chest:{base:'r_treasure', m:[0.6,0.2,0.2,0.04, 0.3,0.4,0.2,0.02, 0.2,0.2,0.6,0.08], over:[['acc_spores',0.9,5,0]]},
+  ev_hermit:{base:'mage', m:[0.6,0.4,0.1,0.04, 0.3,0.7,0.1,0.06, 0.2,0.3,0.5,0.04], over:[['book',0.36,58,56]]},
+  ev_wounded:{base:'knight', m:[0.7,0.2,0.1,0.02, 0.2,0.6,0.1,0.02, 0.2,0.2,0.6,0.02], over:[['heal_icon',0.34,60,58]]},
+  ev_fortune:{base:'orb', hue:200, under:['acc_veil']},
+  ev_bonedice:{base:'dice', m:[0.9,0.1,0,0.08, 0.1,0.85,0,0.06, 0,0.1,0.7,0.04], under:['acc_skulls']},
+  ev_bridge:{base:'rock', hue:20, over:[['coin',0.42,54,54]]},
+  pet_bat0:{base:'bat', over:['acc_collar']},
+  pet_slime0:{base:'slime', over:['acc_collar']},
+  pet_turtle0:{base:'turtle', over:['acc_collar']},
+  pet_wisp0:{base:'ghost', over:['acc_collar']},
+  pet_rat0:{base:'rat', over:['acc_collar']},
+  pet_spider0:{base:'spider', over:['acc_collar']},
+  pet_imp0:{base:'imp', over:['acc_collar']},
+  pet_owl0:{base:'owl', over:['acc_collar']},
+  mn_skeleton:{base:'skeleton', hue:200, bs:[0.86,7,14]},
+  mn_slime:{base:'slime', hue:300, bs:[0.8,10,20]},
+  rl_crossed:{base:'r_combat', hue:170},
+  rl_hearth:{base:'r_rest', hue:320},
+  rl_toxin:{base:'potion_venom', hue:80, under:['acc_spores']},
+  rl_powder:{base:'bomb', m:[0.5,0.3,0.1,0.02, 0.3,0.4,0.1,0.02, 0.2,0.2,0.3,0], under:['acc_flames']},
+  rl_prism:{base:'gem', hue:280},
+  rl_purist:{base:'gem', hue:170, under:[['acc_halo',1,0,4]]},
+  rl_tower:{base:'shield', m:[0.6,0.2,0.2,0.04, 0.2,0.6,0.2,0.04, 0.2,0.2,0.7,0.06]},
+  rl_battery:{base:'flame', hue:260},
+  rl_dice:{base:'dice', hue:300},
+  rl_sledge:{base:'hammer', hue:30, bs:[0.9,5,5]},
   p_frost:{base:'potion_health', hue:200},
   p_rage:{base:'potion_health', hue:20},
   p_purge:{base:'potion_health', m:[0.9,0.1,0.1,0.1, 0.1,0.9,0.1,0.1, 0.1,0.1,0.9,0.12]},
@@ -771,9 +827,16 @@ function recolor(svg, V){
 const OUT = 6.5;
 const SIL = (cls, col, w) => `.${cls} *{fill:${col}!important;stroke:${col}!important;stroke-width:${w}px!important;opacity:1!important;stroke-linejoin:round!important;stroke-linecap:round!important}`;
 const STICKER_CSS = `<style>${SIL('sk','#000',OUT*2+1)}${SIL('se','#d9d1e4',OUT*2+2.6)}${SIL('sw','#ffffff',OUT*2)}</style>`;
+/* prefix -> [frame, subject scale, x, y] */
+const FRAME_FOR = {
+  tr_:['frame_medal',0.5,25,35], pk_:['frame_perk',0.56,22,22], bn_:['frame_boon',0.56,22,22], ug_:['frame_upgrade',0.56,22,22],
+  sk_:['frame_skill',0.56,22,22], qs_:['frame_quest',0.46,27,27], in_:['frame_intent',0.62,19,19], tk_:['frame_trick',0.56,22,22],
+  cu_:['frame_curse',0.5,25,25], ru_:['frame_rule',0.5,25,18], mu_:['frame_mut',0.56,22,22], op_:['frame_opt',0.6,20,20], ul_:['frame_ult',0.56,22,22],
+};
 function innerArt(name){
   if(!VARIANTS[name] && !ART[name]){
     if(name.startsWith('leg_')) VARIANTS[name] = {base:name.slice(4), m:[1.15,0.1,0,0.06, 0.05,0.95,0,0.04, 0,0.05,0.85,0.02], bs:[0.86,7,14], under:['acc_flames'], over:[['acc_crown',0.34,33,-6]]};
+    else if(FRAME_FOR[name.slice(0,3)]){ const f = FRAME_FOR[name.slice(0,3)]; VARIANTS[name] = {base:f[0], over:[[name.slice(3), f[1], f[2], f[3]]]}; }
     else if(name.startsWith('evo_')) VARIANTS[name] = {base:name.slice(4), m:[1.05,0.15,0,0.08, 0.1,1,0.05,0.06, 0.1,0.1,1.1,0.08], bs:[0.88,6,12], under:['acc_runes'], over:[['acc_halo',0.7,15,-4]]};
   }
   const V = VARIANTS[name];
@@ -782,7 +845,7 @@ function innerArt(name){
   if(!baseFn) throw new Error('missing art '+V.base);
   let inner = V.bs ? scaled(V.bs[0], V.bs[1], V.bs[2], baseFn) : baseFn();
   if(V.hue!=null || V.m) inner = recolor(inner, V);
-  const part = q => typeof q==='string' ? ART[q]() : scaled(q[1], q[2], q[3], ART[q[0]]);
+  const part = q => typeof q==='string' ? innerArt(q) : scaled(q[1], q[2], q[3], ()=>innerArt(q[0]));
   if(V.under) inner = V.under.map(part).join('') + inner;
   if(V.over) inner += V.over.map(part).join('');
   return inner;

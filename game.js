@@ -574,7 +574,6 @@ const petPow = () => (1 + 0.4*petTier()) * (petHas('strong') ? 1.5 : 1);
 const petKeys = () => [run.pet, run.pet2].filter(k=>k && PETS[k]);
 const petOn = k => !!run && (run.pet===k || run.pet2===k);
 const petNeed = i => { const k = petKeys()[i]; if(!k) return 99; return Math.max(2, PETS[k].need - petTier() - (setOn('wild')?1:0) - rv('whistle',[1,1,2]) - (petHas('swift')?1:0)); };
-const petEvery = () => petNeed(0);
 const petForm = (k, t) => { const P = PETS[k || run.pet]; const f = P.forms[t==null ? petTier() : t]; return {name:f[0], spr:f[1]}; };
 const petDesc = (k, t) => `${PETS[k].role}. ${PETS[k].passive} Ready: ${PETS[k].desc(t==null ? petPow() : 1 + 0.4*t)}` + (k===run.pet && run.petUps && run.petUps.length ? ' Tricks: ' + run.petUps.map(u=>PET_UPS[u].name).join(', ') + '.' : '');
 function setPet(k){
@@ -688,7 +687,7 @@ function questAdd(key, n){
   const Q = QUESTS[key], before = q.prog[key]||0;
   q.prog[key] = Q.max ? Math.max(before, n) : before + n;
   store.set('quests', q);
-  if(before < Q.goal && q.prog[key] >= Q.goal) setTimeout(()=>{ sfx('trophy'); toast(`<b>Quest complete!</b><br>${Q.text}. Claim your reward on the title screen.`, 'scroll', 3000); }, 400);
+  if(before < Q.goal && q.prog[key] >= Q.goal) setTimeout(()=>{ sfx('trophy'); toast(`<b>Quest complete!</b><br>${Q.text}. Claim your reward on the title screen.`, Q.spr, 3000); }, 400);
 }
 const QUEST_REWARD = 25, QUEST_BONUS = 30;
 
@@ -755,7 +754,7 @@ function unlock(id){
   const a = store.get('ach', {}); if(a[id]) return;
   a[id] = Date.now(); store.set('ach', a);
   const rw = achReward(id);
-  setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}${rw?`<br><span style="color:#c8fbff">Unlocked in the Bazaar: ${rw}</span>`:''}`, 'trophy', rw?4200:3200); }, 500);
+  setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}${rw?`<br><span style="color:#c8fbff">Unlocked in the Bazaar: ${rw}</span>`:''}`, ACH[id].spr, rw?4200:3200); }, 500);
 }
 
 /* ================= mutators ================= */
@@ -926,7 +925,7 @@ function snapFight(){
   return {kind:cb.kind, board:cb.board.slice(), hand:cb.hand.map(p=>({cells:p.cells, h:p.h, w:p.w, type:p.type, used:!!p.used})),
     stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
-    tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
+    tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, firstHit:cb.firstHit,
     enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, turret:cb.turret||0, windUsed:!!cb.windUsed, pthorns:cb.pthorns||0, rageBonus:cb.rageBonus||0, reviveAt:cb.reviveAt||0, echoNext:cb.echoNext||null, keepStreak:!!cb.keepStreak, petCharge:cb.petCharge||null, golemHit:!!cb.golemHit, nullLeft:cb.nullLeft||0, timeLeft:cb.timeLeft||0, cloakLeft:cb.cloakLeft||0, thunder:cb.thunder||0, echoUsed:!!cb.echoUsed, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
 }
 function saveRun(){
@@ -1154,14 +1153,14 @@ function show(which){
   $('#combat').hidden = which!=='combat';
   $('#view').hidden = which==='combat';
   if(which==='combat'){ $('#view').innerHTML = ''; bump($('#combat'),'enter'); }
-  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills','journal','wardrobe'].includes(which);
+  $('#runbar').hidden = !run || ['title','heroes','codex','trophies','skills','journal','bazaar'].includes(which);
   selPotion = -1;
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   document.documentElement.classList.toggle('lock', which==='combat');
   if(run) renderRunbar();
   updateDanger();
   if(run) Sound.floor(run.floor<=FLOORS ? run.floor : 2 + ((run.floor-6) % 3) + 1);
-  Sound.music(['title','heroes','codex','trophies','skills','journal','wardrobe'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':run&&run.floor>FLOORS?'endless':'combat') : which==='shop' ? 'shop' : which==='rest' ? 'rest' : 'map');
+  Sound.music(['title','heroes','codex','trophies','skills','journal','bazaar'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':run&&run.floor>FLOORS?'endless':'combat') : which==='shop' ? 'shop' : which==='rest' ? 'rest' : 'map');
   window.scrollTo(0,0);
 }
 function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
@@ -1450,7 +1449,7 @@ function titleScreen(){
       <button class="navb" id="codexBtn">${img('book',36)}<b>Codex</b><small>Bosses, relics &amp; perks</small></button>
       <button class="navb" id="trophyBtn">${img('trophy',36)}<b>Trophies</b><small>${Object.keys(ach).length} / ${Object.keys(ACH).length}</small></button>
       <button class="navb" id="journalBtn">${img('scroll',36)}<b>Journal</b><small>${st.runs} runs</small></button>
-      <button class="navb" id="wardBtn">${img('palette',36)}<b>Bazaar</b><small>Skins, bursts, trails and boards</small></button>
+      <button class="navb" id="bazBtn">${img('palette',36)}<b>Bazaar</b><small>Skins, bursts, trails and boards</small></button>
       <button class="navb" id="setBtn2">${img('gear',36)}<b>Settings</b><small>Sound, display, data</small></button>
     </div>
     ${st.runs ? '' : `<div class="card">${howToHTML()}</div>`}
@@ -1463,7 +1462,7 @@ function titleScreen(){
   $('#skillBtn').onclick = ()=>{ sfx('click'); skillScreen(); };
   $('#trophyBtn').onclick = ()=>{ sfx('click'); trophyScreen(); };
   $('#journalBtn').onclick = ()=>{ sfx('click'); journalScreen(); };
-  $('#wardBtn').onclick = ()=>{ sfx('click'); wardrobeScreen(); };
+  $('#bazBtn').onclick = ()=>{ sfx('click'); bazaarScreen(); };
   $('#setBtn2').onclick = openSettings;
   const wb = $('#weeklyBtn'); if(wb) wb.onclick = ()=>{ if(store.get('save', null) && wb.dataset.armed!=='1'){ wb.dataset.armed = '1'; wb.textContent = 'Tap again: replaces your saved run'; sfx('warn'); return; }
     const W = weeklyInfo(); sfx('door'); newRun(W.cls, {daily:'W'+W.key, weekly:W.key, rules:W.rules, muts:W.muts}); };
@@ -1493,8 +1492,8 @@ function checkThemeUnlocks(){
   Object.keys(THEMES).forEach(id=>{ if(!seenT[id] && !THEMES[id].cost && !THEMES[id].ach && themeOk(id)){ seenT[id] = 1; fresh = id; } });
   if(fresh){ store.set('themesSeen', seenT); unlock('decorator'); setTimeout(()=>toast(`<b>New board theme!</b><br>${THEMES[fresh].name} is now in the Bazaar under Boards.`, 'palette', 3200), 1400); }
 }
-function wardrobeScreen(tab){
-  show('wardrobe'); tab = tab || store.get('bazTab', 'skin'); store.set('bazTab', tab);
+function bazaarScreen(tab){
+  show('bazaar'); tab = tab || store.get('bazTab', 'skin'); store.set('bazTab', tab);
   const C = cosm(), cur = store.get('theme','stone');
   const tabs = [['skin','Blocks','r_combat'],['burst','Bursts','blastblock'],['trail','Trails','flame'],['theme','Boards','palette']];
   let body = '';
@@ -1517,7 +1516,7 @@ function wardrobeScreen(tab){
     <button class="btn ghost" id="backBtn">Back</button>`);
   $('#view').querySelectorAll('.skinprev').forEach(cv2=>{ const c2 = cv2.getContext('2d'), sk = cv2.dataset.s, d = Math.min(2, window.devicePixelRatio||1);
     cv2.width = 132*d; cv2.height = 66*d; c2.scale(d,d); ['sword','shield','heal','coin'].forEach((t,i)=>c2.drawImage(blockCanvas(t, 30*d, sk), 4+i*31, 18, 30, 30)); });
-  $('#view').querySelectorAll('.baztabs .tab').forEach(b=>b.onclick=()=>{ sfx('click'); wardrobeScreen(b.dataset.tab); });
+  $('#view').querySelectorAll('.baztabs .tab').forEach(b=>b.onclick=()=>{ sfx('click'); bazaarScreen(b.dataset.tab); });
   const spend = (cost, key, name, after)=>{
     if(soulShards() < cost){ sfx('invalid'); toast(`<b>${name}</b><br>Costs ${cost} Soul Shards. You have ${soulShards()}.`, 'shard'); return; }
     const c = cosm(); c.owned[key] = 1; store.set('cos', c); store.set('shards', soulShards() - cost); unlock('collector');
@@ -1525,11 +1524,11 @@ function wardrobeScreen(tab){
   };
   $('#view').querySelectorAll('.theme[data-t]').forEach(b=>b.onclick=()=>{ const id = b.dataset.t, T = THEMES[id];
     if(!themeOk(id)){
-      if(T.cost){ if(b.dataset.armed!=='1'){ b.dataset.armed = '1'; b.querySelector('small').textContent = `Tap again: ${T.cost} Soul Shards`; sfx('warn'); return; } return spend(T.cost, 't_'+id, T.name, ()=>{ store.set('theme', id); wardrobeScreen('theme'); }); }
+      if(T.cost){ if(b.dataset.armed!=='1'){ b.dataset.armed = '1'; b.querySelector('small').textContent = `Tap again: ${T.cost} Soul Shards`; sfx('warn'); return; } return spend(T.cost, 't_'+id, T.name, ()=>{ store.set('theme', id); bazaarScreen('theme'); }); }
       sfx('invalid'); toast(`<b>${T.name}</b><br>Unlock: ${T.ach ? `the trophy ${ACH[T.ach].name} (${ACH[T.ach].desc})` : T.unlock.text}.`, 'palette'); return; }
-    store.set('theme', id); sfx('relic'); wardrobeScreen('theme'); });
+    store.set('theme', id); sfx('relic'); bazaarScreen('theme'); });
   $('#view').querySelectorAll('.theme[data-c]').forEach(b=>b.onclick=()=>{ const id = b.dataset.c, I = COSM[tab].items[id];
-    const equip = ()=>{ const c = cosm(); c[tab] = id; store.set('cos', c); syncCosmetics(); sfx('relic'); demoCos(tab, id, b); setTimeout(()=>wardrobeScreen(tab), tab==='skin'?0:650); };
+    const equip = ()=>{ const c = cosm(); c[tab] = id; store.set('cos', c); syncCosmetics(); sfx('relic'); demoCos(tab, id, b); setTimeout(()=>bazaarScreen(tab), tab==='skin'?0:650); };
     if(cosOwned(tab, id)) return equip();
     if(I.ach){ sfx('invalid'); demoCos(tab, id, b); toast(`<b>${I.name}</b><br>Earn the trophy <b>${ACH[I.ach].name}</b>: ${ACH[I.ach].desc}`, 'trophy', 3200); return; }
     if(b.dataset.armed!=='1'){ b.dataset.armed = '1'; b.querySelector('small').textContent = `Tap again: ${I.cost} Soul Shards`; sfx('warn'); demoCos(tab, id, b); return; }
@@ -1972,95 +1971,95 @@ function forgeScreen(){
 }
 const EVENTS = [
   ()=>({spr:'shrine', title:'Ancient Shrine', text:'A blood-stained altar hums with old power.', opts:[
-    {name:'Offer blood', spr:'drop', desc:'Lose 10 HP. Gain a relic.', ok:()=>run.hp>10, go(){ run.hp-=10; sfx('hurt'); const [id]=relicOffers(1); if(id) gainRelic(id); }},
-    {name:'Pray', spr:'heal_icon', desc:'Heal 10 HP.', go(){ heal(10); sfx('heal'); }},
+    {name:'Offer blood', spr:'op_bloodchalice', desc:'Lose 10 HP. Gain a relic.', ok:()=>run.hp>10, go(){ run.hp-=10; sfx('hurt'); const [id]=relicOffers(1); if(id) gainRelic(id); }},
+    {name:'Pray', spr:'op_holy', desc:'Heal 10 HP.', go(){ heal(10); sfx('heal'); }},
   ]}),
   ()=>({spr:'pool', title:'Glittering Pool', text:'Coins shimmer at the bottom of a black pool. Something moves below.', opts:[
-    {name:'Reach in', spr:'coin', desc:'60%: +45 gold. 40%: lose 9 HP.', go(){ if(Math.random()<0.6){ run.gold+=45; sfx('coin'); toast('You grab a fistful of gold! <b>+45</b>','coin'); } else { run.hp-=9; sfx('hurt'); toast('Something bites! <b>-9 HP</b>','fang'); } }},
-    {name:'Walk away', spr:'r_event', desc:'Nothing happens.', go(){} },
+    {name:'Reach in', spr:'op_glove', desc:'60%: +45 gold. 40%: lose 9 HP.', go(){ if(Math.random()<0.6){ run.gold+=45; sfx('coin'); toast('You grab a fistful of gold! <b>+45</b>','coin'); } else { run.hp-=9; sfx('hurt'); toast('Something bites! <b>-9 HP</b>','fang'); } }},
+    {name:'Walk away', spr:'op_i_leave', desc:'Nothing happens.', go(){} },
   ]}),
-  ()=>({spr:'anvil', title:'Wandering Smith', text:'A dwarf with a portable anvil offers his services.', opts:[
-    {name:'Reforge armor', spr:'chainmail', desc:'Pay 30 gold: +8 max HP.', ok:()=>run.gold>=30, go(){ run.gold-=30; run.maxHp+=8; run.hp+=8; sfx('armor'); }},
-    {name:'Hone blades', spr:'sword', desc:'Pay 40 gold: Sword blocks +1 damage.', ok:()=>run.gold>=40, go(){ run.gold-=40; run.lvl.sword++; sfx('armor'); }},
-    {name:'No thanks', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_smith', title:'Wandering Smith', text:'A dwarf with a portable anvil offers his services.', opts:[
+    {name:'Reforge armor', spr:'op_chainmail', desc:'Pay 30 gold: +8 max HP.', ok:()=>run.gold>=30, go(){ run.gold-=30; run.maxHp+=8; run.hp+=8; sfx('armor'); }},
+    {name:'Hone blades', spr:'op_whetstone', desc:'Pay 40 gold: Sword blocks +1 damage.', ok:()=>run.gold>=40, go(){ run.gold-=40; run.lvl.sword++; sfx('armor'); }},
+    {name:'No thanks', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
   ()=>({spr:'bones', title:'Pile of Bones', text:'A fallen adventurer. Their pack looks heavy.', opts:[
-    {name:'Search', spr:'r_shop', desc:'+30 gold and a potion, but lose 6 HP to a trap.', ok:()=>run.hp>6, go(){ run.gold+=30; run.hp-=6; sfx('hurt'); givePotion(); }},
-    {name:'Pay respects', spr:'heal_icon', desc:'Heal 6 HP.', go(){ heal(6); sfx('heal'); }},
+    {name:'Search', spr:'op_bones', desc:'+30 gold and a potion, but lose 6 HP to a trap.', ok:()=>run.hp>6, go(){ run.gold+=30; run.hp-=6; sfx('hurt'); givePotion(); }},
+    {name:'Pay respects', spr:'op_prayerbeads', desc:'Heal 6 HP.', go(){ heal(6); sfx('heal'); }},
   ]}),
-  ()=>({spr:'goblin', title:'Goblin Gambler', text:'"Double or nothing, eh? Gimme 25 gold."', opts:[
-    {name:'Gamble', spr:'dice', desc:'50%: win 50 gold back. 50%: lose it.', ok:()=>run.gold>=25, go(){ if(Math.random()<0.5){ run.gold+=25; sfx('coin'); toast('You win! <b>+25 gold</b>','coin'); } else { run.gold-=25; sfx('defeat'); toast('The goblin cackles. <b>-25 gold</b>','goblin'); } }},
-    {name:'Decline', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_gambler', title:'Goblin Gambler', text:'"Double or nothing, eh? Gimme 25 gold."', opts:[
+    {name:'Gamble', spr:'op_dice', desc:'50%: win 50 gold back. 50%: lose it.', ok:()=>run.gold>=25, go(){ if(Math.random()<0.5){ run.gold+=25; sfx('coin'); toast('You win! <b>+25 gold</b>','coin'); } else { run.gold-=25; sfx('defeat'); toast('The goblin cackles. <b>-25 gold</b>','goblin'); } }},
+    {name:'Decline', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'mimic', title:'Suspicious Chest', text:'A chest sits alone in the corridor. Did it just breathe?', opts:[
-    {name:'Open it', spr:'r_treasure', desc:'50%: a relic. 50%: it bites for 12.', go(){ if(Math.random()<0.5){ const [id]=relicOffers(1); if(id) gainRelic(id); } else { run.hp-=12; sfx('hurt'); toast('It was a mimic! <b>-12 HP</b>','mimic'); } }},
-    {name:'Kick it', spr:'r_combat', desc:'Fight it for a guaranteed relic.', go(){ return 'mimic'; }},
-    {name:'Leave it', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_chest', title:'Suspicious Chest', text:'A chest sits alone in the corridor. Did it just breathe?', opts:[
+    {name:'Open it', spr:'op_r_treasure', desc:'50%: a relic. 50%: it bites for 12.', go(){ if(Math.random()<0.5){ const [id]=relicOffers(1); if(id) gainRelic(id); } else { run.hp-=12; sfx('hurt'); toast('It was a mimic! <b>-12 HP</b>','mimic'); } }},
+    {name:'Kick it', spr:'op_r_combat', desc:'Fight it for a guaranteed relic.', go(){ return 'mimic'; }},
+    {name:'Leave it', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'potion_venom', title:'Bubbling Alchemist', text:'A hooded figure stirs a cauldron of glowing liquid.', opts:[
-    {name:'Buy a brew', spr:'potion_health', desc:'Pay 15 gold for a random potion.', ok:()=>run.gold>=15&&canPotion(), go(){ run.gold-=15; givePotion(); sfx('potion'); }},
-    {name:'Drink from the pot', spr:'potion_venom', desc:'Heal to full, but lose 5 max HP.', go(){ run.maxHp=Math.max(10,run.maxHp-5); run.hp=run.maxHp; sfx('heal'); }},
-    {name:'Leave', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_brew', title:'Bubbling Alchemist', text:'A hooded figure stirs a cauldron of glowing liquid.', opts:[
+    {name:'Buy a brew', spr:'op_cauldron', desc:'Pay 15 gold for a random potion.', ok:()=>run.gold>=15&&canPotion(), go(){ run.gold-=15; givePotion(); sfx('potion'); }},
+    {name:'Drink from the pot', spr:'op_potion_venom', desc:'Heal to full, but lose 5 max HP.', go(){ run.maxHp=Math.max(10,run.maxHp-5); run.hp=run.maxHp; sfx('heal'); }},
+    {name:'Leave', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
   ()=>({spr:'dummy', title:'Training Dummy', text:'An old practice dummy, still standing.', opts:[
-    {name:'Train hard', spr:'r_combat', desc:'Lose 7 HP. Upgrade a random block type.', ok:()=>run.hp>7, go(){ run.hp-=7; sfx('hit'); const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; toast(`<b>${UPGRADES[k].name}</b><br>${UPGRADES[k].desc}`, UPGRADES[k].spr); }},
-    {name:'Stretch', spr:'heal_icon', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
+    {name:'Train hard', spr:'op_axe', desc:'Lose 7 HP. Upgrade a random block type.', ok:()=>run.hp>7, go(){ run.hp-=7; sfx('hit'); const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; toast(`<b>${UPGRADES[k].name}</b><br>${UPGRADES[k].desc}`, UPGRADES[k].spr); }},
+    {name:'Stretch', spr:'op_feather', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
   ]}),
-  ()=>({spr:'idol', title:'Cursed Idol', text:'A golden idol grins from a pedestal. The air feels heavy.', opts:[
-    {name:'Take it', spr:'idol', desc:'Gain a rare relic. Lose 8 max HP.', ok:()=>run.maxHp>20, go(){ run.maxHp-=8; run.hp=Math.min(run.hp,run.maxHp); const [id]=relicOffers(1,3); if(id) gainRelic(id); sfx('rage'); }},
-    {name:'Leave it', spr:'r_event', desc:'Some things are better left alone.', go(){} },
+  ()=>({spr:'ev_idol', title:'Cursed Idol', text:'A golden idol grins from a pedestal. The air feels heavy.', opts:[
+    {name:'Take it', spr:'op_idol', desc:'Gain a rare relic. Lose 8 max HP.', ok:()=>run.maxHp>20, go(){ run.maxHp-=8; run.hp=Math.min(run.hp,run.maxHp); const [id]=relicOffers(1,3); if(id) gainRelic(id); sfx('rage'); }},
+    {name:'Leave it', spr:'op_i_leave', desc:'Some things are better left alone.', go(){} },
   ]}),
-  ()=>({spr:'pool', title:'Fountain of Youth', text:'Crystal water bubbles up from the stone. It smells of flowers.', opts:[
-    {name:'Drink deeply', spr:'heal_icon', desc:'Heal to full HP.', ok:()=>run.hp<run.maxHp, go(){ run.hp = run.maxHp; sfx('heal'); }},
-    {name:'Fill a flask', spr:'potion_health', desc:'Gain a Health Potion.', ok:()=>canPotion(), go(){ givePotion('health'); sfx('potion'); }},
-    {name:'Toss a coin', spr:'coin', desc:'Pay 10 gold. +4 max HP.', ok:()=>run.gold>=10, go(){ run.gold-=10; run.maxHp+=4; run.hp+=4; sfx('coin'); }},
+  ()=>({spr:'ev_fountain', title:'Fountain of Youth', text:'Crystal water bubbles up from the stone. It smells of flowers.', opts:[
+    {name:'Drink deeply', spr:'op_phoenix', desc:'Heal to full HP.', ok:()=>run.hp<run.maxHp, go(){ run.hp = run.maxHp; sfx('heal'); }},
+    {name:'Fill a flask', spr:'op_potion_health', desc:'Gain a Health Potion.', ok:()=>canPotion(), go(){ givePotion('health'); sfx('potion'); }},
+    {name:'Toss a coin', spr:'op_clover', desc:'Pay 10 gold. +4 max HP.', ok:()=>run.gold>=10, go(){ run.gold-=10; run.maxHp+=4; run.hp+=4; sfx('coin'); }},
   ]}),
-  ()=>({spr:'mage', title:'Hermit Sage', text:'"I can teach you to focus your power... for a price."', opts:[
-    {name:'Study', spr:'spellbook', desc:'Pay 45 gold: your special needs 1 fewer line this run.', ok:()=>run.gold>=45, go(){ run.gold-=45; run.ultBonus = (run.ultBonus||0)+1; sfx('ult'); }},
-    {name:'Meditate together', spr:'flame', desc:'Fully charge your special.', go(){ run.charge = ULT().need; sfx('ult'); }},
+  ()=>({spr:'ev_hermit', title:'Hermit Sage', text:'"I can teach you to focus your power... for a price."', opts:[
+    {name:'Study', spr:'op_book', desc:'Pay 45 gold: your special needs 1 fewer line this run.', ok:()=>run.gold>=45, go(){ run.gold-=45; run.ultBonus = (run.ultBonus||0)+1; sfx('ult'); }},
+    {name:'Meditate together', spr:'op_shard', desc:'Fully charge your special.', go(){ run.charge = ULT().need; sfx('ult'); }},
   ]}),
-  ()=>({spr:'skeleton', title:'Bone Dice', text:'A skeleton rattles a pair of bone dice. "Roll with me, mortal."', opts:[
-    {name:'Roll', spr:'dice', desc:'1 in 3: a relic. 1 in 3: 35 gold. 1 in 3: lose 10 HP.', ok:()=>run.hp>10, go(){ const r = Math.random(); if(r<1/3){ const [id]=relicOffers(1); if(id) gainRelic(id); } else if(r<2/3){ run.gold+=35; sfx('coin'); toast('Lucky roll! <b>+35 gold</b>','coin'); } else { run.hp-=10; sfx('hurt'); toast('Snake eyes. <b>-10 HP</b>','skeleton'); } }},
-    {name:'Walk away', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_bonedice', title:'Bone Dice', text:'A skeleton rattles a pair of bone dice. "Roll with me, mortal."', opts:[
+    {name:'Roll', spr:'op_skeleton', desc:'1 in 3: a relic. 1 in 3: 35 gold. 1 in 3: lose 10 HP.', ok:()=>run.hp>10, go(){ const r = Math.random(); if(r<1/3){ const [id]=relicOffers(1); if(id) gainRelic(id); } else if(r<2/3){ run.gold+=35; sfx('coin'); toast('Lucky roll! <b>+35 gold</b>','coin'); } else { run.hp-=10; sfx('hurt'); toast('Snake eyes. <b>-10 HP</b>','skeleton'); } }},
+    {name:'Walk away', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'r_den', title:'Stray Companion', text:'A small creature follows you out of the shadows, looking hopeful.', opts:[
-    {name:'Adopt it', spr:'r_den', desc:'Gain a random pet companion (replaces your current one).', go(){ const k = pick(Object.keys(PETS).filter(k=>k!==run.pet)); setPet(k); sfx('heal'); toast(`<b>${PETS[k].name}</b> joins you!<br>${petDesc(k,0)}`, PETS[k].spr, 3200); }},
-    {name:'Shoo it away', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_stray', title:'Stray Companion', text:'A small creature follows you out of the shadows, looking hopeful.', opts:[
+    {name:'Adopt it', spr:'op_bone_treat', desc:'Gain a random pet companion (replaces your current one).', go(){ const k = pick(Object.keys(PETS).filter(k=>k!==run.pet)); setPet(k); sfx('heal'); toast(`<b>${PETS[k].name}</b> joins you!<br>${petDesc(k,0)}`, PETS[k].spr, 3200); }},
+    {name:'Shoo it away', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'rock', title:'Collapsing Bridge', text:'The bridge ahead groans. Gold glints in the rubble below.', opts:[
-    {name:'Climb down', spr:'coin', desc:'Lose 8 HP. Gain 40 gold.', ok:()=>run.hp>8, go(){ run.hp-=8; run.gold+=40; sfx('rubble'); }},
-    {name:'Cross carefully', spr:'r_event', desc:'Move on safely.', go(){} },
+  ()=>({spr:'ev_bridge', title:'Collapsing Bridge', text:'The bridge ahead groans. Gold glints in the rubble below.', opts:[
+    {name:'Climb down', spr:'op_rock', desc:'Lose 8 HP. Gain 40 gold.', ok:()=>run.hp>8, go(){ run.hp-=8; run.gold+=40; sfx('rubble'); }},
+    {name:'Cross carefully', spr:'op_i_leave', desc:'Move on safely.', go(){} },
   ]}),
-  ()=>({spr:'knight', title:'Wounded Adventurer', text:'A knight slumps against the wall, clutching a wound.', opts:[
-    {name:'Share a potion', spr:'potion_health', desc:'Give your first potion. Gain 20 gold and a random upgrade.', ok:()=>run.potions.length>0, go(){ run.potions.shift(); run.gold+=20; const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; sfx('heal'); toast(`"Thank you, friend."<br><b>${UPGRADES[k].name}</b>: ${UPGRADES[k].desc}`, UPGRADES[k].spr, 3000); }},
-    {name:'Bandage them', spr:'heal_icon', desc:'Lose 5 HP. Gain 15 gold.', ok:()=>run.hp>5, go(){ run.hp-=5; run.gold+=15; sfx('coin'); }},
-    {name:'Walk past', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_wounded', title:'Wounded Adventurer', text:'A knight slumps against the wall, clutching a wound.', opts:[
+    {name:'Share a potion', spr:'op_ring', desc:'Give your first potion. Gain 20 gold and a random upgrade.', ok:()=>run.potions.length>0, go(){ run.potions.shift(); run.gold+=20; const k=pick(Object.keys(UPGRADES)); run.lvl[k]++; sfx('heal'); toast(`"Thank you, friend."<br><b>${UPGRADES[k].name}</b>: ${UPGRADES[k].desc}`, UPGRADES[k].spr, 3000); }},
+    {name:'Bandage them', spr:'op_heal_icon', desc:'Lose 5 HP. Gain 15 gold.', ok:()=>run.hp>5, go(){ run.hp-=5; run.gold+=15; sfx('coin'); }},
+    {name:'Walk past', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'anvil', title:'Enchanter\'s Altar', text:'Runes glow on a stone altar. Your blocks hum when you come close.', opts:[
-    {name:'Empower', spr:'anvil', desc:'Lose 8 HP: upgrade one block type to its + version.', ok:()=>run.hp>8 && plusable().length>0, go(){ run.hp -= 8; return 'plus'; }},
-    {name:'Rest a moment', spr:'heal_icon', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
+  ()=>({spr:'ev_altar', title:'Enchanter\'s Altar', text:'Runes glow on a stone altar. Your blocks hum when you come close.', opts:[
+    {name:'Empower', spr:'op_rune', desc:'Lose 8 HP: upgrade one block type to its + version.', ok:()=>run.hp>8 && plusable().length>0, go(){ run.hp -= 8; return 'plus'; }},
+    {name:'Rest a moment', spr:'op_r_rest', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
   ]}),
-  ()=>({spr:'dummy', title:'Sparring Hall', text:'Straw dummies stand in rows. A sign reads: "Practice makes perfect."', opts:[
-    {name:'Spar for an hour', spr:'sword', desc:'Lose 6 HP. Gain 25 XP.', ok:()=>run.hp>6, go(){ run.hp-=6; gainXP(25); sfx('hit'); toast(`<b>+25 XP</b><br>${run.lvUp?'Level up after your next fight!':`${run.xp} / ${xpNeed(run.level)} XP`}`, 'dummy'); }},
-    {name:'Stretch', spr:'heal_icon', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
+  ()=>({spr:'ev_sparring', title:'Sparring Hall', text:'Straw dummies stand in rows. A sign reads: "Practice makes perfect."', opts:[
+    {name:'Spar for an hour', spr:'op_sword', desc:'Lose 6 HP. Gain 25 XP.', ok:()=>run.hp>6, go(){ run.hp-=6; gainXP(25); sfx('hit'); toast(`<b>+25 XP</b><br>${run.lvUp?'Level up after your next fight!':`${run.xp} / ${xpNeed(run.level)} XP`}`, 'dummy'); }},
+    {name:'Stretch', spr:'op_boots', desc:'Heal 8 HP.', go(){ heal(8); sfx('heal'); }},
   ]}),
-  ()=>({spr:'satchel', title:'Abandoned Cart', text:'A merchant\'s cart lies on its side. Nobody is around.', opts:[
-    {name:'Search the crates', spr:'potion_health', desc:'Find 2 random potions.', ok:()=>canPotion(), go(){ givePotion(); if(canPotion()) givePotion(); sfx('chest'); }},
-    {name:'Take the coin purse', spr:'coin', desc:'+30 gold.', go(){ run.gold+=30; sfx('coin'); }},
+  ()=>({spr:'ev_cart', title:'Abandoned Cart', text:'A merchant\'s cart lies on its side. Nobody is around.', opts:[
+    {name:'Search the crates', spr:'op_satchel', desc:'Find 2 random potions.', ok:()=>canPotion(), go(){ givePotion(); if(canPotion()) givePotion(); sfx('chest'); }},
+    {name:'Take the coin purse', spr:'op_coin', desc:'+30 gold.', go(){ run.gold+=30; sfx('coin'); }},
   ]}),
-  ()=>({spr:'orb', title:'Fortune Teller', text:'"I see the guardian waiting below... but fate can be changed, for a price."', opts:[
-    {name:'Change your fate', spr:'r_boss', desc:`Pay 25 gold: replace ${bossFor().name} with a different boss for this floor.`, ok:()=>run.gold>=25, go(){ run.gold-=25; const list = (run.floor<=5 ? ENEMIES[run.floor-1] : ENEMIES[2+((run.floor-6)%3)]).bosses; let k = run.bossPick[run.floor]; let nk = k; while(list.length>1 && nk===k) nk = rand(0, list.length-1); run.bossPick[run.floor] = nk; sfx('phase'); toast(`<b>Fate rewritten</b><br>${bossFor().name} now waits below.`, bossFor().spr, 3200); }},
-    {name:'Ask about treasure', spr:'coin', desc:'Pay 10 gold: she points you to a hidden relic.', ok:()=>run.gold>=10, go(){ run.gold-=10; const [id] = relicOffers(1); if(id) gainRelic(id); }},
-    {name:'Leave', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_fortune', title:'Fortune Teller', text:'"I see the guardian waiting below... but fate can be changed, for a price."', opts:[
+    {name:'Change your fate', spr:'op_r_boss', desc:`Pay 25 gold: replace ${bossFor().name} with a different boss for this floor.`, ok:()=>run.gold>=25, go(){ run.gold-=25; const list = (run.floor<=5 ? ENEMIES[run.floor-1] : ENEMIES[2+((run.floor-6)%3)]).bosses; let k = run.bossPick[run.floor]; let nk = k; while(list.length>1 && nk===k) nk = rand(0, list.length-1); run.bossPick[run.floor] = nk; sfx('phase'); toast(`<b>Fate rewritten</b><br>${bossFor().name} now waits below.`, bossFor().spr, 3200); }},
+    {name:'Ask about treasure', spr:'op_scroll', desc:'Pay 10 gold: she points you to a hidden relic.', ok:()=>run.gold>=10, go(){ run.gold-=10; const [id] = relicOffers(1); if(id) gainRelic(id); }},
+    {name:'Leave', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'bagicon', title:'Block Peddler', text:'A goblin rattles a sack full of glowing blocks. "Special stock, very rare!"', opts:[
-    {name:'Rainbow blocks', spr:'blastblock', desc:'Pay 40 gold: add 2 Rainbow blocks to your bag.', ok:()=>run.gold>=40, go(){ run.gold-=40; bagAdd('rainbow',2); sfx('buy'); }},
-    {name:'Blast blocks', spr:'bomb', desc:'Pay 30 gold: add 2 Blast blocks to your bag.', ok:()=>run.gold>=30, go(){ run.gold-=30; bagAdd('blast',2); sfx('buy'); }},
-    {name:'No thanks', spr:'r_event', desc:'Move on.', go(){} },
+  ()=>({spr:'ev_peddler', title:'Block Peddler', text:'A goblin rattles a sack full of glowing blocks. "Special stock, very rare!"', opts:[
+    {name:'Rainbow blocks', spr:'op_palette', desc:'Pay 40 gold: add 2 Rainbow blocks to your bag.', ok:()=>run.gold>=40, go(){ run.gold-=40; bagAdd('rainbow',2); sfx('buy'); }},
+    {name:'Blast blocks', spr:'op_bomb', desc:'Pay 30 gold: add 2 Blast blocks to your bag.', ok:()=>run.gold>=30, go(){ run.gold-=30; bagAdd('blast',2); sfx('buy'); }},
+    {name:'No thanks', spr:'op_i_leave', desc:'Move on.', go(){} },
   ]}),
-  ()=>({spr:'r_den', title:'Mysterious Egg', text:'A warm, speckled egg sits in a nest of bones. It wobbles.', opts:[
-    {name:'Keep it warm', spr:'heart', desc:run.pet?'It hatches... and runs off, leaving 35 gold behind.':'It hatches into a random pet that joins you.', go(){ if(run.pet){ run.gold+=35; sfx('coin'); } else { setPet(pick(Object.keys(PETS))); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[run.pet].name}</b> hatches and joins you!`, PETS[run.pet].spr); } }},
-    {name:'Cook it', spr:'flame', desc:'Heal 15 HP.', go(){ heal(15); sfx('heal'); }},
+  ()=>({spr:'ev_egg', title:'Mysterious Egg', text:'A warm, speckled egg sits in a nest of bones. It wobbles.', opts:[
+    {name:'Keep it warm', spr:'op_heart', desc:run.pet?'It hatches... and runs off, leaving 35 gold behind.':'It hatches into a random pet that joins you.', go(){ if(run.pet){ run.gold+=35; sfx('coin'); } else { setPet(pick(Object.keys(PETS))); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[run.pet].name}</b> hatches and joins you!`, PETS[run.pet].spr); } }},
+    {name:'Cook it', spr:'op_flame', desc:'Heal 15 HP.', go(){ heal(15); sfx('heal'); }},
   ]}),
 ];
 function eventScreen(){
@@ -2344,7 +2343,7 @@ function startCombat(kind, forced){
   const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (1 + 0.12*curseN('thick')) * (has('cursedcrown')?1.1:1) * (has('warbanner')?1.2:1) * (tpls.length>1 ? 0.58 : 1)));
   RM.tpls = tpls; RM.maxHps = maxHps; RM.t = kind; delete RM.tpl; delete RM.maxHp;
   cb = {
-    kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
+    kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, firstHit:true,
     bombs:{}, chains:[], weak:[], weakT:0, webs:{}, silence:0,
     streak: rv('drum',[2,3,4]) + skill('momentum'), tookDmg:false, mirror:has('mirror') ? (rt('mirror')>=3?2:1) : 0, moves:0,
     shield: rv('chainmail',[8,12,18]) + rv('oath',[6,10,14]) + 4*skill('fort') + (setOn('iron')?10:0) + 6*pk('guard'),
@@ -3068,7 +3067,7 @@ function checkEnd(){
   if(cb.enemies.every(e=>e.dead)){
     cb.over = true; if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
     if(cb.kind==='goblin') unlock('goblin');
-    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; run.bossLog = (run.bossLog||[]).concat([[cb.enemies[0].name, cb.enemies[0].spr]]); { const sn = seen(); if(ALL_ENEMIES.filter(x=>x.boss && sn.e[x.name] && sn.e[x.name].kills>0).length>=10) unlock('bossdex'); } if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
+    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; run.bossLog = (run.bossLog||[]).concat([[cb.enemies[0].name, cb.enemies[0].spr]]); { const sn = seen(); if(ALL_ENEMIES.filter(x=>x.boss && sn.e[x.name] && sn.e[x.name].kills>0).length>=10) unlock('bossdex'); } if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr.replace(/^(leg_|evo_)+/,'')==='dragon') unlock('dragon'); }
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
@@ -3215,23 +3214,23 @@ function enemySheet(idx){
 }
 function intentInfo(it, e){
   const d = it.k==='flee' ? 0 : intentDamage(it, e);
-  if(SIG[it.k]){ const [val, desc] = SIG[it.k].info(it, e || cb.enemy, d); return [SIG[it.k].ic, val, desc]; }
+  if(SIG[it.k]){ const [val, desc] = SIG[it.k].info(it, e || cb.enemy, d); return ['in_'+SIG[it.k].ic, val, desc]; }
   switch(it.k){
-    case 'atk': return ['sword', `${d}`, `Attacks for ${d}`];
-    case 'multi': { const n = it.n + ((e||cb.enemy).heads ? (e||cb.enemy).heads-1 : 0); return ['r_combat', `${d}x${n}`, `Attacks ${n} times for ${d}`]; }
-    case 'drain': return ['drop', `${d}`, `Drains up to ${d} HP from you and heals itself by what it takes`];
-    case 'curse': return ['rock', `x${it.v}`, `Drops ${it.v} rubble blocks on your grid`];
-    case 'ice': return ['snow', `x${it.v}`, `Freezes ${it.v} empty cells. Ice cracks into rubble when cleared`];
-    case 'armor': return ['armor', `+${it.v}`, `Gains ${it.v} armor`];
-    case 'heal': return ['heal_icon', `+${it.v}`, `Heals ${it.v}`];
-    case 'rage': return ['rage', `+${it.v}`, `Enrages: all its attacks deal +${it.v} for the rest of the fight`];
-    case 'flee': return ['r_shop', 'Flee', `Escapes with its loot`];
-    case 'petrify': return ['rock', `x${it.v}`, `Turns ${it.v} of your blocks on the grid to stone`];
-    case 'sap': return ['flame', `-${it.v}`, `Drains ${it.v} charge from your special`];
-    case 'shuffle': return ['dice', 'Mix', `Shuffles the pieces in your hand`];
-    case 'steal': return ['coin', `-${it.v}`, `Steals up to ${it.v} of your gold`];
-    case 'bomb': return ['bomb', `x${it.v}`, `Plants ${it.v} bomb${it.v>1?'s':''} on your grid. Clear them within 4 moves or each explodes for ${bombDmg()}`];
-    case 'chain': return ['chainicon', `x${it.v}`, `Chains ${it.v} of your blocks. Chained blocks don't count toward clears until you clear a line next to them`];
+    case 'atk': return ['in_sword', `${d}`, `Attacks for ${d}`];
+    case 'multi': { const n = it.n + ((e||cb.enemy).heads ? (e||cb.enemy).heads-1 : 0); return ['in_r_combat', `${d}x${n}`, `Attacks ${n} times for ${d}`]; }
+    case 'drain': return ['in_drop', `${d}`, `Drains up to ${d} HP from you and heals itself by what it takes`];
+    case 'curse': return ['in_rock', `x${it.v}`, `Drops ${it.v} rubble blocks on your grid`];
+    case 'ice': return ['in_snow', `x${it.v}`, `Freezes ${it.v} empty cells. Ice cracks into rubble when cleared`];
+    case 'armor': return ['in_armor', `+${it.v}`, `Gains ${it.v} armor`];
+    case 'heal': return ['in_heal_icon', `+${it.v}`, `Heals ${it.v}`];
+    case 'rage': return ['in_rage', `+${it.v}`, `Enrages: all its attacks deal +${it.v} for the rest of the fight`];
+    case 'flee': return ['in_r_shop', 'Flee', `Escapes with its loot`];
+    case 'petrify': return ['in_gargoyle', `x${it.v}`, `Turns ${it.v} of your blocks on the grid to stone`];
+    case 'sap': return ['in_leech', `-${it.v}`, `Drains ${it.v} charge from your special`];
+    case 'shuffle': return ['in_dice', 'Mix', `Shuffles the pieces in your hand`];
+    case 'steal': return ['in_coin', `-${it.v}`, `Steals up to ${it.v} of your gold`];
+    case 'bomb': return ['in_bomb', `x${it.v}`, `Plants ${it.v} bomb${it.v>1?'s':''} on your grid. Clear them within 4 moves or each explodes for ${bombDmg()}`];
+    case 'chain': return ['in_chainicon', `x${it.v}`, `Chains ${it.v} of your blocks. Chained blocks don't count toward clears until you clear a line next to them`];
   }
 }
 function renderEnemies(){
@@ -3767,6 +3766,27 @@ cv.addEventListener('pointercancel', ()=>{ drag = null; press = null; });
 addEventListener('keydown', e=>{ if(e.key==='Escape' && !$('#modal').hidden) closeSettings(); });
 document.addEventListener('touchmove', e=>{ if(document.documentElement.classList.contains('lock') && !e.target.closest('#modal')) e.preventDefault(); }, {passive:false});
 window.addEventListener('scroll', ()=>{ if(document.documentElement.classList.contains('lock') && window.scrollY) window.scrollTo(0,0); });
+
+/* ================= icon identity =================
+   Every trophy, perk, boon, upgrade, skill, quest, trick, curse, rule, mutator, intent
+   and hero special is drawn on its own category frame (see FRAME_FOR in art.js), and the
+   few that shared a subject inside a category get their own. */
+(function brandIcons(){
+  const own = {
+    ACH:{perfect:'laurel', endless:'i_doom', allstar:'trophy', quad:'blastblock', signature:'katana', duo:'daggers', setbonus:'chainicon', weekly:'calendar', daily:'hourglass', level8:'i_rise', legend:'hydra', bossdex:'book'},
+    BOONS:{up_heal:'r_rest', up_coin:'magnet', bag_cut:'axe', discover:'gem'},
+    RELICS:{prism:'rl_prism', purist:'rl_purist', crossed:'rl_crossed', hearth:'rl_hearth', toxin:'rl_toxin', powder:'rl_powder', tower:'rl_tower', battery:'rl_battery', dice:'rl_dice', sledge:'rl_sledge'},
+    SIG:{quake:'hammer', freezerow:'frostshard', scramble:'mutator'},
+  };
+  const frame = (list, pre, ov={}) => (Array.isArray(list) ? list.map(x=>[x.id,x]) : Object.entries(list)).forEach(([k,o])=>{ o.spr = pre + (ov[k] || o.spr); });
+  frame(ACH,'tr_',own.ACH); frame(PERKS,'pk_'); frame(BOONS,'bn_',own.BOONS); frame(UPGRADES,'ug_'); frame(SKILLS,'sk_'); frame(QUESTS,'qs_');
+  frame(PET_UPS,'tk_'); frame(CURSES,'cu_'); frame(RULES,'ru_'); frame(MUTS,'mu_');
+  Object.values(CLASSES).forEach(C=>{ C.ult.spr = 'ul_' + C.ult.spr; });
+  Object.entries(own.RELICS).forEach(([k,s])=>{ if(RELICS[k]) RELICS[k].spr = s; });
+  Object.entries(own.SIG).forEach(([k,s])=>{ if(SIG[k]) SIG[k].ic = s; });
+  Object.entries(PETS).forEach(([k,P])=>{ const s = 'pet_'+k+'0'; if(ART[s] || VARIANTS[s]){ P.forms[0][1] = s; P.spr = s; } });
+  MINIONS.skeleton.spr = 'mn_skeleton'; MINIONS.slimeling.spr = 'mn_slime';
+})();
 
 /* ================= boot ================= */
 let errShown = false;

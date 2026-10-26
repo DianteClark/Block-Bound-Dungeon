@@ -40,7 +40,7 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **Levels and perks.** Win fights to earn XP. Each level up lets you pick 1 of 3 perks (24 in all) for the rest of the run. Tap your hero icon to see them.
 - **Hero Mastery.** Every hero levels up as you play them, unlocking perks up to Mastery 5.
 - **Pets.** Nine companions, each with a role: Hunter, Janitor, Guardian, Mystic, Scavenger, Trapper, Demolisher, Seer and Bulwark. Each has a passive bonus and an ability that charges every move: tap it when it's ready. Pets earn XP, **evolve twice** with new art and learn a trick at each stage. In the Endless Depths you can bring a second pet.
-- **Potions and throwables.** 16 potions and 5 throwables (Grenade, Throwing Net, Hammer, Poison Darts, Caltrops). Brew two potions into a Greater one at any campfire.
+- **Potions and throwables.** 16 potions and 5 throwables (Grenade, Throwing Net, Hammer, Poison Darts, Caltrops); tap a potion twice to use it. Brew two potions into a Greater one at any campfire.
 - **5 floors with a branching map.** Choose your route down through fights, elites, campfires, merchants, treasure, mystery events, Beast Dens and Forges to the boss at the bottom of each floor.
 - **30 unique bosses.** Each floor's guardian is picked from six, and every one has its own art and signature mechanic: the Bone King raises minions, the Slime Queen splits, the Pharaoh pours sand that falls down your grid, the Obsidian Golem turns immune to rows or columns, the Firebird is reborn, the Glacier Queen pushes ice up from below, the Demon Lord flips your grid, the Doom Watcher marks a line you must clear in time, and many more. The map shows which boss awaits.
 - **Guarded bosses and Legendary bosses.** Many bosses open the fight behind guards and can't be hurt until the guards fall, and call fresh guards at each new phase. On floor 5 at Heat 4 or higher, and in the Endless Depths, bosses are Legendary: three phases, a big heal at the third, and a new move learned from another boss.
@@ -59,8 +59,7 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **Heat levels.** Winning unlocks Heat 1 to 5, each adding a new challenge.
 - **Enemy passives:** Armored, Regenerates, Ethereal, Thorns and Enrages.
 - **Skill Tree.** Every run earns Soul Shards. Spend them on 10 permanent upgrades such as Vitality, Quick Hands, Focus and Treasure Sense.
-- **59 relics**, **9 potions** (tap a potion twice to drink it), **Blast blocks** that set off everything around them, and permanent block upgrades.
-- **20 mystery events** (including a Fortune Teller who can change your floor boss), merchants with mystery boxes and pets for sale,, and campfires where you can rest, train, upgrade or meditate to charge your special.
+- **21 mystery events** (including a Fortune Teller who can change your floor boss), merchants with mystery boxes and pets for sale, and campfires where you can rest, train, upgrade or meditate to charge your special.
 - **Codex** of every monster, boss, relic, perk and pet you've discovered, and **50 trophies** to unlock.
 - **First-fight tips** walk new players through the basics (replay them from Settings).
 - **Daily Quests.** Three new quests every day, each worth Soul Shards, plus a bonus for finishing all three.
