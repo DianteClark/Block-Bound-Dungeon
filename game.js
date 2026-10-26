@@ -90,36 +90,36 @@ const SHAPES = SHAPE_SRC.map(mkShape);
 function rotated(p){ return {cells: p.cells.map(([r,c])=>[c, p.h-1-r]), h:p.w, w:p.h}; }
 
 const CLASSES = {
-  knight:{name:'Knight', spr:'knight', hp:66, gold:20, relic:'oath', potions:['iron'],
+  knight:{name:'Knight', spr:'knight', hp:66, gold:20, relic:'oath', potions:['iron'], bag:{sword:5, shield:5, heal:2, coin:2},
     desc:'Sturdy and patient. Shields hit harder and every fight starts behind a wall.',
     ult:{name:'Bulwark', need:8, spr:'oath', desc:'Gain a big shield and smash all rubble and ice off the grid.'}},
-  rogue:{name:'Rogue', spr:'rogue', hp:62, gold:45, relic:'daggers', potions:['fire','smoke'],
+  rogue:{name:'Rogue', spr:'rogue', hp:62, gold:45, relic:'daggers', potions:['fire','smoke'], bag:{sword:6, shield:2, heal:2, coin:4},
     desc:'Lives on momentum. Combo streaks grow twice as fast and coins pay extra.',
     ult:{name:'Shadowstep', need:7, spr:'daggers', desc:'Fresh hand, the enemy loses a turn, and your next clear is doubled.'}},
-  mage:{name:'Mage', spr:'mage', hp:52, gold:20, relic:'orb', potions:['health'],
+  mage:{name:'Mage', spr:'mage', hp:52, gold:20, relic:'orb', potions:['health'], bag:{sword:5, shield:3, heal:2, coin:2},
     desc:'Fragile but explosive. Rainbow blocks appear and big clears detonate.',
     ult:{name:'Meteor', need:9, spr:'potion_fire', desc:'Detonate the fullest row and column at x2.5, even if they are not full.'}},
-  berserker:{name:'Berserker', spr:'berserker', hp:80, gold:25, relic:'bloodlust', potions:['fire'],
+  berserker:{name:'Berserker', spr:'berserker', hp:80, gold:25, relic:'bloodlust', potions:['fire'], bag:{sword:7, shield:2, heal:2, coin:2},
     desc:'Gets deadlier the more he bleeds. Swords grow stronger as your HP drops.',
     ult:{name:'Rampage', need:7, spr:'bloodaxe', desc:'Smash the two fullest rows at x3, even if they are not full. Costs 5 HP.'},
     unlock:{text:'Reach floor 3', cost:120, ok:s=>s.bestFloor>=3}},
-  necromancer:{name:'Necromancer', spr:'necromancer', hp:56, gold:30, relic:'gravetome', potions:['venom'],
+  necromancer:{name:'Necromancer', spr:'necromancer', hp:56, gold:30, relic:'gravetome', potions:['venom'], bag:{sword:5, shield:3, heal:2, coin:2},
     desc:'Rots enemies from the inside. Venom blocks appear and poison never wears off.',
     ult:{name:'Raise Dead', need:7, spr:'gravetome', desc:'Turn all rubble and ice into Venom blocks and poison the enemy.'},
     unlock:{text:'Defeat 60 foes in total', cost:150, ok:s=>s.kills>=60}},
-  alchemist:{name:'Alchemist', spr:'alchemist', hp:60, gold:35, relic:'philflask', potions:['health','bomb'],
+  alchemist:{name:'Alchemist', spr:'alchemist', hp:60, gold:35, relic:'philflask', potions:['health','bomb'], bag:{sword:5, shield:3, heal:3, coin:3},
     desc:'Never short on supplies. An extra potion slot and a fresh brew after every fight.',
     ult:{name:'Transmute', need:6, spr:'philflask', desc:'Turn every block of the most common type on the grid into Rainbow blocks.'},
     unlock:{text:'Drink 10 potions in total', cost:150, ok:s=>s.potions>=10}},
-  paladin:{name:'Paladin', spr:'paladin', hp:70, gold:25, relic:'holysymbol', potions:['health'],
+  paladin:{name:'Paladin', spr:'paladin', hp:70, gold:25, relic:'holysymbol', potions:['health'], bag:{sword:4, shield:4, heal:4, coin:2},
     desc:'A holy tank. Hearts also strike the enemy, and overhealing becomes shield.',
     ult:{name:'Smite', need:8, spr:'holy', desc:'Deal damage equal to your shield plus 15. You keep the shield.'},
     unlock:{text:'Win a run with any hero', cost:200, ok:s=>s.wins>=1}},
-  ranger:{name:'Ranger', spr:'ranger', hp:60, gold:30, relic:'huntersmark', potions:['fire'],
+  ranger:{name:'Ranger', spr:'ranger', hp:60, gold:30, relic:'huntersmark', potions:['fire'], bag:{sword:6, shield:3, heal:2, coin:2},
     desc:'A precise hunter. Pure lines hit much harder and every cleared line adds damage.',
     ult:{name:'Volley', need:7, spr:'mark', desc:'Fire 6 arrows that pierce armor, 5 damage each (more on deeper floors).'},
     unlock:{text:'Clear 15 pure lines in total', cost:180, ok:s=>s.pures>=15}},
-  bard:{name:'Bard', spr:'bard', hp:58, gold:35, relic:'lute', potions:['luck'],
+  bard:{name:'Bard', spr:'bard', hp:58, gold:35, relic:'lute', potions:['luck'], bag:{sword:5, shield:3, heal:3, coin:3},
     desc:'Plays to the rhythm of combos. Every third clear in a row strikes a chord that shields and heals.',
     ult:{name:'Encore', need:7, spr:'lute', desc:'Replay your last clear: its damage, shield, healing, poison and gold all happen again.'},
     unlock:{text:'Reach Mastery 3 with any hero', cost:160, ok:()=>Object.keys(CLASSES).some(k=>masteryLevel(k)>=3)}},
@@ -230,6 +230,8 @@ const BOONS = [
   {id:'purse', name:'Coin Purse', spr:'coin', desc:'+25 gold.', w:2, apply(){ run.gold+=25; }},
   {id:'brew', name:'Potion', spr:'potion_health', desc:'Gain a random potion.', w:2, ok:()=>canPotion(), apply(){ givePotion(); }},
   ...Object.entries(UPGRADES).map(([k,u])=>({id:'up_'+k, name:u.name, spr:u.spr, desc:u.desc+' (permanent)', w:2.5, apply(){ run.lvl[k]++; }})),
+  {id:'bag_add', name:'Recruit Blocks', spr:'bagicon', desc:'Add 2 blocks of a type you choose to your bag.', w:2.5, choose:true, apply(done){ chooseBlock('Recruit Blocks', 'Pick a block type to add 2 of.', addableTypes(), t=>{ if(t){ bagAdd(t,2); sfx('relic'); } done(!!t); }); }},
+  {id:'bag_cut', name:'Trim the Bag', spr:'bagicon', desc:'Remove 2 blocks of a type you choose from your bag.', w:2, ok:()=>bagSize()-2>=BAG_MIN, choose:true, apply(done){ chooseBlock('Trim the Bag', 'Pick a block type to remove 2 of.', removableTypes(), t=>{ if(t){ bagRemove(t, Math.min(2, run.bag[t])); sfx('anvil'); } done(!!t); }); }},
 ];
 
 const M = (k,v,t,n) => ({k,v,t,n});
@@ -498,7 +500,7 @@ function heal(n){ run.hp = Math.min(run.maxHp, run.hp + n); }
 function snapFight(){
   if(!cb || cb.over) return null;
   return {kind:cb.kind, board:cb.board.slice(), hand:cb.hand.map(p=>({cells:p.cells, h:p.h, w:p.w, type:p.type, used:!!p.used})),
-    stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null,
+    stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
     tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, enraged:cb.enraged, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
     enemy:JSON.parse(JSON.stringify(cb.enemy))};
@@ -523,6 +525,8 @@ function newRun(cls, opts){
   run = {cls, heat, hp, maxHp:hp, gold:C.gold + 15*skill('purse'), relics:[C.relic], potions:C.potions.slice(), potionSlots:3, charge:0,
     jid:Date.now(), lvl:{sword:skill('whet'),shield:0,heal:0,coin:0}, floor:1, step:0, map:null, path:[], kills:0, bosses:0, dmg:0, bestLines:0, bestHit:0, phoenixUsed:false};
   if(RELICS[C.relic].onGet) RELICS[C.relic].onGet();
+  run.bag = startingBag(cls);
+  if(RELIC_BLOCKS[C.relic]){ const [t,n] = RELIC_BLOCKS[C.relic]; bagAdd(t, n); }
   for(let i=0;i<skill('belt');i++) givePotion();
   const ml = masteryLevel(cls);
   if(ml>=2){ run.maxHp += 5; run.hp += 5; }
@@ -549,6 +553,8 @@ function migrate(r){
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
   delete r.choices;
   r.relics = r.relics.filter(id=>RELICS[id]);
+  if(!r.bag || typeof r.bag!=='object' || !Object.keys(r.bag).length){ r.bag = Object.assign({}, CLASSES[r.cls].bag || DEFAULT_BAG); r.relics.forEach(id=>{ if(RELIC_BLOCKS[id]){ const [t,n] = RELIC_BLOCKS[id]; r.bag[t] = (r.bag[t]||0)+n; } }); }
+  Object.keys(r.bag).forEach(t=>{ if(!TYPES[t] || !(r.bag[t]>0)) delete r.bag[t]; });
   r.potions = (r.potions||[]).filter(id=>POTIONS[id]);
   if(!Array.isArray(r.map) || r.map.length!==STEPS){ r.map = genMap(); r.path = []; r.room = null; }
   if(r.room && !r.room.t) r.room = null;
@@ -560,6 +566,7 @@ function migrate(r){
 function gainRelic(id){
   const sk = setOf(id), before = sk ? setCount(sk) : 0;
   run.relics.push(id); const R = RELICS[id]; if(R.onGet) R.onGet();
+  if(RELIC_BLOCKS[id]){ const [t,n] = RELIC_BLOCKS[id]; bagAdd(t, n); setTimeout(()=>toast(`<b>+${n} ${TYPES[t].name} blocks</b><br>Added to your bag.`, 'bagicon'), 1400); }
   if(sk && before<3 && setCount(sk)>=3) setTimeout(()=>{ sfx('trophy'); toast(`<b>${SETS[sk].name} set complete!</b><br>${SETS[sk].bonus}`, R.spr, 3600); unlock('setbonus'); }, 900);
   markSeen('r', id);
   if(run.relics.length>=10) unlock('relics10');
@@ -627,6 +634,7 @@ function renderRunbar(){
   tween($('#goldText'), run.gold);
   if(run.gold>=200) unlock('rich');
   $('#floorText').textContent = `F${run.floor}-${Math.min(run.step+1,STEPS)}${run.heat?` H${run.heat}`:''}`;
+  const bb = $('#bagBtn'); if(!bb.dataset.k){ bb.innerHTML = img('bagicon',26); bb.dataset.k = '1'; } bb.onclick = openBag;
   const pb = $('#potionBar'); pb.innerHTML = '';
   for(let i=0;i<run.potionSlots;i++){
     const id = run.potions[i]; const b = document.createElement('button');
@@ -646,6 +654,34 @@ function renderRunbar(){
   });
   updateDanger();
 }
+function bagHTML(){
+  const n = bagSize();
+  return `<div class="bagrows">${BAG_TYPES.filter(t=>run.bag[t]).map(t=>`<div class="bagrow">${blockChip(t)}<b>${TYPES[t].name}</b><span class="bagbar"><i style="width:${100*run.bag[t]/n}%;background:${TYPES[t].c}"></i></span><span class="bagn">${run.bag[t]}</span><small>${Math.round(100*run.bag[t]/n)}%</small></div>`).join('')}</div>`;
+}
+function openBag(){
+  if(!run) return; sfx('click');
+  const m = $('#modal'); m.hidden = false;
+  m.innerHTML = `<div class="card" role="dialog" aria-label="Block bag" style="max-height:84vh;overflow:auto">
+    <div class="row"><h2 class="title" style="font-size:24px">Block Bag (${bagSize()})</h2>${img('bagicon',36)}</div>
+    <p class="muted" style="font-size:13px">Every piece's block type is drawn from this bag. Add blocks you want more of and remove the ones you don't at merchants, forges, campfires and rewards.</p>
+    ${bagHTML()}
+    <button class="btn" id="closeBtn">Close</button></div>`;
+  $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
+}
+/* pick a block type from a list; calls done(type) or done(null) if cancelled */
+function chooseBlock(title, sub, types, done, cancelText){
+  sfx('click'); const m = $('#modal'); m.hidden = false;
+  m.innerHTML = `<div class="card" role="dialog" aria-label="${title}" style="max-height:84vh;overflow:auto">
+    <div class="row"><h2 class="title" style="font-size:22px">${title}</h2>${img('bagicon',34)}</div>
+    <p class="muted" style="font-size:13px">${sub}</p>
+    <div class="blockpick">${types.map(t=>`<button class="bpick" data-t="${t}">${blockChip(t)}<b>${TYPES[t].name}</b><small>${(run.bag[t]||0)} in bag</small></button>`).join('')}</div>
+    <button class="btn ghost" id="bpCancel">${cancelText||'Cancel'}</button></div>`;
+  let used = false;
+  m.querySelectorAll('.bpick').forEach(b=>b.onclick=()=>{ if(used) return; used = true; closeSettings(); done(b.dataset.t); });
+  $('#bpCancel').onclick = ()=>{ if(used) return; used = true; closeSettings(); done(null); };
+}
+const removableTypes = () => BAG_TYPES.filter(t=>run.bag[t]>0);
+const addableTypes = () => BAG_TYPES.filter(t=>['sword','shield','heal','coin'].includes(t) || run.bag[t]>0);
 function openRelics(){
   if(!run) return; sfx('click');
   const m = $('#modal'); m.hidden = false;
@@ -956,6 +992,7 @@ function heroScreen(){
         <span class="ult">Unlock: ${C.unlock.text}, or spend <b style="display:inline;font-size:13px">${C.unlock.cost} Soul Shards</b> (you have ${soulShards()}).</span></span></button>`;
       return `<button class="choice hero" data-id="${id}"><span class="ic">${img(C.spr,70)}</span><span>
         <b>${C.name}${wins?` <span class="rar rar3">${wins} win${wins>1?'s':''}</span>`:''}</b><small>${C.desc}</small>
+        <span class="bagmini">${Object.entries(C.bag||DEFAULT_BAG).map(([t,n])=>`<span>${blockChip(t)}${n}</span>`).join('')}</span>
         <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
         <span class="ult">Special: <b style="font-size:13px;display:inline">${C.ult.name}</b> - ${C.ult.desc}</span>
         ${(()=>{ const lv = masteryLevel(id), x = masteryXp(id), nx = MASTERY[lv]; return `<span class="mastery"><span class="mlv">Mastery ${lv}</span><span class="qbar"><i style="width:${nx?Math.min(100,100*(x-MASTERY[lv-1])/(nx-MASTERY[lv-1])):100}%"></i></span><small>${nx?`Next: ${MASTERY_PERKS[lv]}`:'Max mastery'}</small></span>`; })()}
@@ -1164,8 +1201,10 @@ function restScreen(){
     ${choiceBtn({id:'heal',spr:'heal_icon',name:'Rest',desc:`Heal ${amt} HP.${has('hearth')?' +4 max HP.':''}`})}
     ${choiceBtn({id:'train',spr:'heart',name:'Train',desc:'+8 max HP.'})}
     ${choiceBtn({id:'up',spr:U.spr,name:U.name,desc:U.desc+' (permanent)'})}
-    ${choiceBtn({id:'med',spr:C.spr,name:'Meditate',desc:`Start your next fight with ${C.name} fully charged.`, disabled: run.charge>=C.need})}`);
+    ${choiceBtn({id:'med',spr:C.spr,name:'Meditate',desc:`Start your next fight with ${C.name} fully charged.`, disabled: run.charge>=C.need})}
+    ${choiceBtn({id:'cut',spr:'bagicon',name:'Declutter',desc:'Remove 2 blocks of one type from your bag.', disabled: bagSize()-2 < BAG_MIN})}`);
   bindChoices(id=>{
+    if(id==='cut') return chooseBlock('Declutter', 'Pick a block type to remove 2 of.', removableTypes(), t=>{ if(!t) return restScreen(); bagRemove(t, Math.min(2, run.bag[t])); sfx('anvil'); toast(`<b>Removed ${TYPES[t].name} blocks</b><br>${bagSize()} blocks left in your bag.`, 'bagicon'); advance(); });
     if(id==='heal'){ heal(amt); if(has('hearth')){ run.maxHp+=4; run.hp+=4; } sfx('heal'); }
     else if(id==='train'){ run.maxHp+=8; run.hp+=8; sfx('armor'); }
     else if(id==='up'){ run.lvl[up]++; sfx('armor'); }
@@ -1201,6 +1240,8 @@ function shopScreen(){
       ${mut('dry')?'':pots.map(s=>s.sold?'':choiceBtn({id:'p:'+s.id,spr:POTIONS[s.id].spr,name:POTIONS[s.id].name,desc:POTIONS[s.id].desc+(full?' (potion slots full)':''),price:s.price,disabled:run.gold<s.price||full})).join('')}
       ${S.upSold?'':choiceBtn({id:'u:'+up,spr:UPGRADES[up].spr,name:UPGRADES[up].name,desc:UPGRADES[up].desc+' (permanent)',price:upPrice,disabled:run.gold<upPrice})}
       ${S.packSold||run.potionSlots>=5||mut('dry')?'':choiceBtn({id:'b:pack',spr:'satchel',name:'Bigger Pack',desc:'+1 potion slot.',price:packPrice,disabled:run.gold<packPrice})}
+      ${choiceBtn({id:'a:add',spr:'bagicon',name:'Hire Blocks',desc:'Add 2 blocks of a type you choose to your bag.',price:P(30+10*(S.adds||0)),disabled:run.gold<P(30+10*(S.adds||0))})}
+      ${S.cutSold?'':choiceBtn({id:'c:cut',spr:'bagicon',name:'Remove a Block Type',desc:'Remove up to 3 blocks of one type from your bag.',price:P(45),disabled:run.gold<P(45)||bagSize()-1<BAG_MIN})}
       ${S.healSold?'':choiceBtn({id:'h:heal',spr:'heal_icon',name:'Bandages',desc:'Heal 30% of your max HP.',price:P(35),disabled:run.gold<P(35)||run.hp>=run.maxHp})}
       <button class="btn ghost" id="rerollShop" ${run.gold<rerollPrice()?'disabled':''}>Restock relics and potions (${rerollPrice()} gold)</button>
       <button class="btn ghost" id="leaveBtn">Leave</button>`);
@@ -1214,6 +1255,8 @@ function shopScreen(){
       if(kind==='r'){ const s=stock.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; gainRelic(id); }
       else if(kind==='p'){ const s=pots.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; givePotion(id); sfx('buy'); }
       else if(kind==='u'){ if(run.gold<upPrice||S.upSold) return; run.gold-=upPrice; S.upSold=true; run.lvl[id]++; sfx('buy'); toast(`<b>${UPGRADES[id].name}</b><br>${UPGRADES[id].desc}`, UPGRADES[id].spr); }
+      else if(kind==='a'){ const c = P(30+10*(S.adds||0)); if(run.gold<c) return; return chooseBlock('Hire Blocks', 'Pick a block type to add 2 of.', addableTypes(), t=>{ if(!t) return; run.gold -= c; S.adds = (S.adds||0)+1; bagAdd(t,2); sfx('buy'); renderRunbar(); render(); saveRun(); }); }
+      else if(kind==='c'){ if(run.gold<P(45)||S.cutSold) return; return chooseBlock('Remove Blocks', 'Pick a block type to remove up to 3 of.', removableTypes(), t=>{ if(!t) return; run.gold -= P(45); S.cutSold = true; let n=0; while(n<3 && bagRemove(t,1)) n++; sfx('anvil'); renderRunbar(); render(); saveRun(); }); }
       else if(kind==='h'){ if(run.gold<P(35)||S.healSold) return; run.gold-=P(35); S.healSold=true; heal(Math.round(run.maxHp*0.3)); sfx('heal'); }
       else { if(run.gold<packPrice||S.packSold) return; run.gold-=packPrice; S.packSold=true; run.potionSlots++; sfx('buy'); }
       renderRunbar(); render(); saveRun();
@@ -1239,10 +1282,12 @@ function forgeScreen(){
   view(`${scene('anvil','The Forge','The anvil glows white-hot. Choose what to forge.')}
     ${R.forge.ups.map(k=>choiceBtn({id:'t:'+k, spr:UPGRADES[k].spr, name:'Temper: '+UPGRADES[k].name, desc:UPGRADES[k].desc.replace('+1','+2')+' (permanent)'})).join('')}
     ${choiceBtn({id:'r:'+(low||''), spr:low?RELICS[low].spr:'r_treasure', name:'Reforge', desc: low ? `Melt down your ${RELICS[low].name} and forge a relic of higher rarity.` : 'You have no relic to reforge.', disabled:!low})}
+    ${choiceBtn({id:'b:bag', spr:'bagicon', name:'Refine', desc:'Remove 3 blocks of one type from your bag.', disabled: bagSize()-1 < BAG_MIN})}
     ${choiceBtn({id:'s:'+(low||''), spr:'coin', name:'Smelt', desc: low ? `Melt down your ${RELICS[low].name} for ${30+25*RELICS[low].r} gold.` : 'You have no relic to smelt.', disabled:!low})}
     <button class="btn ghost" id="leaveBtn">Leave</button>`);
   bindChoices(key=>{
     const [k,id] = key.split(':');
+    if(k==='b') return chooseBlock('Refine', 'Pick a block type to remove up to 3 of.', removableTypes(), t=>{ if(!t) return forgeScreen(); let n = 0; while(n<3 && bagRemove(t,1)) n++; sfx('anvil'); toast(`<b>Removed ${n} ${TYPES[t].name} block${n===1?'':'s'}</b>`, 'bagicon'); advance(); });
     if(k==='t'){ run.lvl[id] += 2; sfx('anvil'); toast(`<b>${UPGRADES[id].name} x2</b><br>${UPGRADES[id].desc.replace('+1','+2')}`, UPGRADES[id].spr); }
     else if(k==='r' && id){ const rr = RELICS[id].r; run.relics = run.relics.filter(x=>x!==id); const [nid] = relicOffers(1, Math.min(3, rr+1)); if(nid) gainRelic(nid); sfx('blast'); }
     else if(k==='s' && id){ run.gold += 30+25*RELICS[id].r; run.relics = run.relics.filter(x=>x!==id); sfx('coin'); }
@@ -1346,7 +1391,9 @@ function rewardScreen(kind){
   view(`${scene(kind==='boss'?'r_boss':kind==='goblin'?'goldgoblin':'r_treasure', title, `+${RW.g} gold.${RW.extra} Choose a reward:`)}
     ${offers.map(o=>choiceBtn(o)).join('')}
     <button class="btn ghost" id="skipBtn">Skip</button>`);
-  bindChoices(id=>{ const b = BOONS.find(x=>x.id===id); if(b){ b.apply(); sfx('heal'); } else gainRelic(id); advance(); });
+  bindChoices(id=>{ const b = BOONS.find(x=>x.id===id);
+    if(b && b.choose) return b.apply(ok=>{ if(ok) advance(); else rewardScreen(kind); });
+    if(b){ b.apply(); sfx('heal'); } else gainRelic(id); advance(); });
   $('#skipBtn').onclick = ()=>{ sfx('click'); advance(); };
 }
 function rollReward(RW, kind){
@@ -1434,12 +1481,25 @@ function endScreen(won){
 }
 
 /* ================= combat ================= */
+/* ---------- the block bag: every piece's type is drawn from your curated bag ---------- */
+const BAG_TYPES = ['sword','shield','heal','coin','rainbow','venom','blast'];
+const BAG_MIN = 6;
+const DEFAULT_BAG = {sword:6, shield:3, heal:2, coin:2};
+const RELIC_BLOCKS = {prism:['rainbow',2], orb:['rainbow',2], toxin:['venom',2], gravetome:['venom',2], satchel:['blast',2]};
+function startingBag(cls){
+  const b = Object.assign({}, CLASSES[cls].bag || DEFAULT_BAG);
+  return b;
+}
+const bagSize = () => Object.values(run.bag||{}).reduce((a,v)=>a+v,0);
+function bagAdd(t, n=1){ run.bag[t] = (run.bag[t]||0) + n; }
+function bagRemove(t, n=1){ if(!run.bag[t]) return false; if(bagSize()-n < BAG_MIN) return false; run.bag[t] = Math.max(0, run.bag[t]-n); if(!run.bag[t]) delete run.bag[t]; return true; }
 function rollType(){
-  const e = [['sword',46],['shield',22],['heal',13],['coin',10]];
-  if(has('prism')||has('orb')) e.push(['rainbow',has('prism')&&has('orb')?20:12]);
-  if(has('toxin')||has('gravetome')) e.push(['venom',has('toxin')&&has('gravetome')?20:12]);
-  if(has('satchel')) e.push(['blast',7]);
-  return weighted(e);
+  if(!run.bag || !bagSize()) run.bag = startingBag(run.cls);
+  if(cb){
+    if(!cb.pile || !cb.pile.length){ cb.pile = shuffle(Object.entries(run.bag).flatMap(([t,n])=>Array(n).fill(t))); }
+    return cb.pile.pop();
+  }
+  return weighted(Object.entries(run.bag));
 }
 function shapeWeight(s){
   const n = s.cells.length;
