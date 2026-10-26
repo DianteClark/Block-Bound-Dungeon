@@ -821,6 +821,10 @@ function migrate(r){
   if(!validSave(r)) throw new Error('bad save');
   r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, muts:[], daily:null, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}, level:1, xp:0, perks:{}, lvUp:0, petLv:0, petXp:0, petUps:[], petEvo:0, plus:{}, carry:0, bossRelic:0}, r);
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
+  if(!Number.isFinite(r.gold)) r.gold = 120;
+  if(!Number.isFinite(r.maxHp) || r.maxHp<1) r.maxHp = 60;
+  if(!Number.isFinite(r.hp)) r.hp = r.maxHp;
+  if(r.room && r.room.shop) (r.room.shop.stock||[]).forEach(s=>{ if(!Number.isFinite(s.price)) s.price = 80; });
   delete r.choices;
   r.relics = r.relics.filter(id=>RELICS[id]);
   if(!r.bag || typeof r.bag!=='object' || !Object.keys(r.bag).length){ r.bag = Object.assign({}, CLASSES[r.cls].bag || DEFAULT_BAG); r.relics.forEach(id=>{ if(RELIC_BLOCKS[id]){ const [t,n] = RELIC_BLOCKS[id]; r.bag[t] = (r.bag[t]||0)+n; } }); }
@@ -890,6 +894,7 @@ const HERO_RELICS = {
 };
 Object.entries(HERO_RELICS).forEach(([id,H])=>{ RELICS[id] = {...H, spr:id, r:5}; });
 function relicHook(name, ...args){ (run && run.relics || []).forEach(id=>{ const R = RELICS[id]; if(R && R[name]) try{ R[name](...args); }catch(e){ console.error(e); } }); }
+const relicPrice = id => ({0:50, 1:55, 2:80, 3:115, 4:150, 5:90})[(RELICS[id]||{}).r] || 70;
 function relicOffers(n, minR=1){
   const free = Object.keys(RELICS).filter(id=>!has(id) && !RELICS[id].starter && !RELICS[id].boss && (!RELICS[id].hero || (RELICS[id].hero===run.cls && heroRelicOpen(id))));
   const pool = free.filter(id=>RELICS[id].r>=minR);
@@ -944,6 +949,7 @@ function show(which){
 function updateDanger(){ document.body.classList.toggle('danger', !!run && screenName==='combat' && run.hp>0 && run.hp/run.maxHp<=0.3); }
 function renderRunbar(){
   if(!run) return;
+  if(!Number.isFinite(run.gold)) run.gold = 0;
   const hi = $('#heroIcon'); hi.innerHTML = img(CLASSES[run.cls].spr, 34) + `<b class="lvb">${run.level||1}</b>`; hi.onclick = openPerks;
   const xf = $('#xpFill'); if(xf) xf.style.width = (100*(run.xp||0)/xpNeed(run.level||1))+'%';
   const pct = (100*Math.max(0,run.hp)/run.maxHp)+'%';
@@ -1621,7 +1627,7 @@ function shopScreen(){
   const disc = (has('clover') ? 0.8 : 1) * (mut('rush') ? 1.5 : 1) * (rule('rich') ? 1.5 : 1), P = x => Math.round(x*disc);
   const R = run.room;
   if(!R.shop){ R.shop = {
-    stock: relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false})),
+    stock: relicOffers(3).map(id=>({id, price:P(relicPrice(id)+rand(-5,5)), sold:false})),
     pots: shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})),
     up: pick(Object.keys(UPGRADES)), upSold:false, packSold:false, removeSold:false }; saveRun(); }
   const S = R.shop, stock = S.stock, pots = S.pots, up = S.up, upPrice = P(50), packPrice = P(70);
@@ -1643,12 +1649,12 @@ function shopScreen(){
       <button class="btn ghost" id="leaveBtn">Leave</button>`);
     $('#rerollShop').onclick = ()=>{
       const c = rerollPrice(); if(run.gold<c) return; run.gold -= c; S.rerolls = (S.rerolls||0)+1;
-      stock.splice(0, stock.length, ...relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false})));
+      stock.splice(0, stock.length, ...relicOffers(3).map(id=>({id, price:P(relicPrice(id)+rand(-5,5)), sold:false})));
       pots.splice(0, pots.length, ...shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})));
       sfx('shuffle'); renderRunbar(); render(); saveRun(); };
     $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
       const [kind,id] = b.dataset.id.split(':');
-      if(kind==='r'){ const s=stock.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; gainRelic(id); }
+      if(kind==='r'){ const s=stock.find(x=>x.id===id); if(!s || !Number.isFinite(s.price)) s.price = relicPrice(id); if(!(run.gold>=s.price)||s.sold) return; run.gold-=s.price; s.sold=true; gainRelic(id); }
       else if(kind==='p'){ const s=pots.find(x=>x.id===id); if(run.gold<s.price||s.sold) return; run.gold-=s.price; s.sold=true; givePotion(id); sfx('buy'); }
       else if(kind==='u'){ if(run.gold<upPrice||S.upSold) return; run.gold-=upPrice; S.upSold=true; run.lvl[id]++; sfx('buy'); toast(`<b>${UPGRADES[id].name}</b><br>${UPGRADES[id].desc}`, UPGRADES[id].spr); }
       else if(kind==='a'){ const c = P(30+10*(S.adds||0)); if(run.gold<c) return; return chooseBlock('Hire Blocks', 'Pick a block type to add 2 of.', addableTypes(), t=>{ if(!t) return; run.gold -= c; S.adds = (S.adds||0)+1; bagAdd(t,2); sfx('buy'); renderRunbar(); render(); saveRun(); }); }
@@ -1984,7 +1990,7 @@ const PLUS = {
   venom:{name:'Venom+', desc:'Venom blocks apply double poison.'},
   blast:{name:'Blast+', desc:'Blast blocks deal +5 damage.'},
 };
-const plusOn = t => !!(run && run.plus && run.plus[t]);
+const plusOn = t => !!(run && run.plus && run.plus[t] && run.bag && run.bag[t]>0);
 const plusable = () => Object.keys(run.bag||{}).filter(t=>PLUS[t] && run.bag[t]>0 && !plusOn(t));
 function empower(t){ run.plus = run.plus || {}; run.plus[t] = 1; for(const k in BLK) if(k.startsWith(t+'|')) delete BLK[k]; unlock('empower'); toast(`<b>${PLUS[t].name}</b><br>${PLUS[t].desc}`, 'r_combat', 3200); }
 function choosePlus(title, done){ chooseBlock(title, 'Pick a block type to upgrade. Every block of that type in your bag gets stronger.', plusable(), t=>{ if(t){ empower(t); sfx('anvil'); } done(!!t); }); }
@@ -2109,6 +2115,7 @@ function resumeFight(f){
   delete cb.enemy; attachEnemy(cb);
   cb.enemies.forEach(e=>{ if(!e.intent) nextIntent(e); });
   $('#enemyPanel').dataset.sig = '';
+  if(run.hp<=0) setTimeout(()=>{ if(cb && !cb.over) checkEnd(); }, 400);
   show('combat'); renderEnemies(); layout(); renderHUD();
   toast('<b>Fight resumed</b><br>Right where you left off.', cb.enemy.spr, 2000);
 }
@@ -2574,6 +2581,7 @@ function hitPlayer(n, small){
   if(v>0) cb.tookDmg = true;
   if(pk('wind') && !cb.windUsed && run.hp>0 && run.hp < run.maxHp*0.3){ cb.windUsed = true; heal(15); setTimeout(()=>floatText(hpEl(), 'Second wind +15', '#86e6a8', true), 200); }
   floatText(hpEl(), v>0?`-${v}`:'Blocked!', v>0?'#ff6a6f':'#a8ceff');
+  if(run.hp<=0){ const f = cb; setTimeout(()=>{ if(cb===f && !cb.over){ renderHUD(); checkEnd(); } }, 30); }
   if(v>0){ sfx('hurt'); if(!small){ shake(); flash('rgba(200,20,30,.45)'); buzz(60); } if(wasSafe && run.hp>0 && run.hp/run.maxHp<=0.3) sfx('heartbeat'); }
   else sfx('block');
   updateDanger();
