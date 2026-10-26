@@ -2431,6 +2431,7 @@ function evolveEnemy(e){
   renderHUD(); const el = eArt(e); if(el) burstAt(el, ['#ffd23f','#fff','#c77dff'], 40); unlock('ascended'); saveRun();
 }
 function addGuards(n){
+  if(!cb || cb.over) return 0;
   const pool = floorPool().normal; let added = 0;
   for(let k=0;k<n;k++){
     const slot = [1,2].find(s=>!cb.enemies[s] || cb.enemies[s].dead || cb.enemies[s].hp<=0); if(slot==null) break;
@@ -2929,18 +2930,18 @@ function damageEnemy(n, noThorns, pierce, target){
   if(cb.kind==='boss' && e===cb.enemies[0] && !cb.phase && e.hp>0 && e.hp<e.maxHp*(e.legendary?0.66:0.5)){
     cb.phase = 1; e.moves = e.moves.map(m=>({...m, v: m.k==='shuffle'||m.k==='flee' ? m.v : Math.round(m.v*1.2), t: Math.max(2, m.t-1)}));
     e.armor += Math.round(e.maxHp*0.08);
-    setTimeout(()=>{ banner('PHASE 2', `${e.name} grows furious`, 1600); flash('rgba(200,20,40,.45)'); sfx('phase'); shake(); buzz(120); if(!e.secret && run.floor>=3) addGuards(e.legendary || run.floor>=4 ? 2 : 1); renderHUD(); }, 300);
+    setTimeout(()=>{ if(!cb || cb.over) return; banner('PHASE 2', `${e.name} grows furious`, 1600); flash('rgba(200,20,40,.45)'); sfx('phase'); shake(); buzz(120); if(!e.secret && run.floor>=3) addGuards(e.legendary || run.floor>=4 ? 2 : 1); renderHUD(); }, 300);
   } else if(cb.kind==='boss' && e===cb.enemies[0] && e.legendary && cb.phase===1 && e.hp>0 && e.hp<e.maxHp*0.33){
     cb.phase = 2; e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp*0.5)); e.rage += 3;
     const pool = []; ENEMIES.forEach(F=>F.bosses.forEach(b=>b.moves.forEach(mv=>{ if(SIG[mv.k] && !e.moves.some(x=>x.k===mv.k)) pool.push(mv); })));
     if(pool.length){ const nm = pick(pool); e.moves.push({...nm, v:Math.round(nm.v*1.3)}); e.learned = nm.k; }
-    setTimeout(()=>{ banner('PHASE 3', `${e.name} heals and learns a new trick`, 1900); flash('rgba(255,210,60,.5)'); sfx('phase'); shake(); buzz(160); addGuards(2); renderHUD(); }, 300);
+    setTimeout(()=>{ if(!cb || cb.over) return; banner('PHASE 3', `${e.name} heals and learns a new trick`, 1900); flash('rgba(255,210,60,.5)'); sfx('phase'); shake(); buzz(160); addGuards(2); renderHUD(); }, 300);
   }
   if(!e.evoRolled && !e.minion && !e.secret && !e.rare && e.hp>0 && e.hp<e.maxHp*0.5){
     e.evoRolled = true; const ch = window.__forceEvo ? 1 : cb.kind==='boss' ? (e.legendary?0.08:0.05) : cb.kind==='elite' ? 0.08 : 0.05;
     if(Math.random() < ch) setTimeout(()=>{ if(cb && !cb.over && !e.dead && e.hp>0) evolveEnemy(e); }, 450);
   }
-  if(e.passive && e.passive.id==='enrage' && !e.enraged && e.hp>0 && e.hp<e.maxHp/2){ e.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ floatText(eArt(e), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
+  if(e.passive && e.passive.id==='enrage' && !e.enraged && e.hp>0 && e.hp<e.maxHp/2){ e.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ if(!cb) return; floatText(eArt(e), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
   if(d>=100) unlock('bighit');
   const el = eArt(e); if(!el){ return; }
   floatText(el, d>0?`-${d}`:'Blocked', d>0?'#ff8a8d':'#c9c2d4', d>=25);
@@ -3056,7 +3057,7 @@ function checkEnd(){
   if(cb.kind==='boss' && cb.enemies[0].hp<=0) cb.enemies.forEach(e=>{ if(e.minion) e.hp = 0; });
   cb.enemies.forEach((e,idx)=>{ const fs = [1,2].find(s=>!cb.enemies[s] || cb.enemies[s].dead || cb.enemies[s].hp<=0); if(e.hp<=0 && !e.dead && hasMod(e,'splitting') && !e.didSplitDeath && idx===0 && fs!=null){
     e.didSplitDeath = true; const m = makeEnemy({name:`${e.name.replace(/^The /,'')} Shard`, spr:e.spr, minion:true, moves:e.moves.map(x=>({...x, v: x.k==='shuffle'||x.k==='flee' ? x.v : Math.round(x.v*0.6)}))}, Math.round(e.maxHp*0.35));
-    nextIntent(m); m.intent.left++; cb.enemies[fs] = m; setTimeout(()=>{ renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
+    nextIntent(m); m.intent.left++; cb.enemies[fs] = m; setTimeout(()=>{ if(!cb || cb.over) return; renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
   fresh.forEach(e=>{ e.dead = true; run.kills++; relicHook('onKill', e); if(has('bloodring')) heal(rv('bloodring',[5,8,12])); if(has('soulharvest')){ run.charge = Math.min(ULT().need, run.charge + rv('soulharvest',[2,3,4])); if(rt('soulharvest')>=3){ run.maxHp += 3; run.hp += 3; } } if(has('laurel')){ const lh = rv('laurel',[2,3,4]); run.maxHp += lh; run.hp += lh; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
@@ -3286,7 +3287,7 @@ function renderEnemies(){
   });
 }
 function renderHUD(){
-  if(!cb) return;
+  if(!cb || !run) return;
   renderEnemies();
   $('#shieldText').textContent = cb.shield;
   const m = cb.streak*streakStep();
