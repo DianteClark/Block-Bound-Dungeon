@@ -599,7 +599,7 @@ const COSM = {
     bolt:{name:'Lightning', cost:100, desc:'Crackling bolts of lightning.'},
   }},
 };
-function cosm(){ const c = Object.assign({skin:'classic', burst:'shards', trail:'comet', owned:{}}, store.get('cos', {})); if(!c.owned) c.owned = {}; return c; }
+function cosm(){ const c = Object.assign({skin:'classic', burst:'shards', trail:'comet', owned:{}}, store.get('cos', {}) || {}); if(!c.owned) c.owned = {}; return c; }
 const cosOwned = (cat, id) => !COSM[cat].items[id].cost || !!cosm().owned[cat+'_'+id];
 let curSkin = 'classic';
 function syncCosmetics(){ const c = cosm(); curSkin = COSM.skin.items[c.skin] && cosOwned('skin', c.skin) ? c.skin : 'classic'; for(const k in BLK) delete BLK[k]; }
@@ -933,8 +933,8 @@ function openSettings(){
   let armed = false, armT;
   $('#resetBtn').onclick = ()=>{
     if(!armed){ armed = true; $('#resetBtn').textContent = 'Tap again to erase everything'; sfx('warn'); clearTimeout(armT); armT = setTimeout(()=>{ armed=false; const b=$('#resetBtn'); if(b) b.textContent='Reset all data'; }, 3000); return; }
-    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated','daily','mutSel','theme','themesSeen'].forEach(k=>store.set(k,null));
-    sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex, trophies, skills and heroes were erased.', 'bones');
+    ['save','stats','best','runs','seen','ach','heat','heatSel','tut','shards','skills','heroes','quests','mastery','journal','rotated','daily','mutSel','theme','themesSeen','cos','bazTab','heroSel'].forEach(k=>store.set(k,null)); syncCosmetics();
+    sfx('rubble'); closeSettings(); run = null; cb = null; titleScreen(); toast('<b>Data reset</b><br>Saves, records, codex, trophies, skills, heroes and Bazaar items were erased.', 'bones');
   };
   const ab = $('#abandonBtn');
   if(ab){ let a2=false; ab.onclick = ()=>{ if(!a2){ a2=true; ab.textContent='Tap again to abandon this run'; sfx('warn'); return; } store.set('save', null); closeSettings(); run=null; cb=null; titleScreen(); }; }
@@ -1039,7 +1039,7 @@ function titleScreen(){
     ${questCard()}
     <div class="navgrid">
       <button class="navb" id="skillBtn">${img('rune',36)}<b>Skill Tree</b><small>${img('shard',14)} ${soulShards()}</small></button>
-      <button class="navb" id="codexBtn">${img('book',36)}<b>Codex</b><small>Monsters &amp; relics</small></button>
+      <button class="navb" id="codexBtn">${img('book',36)}<b>Codex</b><small>Bosses, relics &amp; perks</small></button>
       <button class="navb" id="trophyBtn">${img('trophy',36)}<b>Trophies</b><small>${Object.keys(ach).length} / ${Object.keys(ACH).length}</small></button>
       <button class="navb" id="journalBtn">${img('scroll',36)}<b>Journal</b><small>${st.runs} runs</small></button>
       <button class="navb" id="wardBtn">${img('palette',36)}<b>Bazaar</b><small>Skins, bursts, trails and boards</small></button>
