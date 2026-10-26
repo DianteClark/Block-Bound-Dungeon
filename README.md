@@ -32,7 +32,7 @@ A block-blasting roguelike dungeon crawler for the browser. No build step, no de
 - **20 heroes.** Knight, Rogue and Mage from the start; unlock the Berserker, Necromancer, Alchemist, Paladin, Ranger, Bard, Monk, Druid, Samurai, Pirate, Witch, Tinkerer, Vampire, Gladiator, Shaman, Cryomancer and Beastmaster through play or with Soul Shards. Each has a starter relic, a block bag and a special of their own.
 - **Block bag.** Your pieces are drawn from a bag of blocks you curate during the run: hire blocks at the merchant, refine them at the forge or campfire, and pick up new block types from relics.
 - **Relic slots and tiers.** Equip 6 relics at the start (your hero's starter relic is free), gaining slots after the floor 2 and 4 bosses and more in the Endless Depths (up to 16). Extra relics go to a satchel you can swap from at campfires. Every relic grows from Tier I to III as you win fights with it, or can be tempered at the Forge.
-- **Over 130 relics**, including 24 boss relics with real trade-offs and 40 hero relics.
+- **165 relics**, including 23 boss relics with real trade-offs and 40 hero relics.
 - **Block types.** Sword, Shield, Heart and Coin are joined by Rainbow, Venom, Blast and 8 discoverable types (Lightning, Mirror, Gem, Frost, Thorn, Echo, Anchor, Crystal). Every hero also has a signature block unlocked at Mastery 3.
 - **Empowered blocks.** Upgrade a block type to its + version at the Forge, the Enchanter's Altar or as a rare reward: Sword+ pierces armor, Shield+ carries shield into the next fight, Heart+ overheals into shield, and more.
 - **Boss relics.** After every boss, choose one cursed treasure: big power with a real downside (Glass Blade, Black Lotus, Pandora's Box, Titan's Heart...).
