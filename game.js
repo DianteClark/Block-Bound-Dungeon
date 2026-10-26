@@ -303,24 +303,47 @@ const RELICS = {
   emberheart:{tiers:['Clearing 2+ lines at once also poisons the enemy for 3.','Clearing 2+ lines at once poisons for 5.','Clearing 2+ lines at once poisons for 8.'], name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
 };
 
-const POTIONS = {
-  health:{name:'Health Potion', spr:'potion_health', desc:'Heal 20 HP.', any:true, use(){ const b=run.hp; heal(20); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); sfx('heal'); }},
-  fire:{name:'Fire Flask', spr:'potion_fire', desc:'Deal 20 damage to the enemy (more on deeper floors).', use(){ flash('rgba(255,120,40,.6)'); damageEnemy(20 + 6*(run.floor-1), true); }},
-  iron:{name:'Iron Tonic', spr:'potion_iron', desc:'Gain 15 shield.', use(){ cb.shield += 15; floatText($('#shieldStat'), '+15', '#a8ceff'); sfx('shield'); }},
-  smoke:{name:'Smoke Bomb', spr:'potion_smoke', desc:'Draw a fresh hand and delay the enemy by 2 turns.', use(){ dealHand(); cb.enemy.intent.left += 2; }},
-  bomb:{name:'Rubble Bomb', spr:'bomb', desc:'Blast every rubble and ice block off the grid. 3 damage each.', use(){
+function curFloor(){ try{ return run ? run.floor : 1; }catch(e){ return 1; } }
+/* potions: every base potion has a Greater version (x1.8) brewed at campfires. Throwables share the potion slots. */
+const POTION_BASE = {
+  health:{name:'Health Potion', spr:'potion_health', any:true, d:m=>`Heal ${Math.round(20*m)} HP.`, use(m){ const b=run.hp; heal(Math.round(20*m)); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); sfx('heal'); }},
+  fire:{name:'Fire Flask', spr:'potion_fire', d:m=>`Deal ${Math.round((20 + 6*(curFloor()-1))*m)} damage to the enemy.`, use(m){ flash('rgba(255,120,40,.6)'); damageEnemy(Math.round((20 + 6*(run.floor-1))*m), true); }},
+  iron:{name:'Iron Tonic', spr:'potion_iron', d:m=>`Gain ${Math.round(15*m)} shield.`, use(m){ const s = Math.round(15*m); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); sfx('shield'); }},
+  smoke:{name:'Smoke Bomb', spr:'potion_smoke', d:m=>`Draw a fresh hand and delay every enemy by ${m>1?3:2} turns.`, use(m){ dealHand(); aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += m>1?3:2; }); }},
+  bomb:{name:'Rubble Bomb', spr:'bomb', d:m=>`Blast every rubble, ice, web and bomb off the grid. ${Math.round(3*m)} damage each.`, use(m){
     const set = []; cb.board.forEach((t,i)=>{ if(JUNK(t)) set.push(i); });
     if(!set.length){ toast('No rubble to blast. The fuse fizzles.', 'bomb'); return; }
     const now = performance.now();
-    set.forEach(i=>{ shards(i, cb.board[i], 6); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; });
-    sfx('blast'); shake(); damageEnemy(3*set.length, true);
-  }},
-  venom:{name:'Venom Vial', spr:'potion_venom', desc:'Poison the enemy for 8.', use(){ cb.enemy.poison += 8; floatText(eArt(), '+8 poison', '#dcb6ff'); sfx('poison'); }},
-  mana:{name:'Mana Potion', spr:'potion_mana', desc:'Fully charge your hero special.', use(){ run.charge = ULT().need; floatText($('#ultBtn'), 'Charged!', '#c8fbff'); sfx('ult'); }},
-  chaos:{name:'Chaos Brew', spr:'potion_chaos', desc:'Turn every piece in your hand into Rainbow blocks.', use(){ cb.hand.forEach(p=>{ if(!p.used) p.type='rainbow'; }); floatText($('#board'), 'Chaos!', '#f0d6ff', true); sfx('ult'); }},
-  luck:{name:'Liquid Luck', spr:'potion_luck', desc:'Your next clear has its multiplier doubled.', use(){ cb.doubleNext = true; floatText($('#board'), 'Lucky!', '#86e6a8', true); sfx('trophy'); }},
+    set.forEach(i=>{ shards(i, cb.board[i], 6); cb.fx.push({i,type:cb.board[i],t0:now}); cb.board[i]=null; delete cb.bombs[i]; });
+    sfx('blast'); shake(); damageEnemy(Math.round(3*m)*set.length, true); }},
+  venom:{name:'Venom Vial', spr:'potion_venom', d:m=>`Poison every enemy for ${Math.round(8*m)}.`, use(m){ const n = Math.round(8*m); aliveEnemies().forEach(e=>{ e.poison += n; floatText(eArt(e), `+${n} poison`, '#dcb6ff'); }); sfx('poison'); }},
+  mana:{name:'Mana Potion', spr:'potion_mana', d:m=>`Fully charge your hero special${m>1?' and gain 10 shield':''}.`, use(m){ run.charge = ULT().need; if(m>1) cb.shield += 10; floatText($('#ultBtn'), 'Charged!', '#c8fbff'); sfx('ult'); }},
+  chaos:{name:'Chaos Brew', spr:'potion_chaos', d:m=>`Turn every piece in your hand into Rainbow blocks${m>1?' and gain a reroll':''}.`, use(m){ cb.hand.forEach(p=>{ if(!p.used) p.type='rainbow'; }); if(m>1) cb.rerolls++; floatText($('#board'), 'Chaos!', '#f0d6ff', true); sfx('ult'); }},
+  luck:{name:'Liquid Luck', spr:'potion_luck', d:m=>`Your next clear has its multiplier ${m>1?'tripled':'doubled'}.`, use(m){ cb.doubleNext = m>1 ? 1.5 : true; floatText($('#board'), 'Lucky!', '#86e6a8', true); sfx('trophy'); }},
+  frostp:{name:'Frost Draught', spr:'p_frost', d:m=>`Delay every enemy's next move by ${m>1?3:2} and gain ${Math.round(6*m)} shield.`, use(m){ aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += m>1?3:2; }); cb.shield += Math.round(6*m); sfx('ice'); flash('rgba(160,220,255,.4)'); }},
+  ragep:{name:'Rage Tonic', spr:'p_rage', d:m=>`Your clears deal +${Math.round(4*m)} damage for the rest of the fight.`, use(m){ cb.rageBonus = (cb.rageBonus||0) + Math.round(4*m); sfx('rage'); floatText($('#board'), 'Enraged!', '#ff9d3c', true); }},
+  purge:{name:'Purifying Salts', spr:'p_purge', d:m=>`Clear every rubble, ice, web, bomb and chain from your grid${m>1?' and heal 10':''}.`, use(m){ const now = performance.now(); cb.board.forEach((t,i)=>{ if(JUNK(t)){ cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; } }); cb.bombs = {}; cb.chains = []; if(cb.webs) cb.webs = {}; if(m>1) heal(10); sfx('heal'); }},
+  goldp:{name:'Liquid Gold', spr:'p_gold', any:true, d:m=>`Gain ${Math.round(35*m)} gold.`, use(m){ const n = Math.round(35*m); run.gold += n; floatText($('#goldWrap'), `+${n}`, '#ffe58a'); questAdd('gold', n); sfx('coin'); }},
+  phoenixp:{name:'Phoenix Tears', spr:'p_phoenix', d:m=>`If you would die this fight, revive at ${m>1?60:30}% HP.`, use(m){ cb.reviveAt = m>1 ? 0.6 : 0.3; floatText(hpEl(), 'Protected', '#ffd23f', true); sfx('relic'); }},
+  giant:{name:'Giant\'s Brew', spr:'p_giant', any:true, d:m=>`+${Math.round(6*m)} max HP and heal that much.`, use(m){ const n = Math.round(6*m); run.maxHp += n; heal(n); sfx('armor'); }},
+  haste:{name:'Haste Elixir', spr:'p_haste', d:m=>`+${m>1?3:2} hand rerolls and refresh your stash.`, use(m){ cb.rerolls += m>1?3:2; cb.stashUsed = false; sfx('whoosh'); }},
+  /* throwables */
+  hammer:{name:'Throwing Hammer', spr:'hammer', throw:true, d:m=>`Smash the fullest 2x2 patch of your grid. The enemy takes ${Math.round(5*m)} per block smashed.`, use(m){
+    let best = null; for(let r=0;r<N-1;r++) for(let c=0;c<N-1;c++){ let n = 0; [[0,0],[0,1],[1,0],[1,1]].forEach(([a,b])=>{ if(cb.board[(r+a)*N+c+b]) n++; }); if(!best || n>best.n) best = {r,c,n}; }
+    let n = 0; [[0,0],[0,1],[1,0],[1,1]].forEach(([a,b])=>{ const i = (best.r+a)*N+best.c+b; if(cb.board[i]){ shards(i, cb.board[i], 6); cb.fx.push({i,type:cb.board[i],t0:performance.now()}); cb.board[i] = null; delete cb.bombs[i]; n++; } });
+    sfx('anvil'); shake(); if(n) damageEnemy(Math.round(5*m)*n, true); }},
+  grenade:{name:'Grenade', spr:'t_grenade', throw:true, d:m=>`Deal ${Math.round((16 + 5*Math.min(curFloor(),8))*m)} damage to every enemy, lanes and guards ignored.`, use(m){ const d = Math.round((16 + 5*Math.min(run.floor,8))*m); aliveEnemies().forEach(e=>damageEnemy(d, true, false, e)); sfx('blast'); shake(); flash('rgba(255,140,40,.5)'); }},
+  netp:{name:'Throwing Net', spr:'t_net', throw:true, d:m=>`Every enemy loses its current move and starts its next one${m>1?', one turn later':''}.`, use(m){ aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee'){ nextIntent(e); if(m>1) e.intent.left++; } }); sfx('shuffle'); floatText($('#board'), 'Netted!', '#c9c2d4', true); }},
+  darts:{name:'Poison Darts', spr:'t_darts', throw:true, d:m=>`Poison every enemy for ${Math.round(5*m)} and deal ${Math.round(5*m)} piercing damage.`, use(m){ const n = Math.round(5*m); aliveEnemies().forEach(e=>{ e.poison += n; damageEnemy(n, true, true, e); }); sfx('poison'); }},
+  caltrops:{name:'Caltrops', spr:'t_caltrops', throw:true, d:m=>`Scatter spikes: enemies take ${Math.round(6*m)} every time they attack you this fight.`, use(m){ cb.pthorns = Math.min(40, (cb.pthorns||0) + Math.round(6*m)); sfx('armor'); }},
 };
-
+const POTIONS = {};
+Object.entries(POTION_BASE).forEach(([k,P])=>{
+  POTIONS[k] = {name:P.name, spr:P.spr, any:P.any, throw:P.throw, base:k, desc:P.d(1), use(){ P.use(1); }};
+  POTIONS['g_'+k] = {name:'Greater '+P.name.replace(/^Throwing /,''), spr:'g_'+P.spr, any:P.any, throw:P.throw, base:k, greater:true, desc:P.d(1.8), use(){ P.use(1.8); }};
+});
+const POTION_POOL = Object.keys(POTION_BASE);
+function refreshPotionDescs(){ Object.entries(POTION_BASE).forEach(([k,P])=>{ POTIONS[k].desc = P.d(1); POTIONS['g_'+k].desc = P.d(1.8); }); }
 const UPGRADES = {
   sword:{name:'Sharpen', spr:'sword', desc:'Sword blocks deal +1 damage.'},
   shield:{name:'Reinforce', spr:'shield', desc:'Shield blocks give +1 shield.'},
@@ -493,7 +516,7 @@ const FLOORS = 5, STEPS = 8;
 /* ================= pets ================= */
 const PETS = {
   bat:{name:'Bat Familiar', spr:'bat', role:'Hunter', need:5, forms:[['Bat Familiar','bat'],['Vampire Bat','pet_bat1'],['Night Terror','pet_bat2']],
-    passive:'Weak spots deal 40% more.', desc:m=>`Swoop: strikes every enemy for ${Math.round((9 + 3*(Math.min(run?run.floor:1,8)-1))*m)} and marks a new weak spot.`,
+    passive:'Weak spots deal 40% more.', desc:m=>`Swoop: strikes every enemy for ${Math.round((9 + 3*(Math.min(curFloor(),8)-1))*m)} and marks a new weak spot.`,
     act(m){ aliveEnemies().filter(e=>!e.guarded).forEach(e=>damageEnemy(Math.round((9 + 3*(Math.min(run.floor,8)-1))*m), true, false, e)); spawnWeak(1); }},
   slime:{name:'Pet Slime', spr:'slime', role:'Janitor', need:6, forms:[['Pet Slime','slime'],['Gel Guardian','pet_slime1'],['Slime Sovereign','pet_slime2']],
     passive:'Clearing rubble, ice or webs heals 1 each.', desc:m=>`Gobble: eats every rubble, ice, web and bomb on your grid, turning them into hearts, and heals ${Math.round(5*m)}.`,
@@ -688,6 +711,7 @@ const ACH = {
   decorator:{name:'Interior Decorator', desc:'Unlock a new board theme.', spr:'palette'},
   evolve:{name:'It\'s Evolving!', desc:'Evolve a pet.', spr:'pet_bat1'},
   evolve2:{name:'Final Form', desc:'Evolve a pet to its final form.', spr:'pet_bat2'},
+  brewer:{name:'Master Brewer', desc:'Brew a Greater potion.', spr:'cauldron'},
   relic3:{name:'Masterwork', desc:'Raise a relic to Tier III.', spr:'hammer'},
   discover:{name:'New Blocks', desc:'Discover a new block type.', spr:'bagicon'},
   signature:{name:'Signature Move', desc:'Start a run with your hero\'s signature block.', spr:'r_combat'},
@@ -887,7 +911,7 @@ function snapFight(){
     stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
     tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
-    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, turret:cb.turret||0, windUsed:!!cb.windUsed, pthorns:cb.pthorns||0, echoNext:cb.echoNext||null, keepStreak:!!cb.keepStreak, petCharge:cb.petCharge||null, golemHit:!!cb.golemHit, nullLeft:cb.nullLeft||0, timeLeft:cb.timeLeft||0, cloakLeft:cb.cloakLeft||0, thunder:cb.thunder||0, echoUsed:!!cb.echoUsed, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
+    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, turret:cb.turret||0, windUsed:!!cb.windUsed, pthorns:cb.pthorns||0, rageBonus:cb.rageBonus||0, reviveAt:cb.reviveAt||0, echoNext:cb.echoNext||null, keepStreak:!!cb.keepStreak, petCharge:cb.petCharge||null, golemHit:!!cb.golemHit, nullLeft:cb.nullLeft||0, timeLeft:cb.timeLeft||0, cloakLeft:cb.cloakLeft||0, thunder:cb.thunder||0, echoUsed:!!cb.echoUsed, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
 }
 function saveRun(){
   if(!run) return;
@@ -1088,12 +1112,13 @@ const setOn = k => setCount(k) >= 3;
 const canPotion = () => !!run && !mut('dry') && run.potions.length < run.potionSlots;
 function givePotion(id){
   if(mut('dry') || run.potions.length >= run.potionSlots) return false;
-  id = id || pick(Object.keys(POTIONS));
+  id = id || (Math.random()<0.06 ? 'g_'+pick(POTION_POOL) : pick(POTION_POOL));
   run.potions.push(id); renderRunbar(); return id;
 }
 /* returns true if the run ended */
 function checkDeath(){
   if(run.hp > 0) return false;
+  if(cb && cb.reviveAt){ run.hp = Math.round(run.maxHp*cb.reviveAt); cb.reviveAt = 0; flash('rgba(255,200,80,.6)'); sfx('ult'); toast('<b>Phoenix Tears</b><br>You rise again!', 'p_phoenix'); renderRunbar(); return false; }
   if(has('lichcrown') && run.lichFloor !== run.floor){
     run.lichFloor = run.floor; run.hp = Math.round(run.maxHp*rv('lichcrown',[0.4,0.55,0.7]));
     flash('rgba(120,200,255,.6)'); sfx('phase'); toast('<b>Crown of the Lich</b><br>Death refuses you, for now.', 'bx_lichcrown'); renderRunbar(); return false;
@@ -1203,7 +1228,7 @@ function openRelics(){
     $('#setInfo').innerHTML = `<div class="setinfo" style="--sc:${S.col}"><b>${S.name} set ${Math.min(3,n)}/3 ${n>=3?'(active)':`(${3-n} more to activate)`}</b>${S.bonus}<small>${S.relics.map(id=>RELICS[id]?`${RELICS[id].name}${run.relics.includes(id)?' (owned)':''}`:'').filter(Boolean).join(' · ')}</small></div>`; });
 }
 function potionTap(i){
-  const id = run.potions[i], P = POTIONS[id]; if(!P) return;
+  const id = run.potions[i], P = POTIONS[id]; if(!P) return; refreshPotionDescs();
   const inFight = cb && !cb.over && !$('#combat').hidden;
   if(!inFight && !P.any){ toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Use it during a fight.</span>`, P.spr); return; }
   if(selPotion !== i){ selPotion = i; renderRunbar(); toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Tap again to drink.</span>`, P.spr); return; }
@@ -1775,6 +1800,25 @@ function gateScreen(){
   });
 }
 /* ================= non-combat rooms ================= */
+function brewModal(after){
+  const m = $('#modal'); m.hidden = false; m.dataset.kind = 'brew'; let first = -1;
+  const draw = ()=>{
+    m.innerHTML = `<div class="card" role="dialog" aria-label="Brew" style="max-height:84vh;overflow:auto"><div class="row"><h2 class="title" style="font-size:22px;margin:0">Brew</h2>${img('cauldron',34)}</div>
+      <p class="muted" style="font-size:13px">${first<0 ? 'Pick the potion to strengthen.' : `Now pick a second potion to pour into your ${POTIONS[run.potions[first]].name}.`} Both are used up to make one Greater potion.</p>
+      ${run.potions.map((id,i)=>`<button class="choice brw ${i===first?'newr':''}" data-i="${i}" ${i===first?'disabled':''}><span class="ic">${img(POTIONS[id].spr,40)}</span><span><b>${POTIONS[id].name}</b><small>${POTIONS[id].desc}</small></span></button>`).join('')}
+      <button class="btn ghost" id="brewX">Done</button></div>`;
+    m.querySelectorAll('.brw').forEach(b=>b.onclick = ()=>{ const i = +b.dataset.i; sfx('click');
+      if(first<0){ first = i; return draw(); }
+      const A = POTIONS[run.potions[first]], B = POTIONS[run.potions[i]];
+      const base = !A.greater ? A.base : !B.greater ? B.base : pick(POTION_POOL);
+      run.potions = run.potions.filter((x,k)=>k!==first && k!==i); run.potions.push('g_'+base);
+      if(A.greater && B.greater){ run.gold += 15; }
+      sfx('potion'); confetti(20); toast(`<b>Brewed: ${POTIONS['g_'+base].name}</b><br>${POTIONS['g_'+base].desc}`, POTIONS['g_'+base].spr, 3200); unlock('brewer');
+      first = -1; renderRunbar(); saveRun(); if(run.potions.length<2){ m.hidden = true; m.dataset.kind = ''; after && after(); } else draw(); });
+    $('#brewX').onclick = ()=>{ m.hidden = true; m.dataset.kind = ''; after && after(); };
+  };
+  draw();
+}
 function restScreen(){
   show('rest');
   const amt = Math.round(run.maxHp*0.35*(has('hearth')?rv('hearth',[1.5,1.8,2.2]):1));
@@ -1786,8 +1830,10 @@ function restScreen(){
     ${choiceBtn({id:'up',spr:U.spr,name:U.name,desc:U.desc+' (permanent)'})}
     ${choiceBtn({id:'med',spr:C.spr,name:'Meditate',desc:`Start your next fight with ${C.name} fully charged.`, disabled: run.charge>=C.need})}
     ${choiceBtn({id:'cut',spr:'bagicon',name:'Declutter',desc:'Remove 2 blocks of one type from your bag.', disabled: bagSize()-2 < BAG_MIN})}
+    ${run.potions.length>=2 ? `<button class="btn ghost" id="brewBtn">${img('cauldron',22)} Brew: combine 2 potions into a Greater one (free)</button>` : ''}
     ${(run.satchel||[]).length ? `<button class="btn ghost" id="satBtn">${img('satchel',22)} Swap relics (free)</button>` : ''}`);
   const sbn = $('#satBtn'); if(sbn) sbn.onclick = ()=>{ sfx('click'); satchelModal(); };
+  const bbn = $('#brewBtn'); if(bbn) bbn.onclick = ()=>{ sfx('click'); brewModal(()=>restScreen()); };
   bindChoices(id=>{
     if(id==='cut') return chooseBlock('Declutter', 'Pick a block type to remove 2 of.', removableTypes(), t=>{ if(!t) return restScreen(); bagRemove(t, Math.min(2, run.bag[t])); sfx('anvil'); toast(`<b>Removed ${TYPES[t].name} blocks</b><br>${bagSize()} blocks left in your bag.`, 'bagicon'); advance(); });
     if(id==='heal'){ heal(amt); if(has('hearth')){ const hh = rv('hearth',[4,6,8]); run.maxHp+=hh; run.hp+=hh; } sfx('heal'); }
@@ -1814,7 +1860,7 @@ function shopScreen(){
   const R = run.room;
   if(!R.shop){ R.shop = {
     stock: relicOffers(3 + (rt('magpie')>=3?1:0)).map(id=>({id, price:P(relicPrice(id)+rand(-5,5)), sold:false})),
-    pots: shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})),
+    pots: shuffle(POTION_POOL).slice(0,3).map(id=>Math.random()<0.15 ? {id:'g_'+id, price:P(rand(40,50)), sold:false} : {id, price:P(rand(18,26)), sold:false}),
     up: pick(Object.keys(UPGRADES)), upSold:false, packSold:false, removeSold:false }; saveRun(); }
   const S = R.shop, stock = S.stock, pots = S.pots, up = S.up, upPrice = P(50), packPrice = P(70);
   const rerollPrice = () => (S.rerolls||0) < rv('magpie',[1,2,2]) ? 0 : P(15 + 10*(S.rerolls||0));
@@ -1836,7 +1882,7 @@ function shopScreen(){
     $('#rerollShop').onclick = ()=>{
       const c = rerollPrice(); if(run.gold<c) return; run.gold -= c; S.rerolls = (S.rerolls||0)+1;
       stock.splice(0, stock.length, ...relicOffers(3).map(id=>({id, price:P(relicPrice(id)+rand(-5,5)), sold:false})));
-      pots.splice(0, pots.length, ...shuffle(Object.keys(POTIONS)).slice(0,2).map(id=>({id, price:P(rand(18,26)), sold:false})));
+      pots.splice(0, pots.length, ...shuffle(POTION_POOL).slice(0,3).map(id=>Math.random()<0.15 ? {id:'g_'+id, price:P(rand(40,50)), sold:false} : {id, price:P(rand(18,26)), sold:false}));
       sfx('shuffle'); renderRunbar(); render(); saveRun(); };
     $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
       const [kind,id] = b.dataset.id.split(':');
@@ -2633,7 +2679,7 @@ function planClear(board){
   cols.forEach(c=>{ if(isPure(board, [...Array(N).keys()].map(r=>r*N+c))) pure++; });
   let mult = MULT[Math.min(lines,8)] + cb.streak*streakStep() + pure*(has('chaoscrown') ? rv('chaoscrown',[2,2.5,3]) : has('purist') ? rv('purist',[1,1.25,1.5]) : has('huntersmark') ? 1 : 0.5) + pure*0.25*pk('purist');
   if(cb.firstClear && has('ring')) mult *= rv('ring',[2,2.5,3]);
-  if(cb.doubleNext) mult *= 2;
+  if(cb.doubleNext) mult *= cb.doubleNext===1.5 ? 3 : 2;
   const set = lineCells(rows, cols);
   { let ar = 0; set.forEach(i=>{ if(board[i]==='arcane') ar++; }); mult += Math.min(1, 0.25*ar); }
   const blasted = expandBlast(board, set);
@@ -2693,6 +2739,7 @@ function computeEffects(board, set, o){
   const e = cb.enemy;
   if(has('scythe') && e.hp < e.maxHp*(rt('scythe')>=3?0.4:0.3)) dmg = Math.round(dmg*rv('scythe',[1.5,1.75,2]));
   if(e.passive && e.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
+  if(cb && cb.rageBonus && dmg>0) dmg += cb.rageBonus;
   if(has('voidheart')) dmg = Math.round(dmg*rv('voidheart',[1.25,1.35,1.5]));
   if(has('colossus')) dmg = Math.round(dmg*rv('colossus',[0.75,0.8,0.85]));
   /* discoverable and signature blocks */

@@ -320,6 +320,10 @@ const ART = {
   owl: () => both(p('M24 30 L18 10 L36 24Z','#8a6a4a')) + p('M50 18 C74 18 86 36 86 58 C86 80 70 94 50 94 C30 94 14 80 14 58 C14 36 26 18 50 18Z','#a07a5a') + pn('M50 18 C74 18 86 36 86 58 C86 80 70 94 50 94 C64 82 72 66 70 48 C68 32 60 22 50 18Z','#7a5a40') + po('M50 18 C74 18 86 36 86 58 C86 80 70 94 50 94 C30 94 14 80 14 58 C14 36 26 18 50 18Z')
     + p('M30 66 C36 86 64 86 70 66 C62 72 38 72 30 66Z','#e8d4b0') + c(36,46,13,'#f3ead6') + c(64,46,13,'#f3ead6') + c(36,46,7,'#ffd23f') + c(64,46,7,'#ffd23f') + cn(36,46,3.5,K) + cn(64,46,3.5,K) + cn(34,44,1.4,'#fff') + cn(62,44,1.4,'#fff') + p('M46 56 L54 56 L50 66Z','#ff9d3c') + hl(30,28,5,3,-20,.4),
   pet_golem0: () => scaled(0.86, 7, 10, ()=>ART.golem()),
+  t_grenade: () => scaled(0.9, 5, 6, ()=>ART.bomb()) + r(38,10,24,10,3,'#5a7a3a'),
+  t_net: () => ART.acc_web() + c(50,50,10,'#c98a4b'),
+  t_darts: () => [[-30,'#45c674'],[0,'#a259e6'],[30,'#45c674']].map(([d,col])=>`<g transform="rotate(${d} 50 80)">`+ln('M50 80 L50 20','#c9c2d4',4)+p('M44 26 L50 6 L56 26Z','#e4ebf3')+p('M42 70 L50 62 L58 70 L58 84 L42 84Z',col)+`</g>`).join(''),
+  t_caltrops: () => [[30,40],[66,34],[48,68]].map(([x,y])=>p(star(x,y,16,6,4),'#8a94a8')+cn(x,y,3,'#c9c2d4')).join(''),
   /* ---------- floor bosses (new) ---------- */
   vampirelord: () => p('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z','#a8203a') + pn('M68 58 L86 44 L92 96 L72 96Z','#7a1028') + po('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z')
     + p('M26 96 L30 66 L50 74 L70 66 L74 96Z','#2a2233') + p('M44 70 L50 90 L56 70Z','#f3ead6') + c(50,84,4.5,'#f7c936')
@@ -545,6 +549,34 @@ const ART = {
 const SVG_CACHE = {};
 /* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
+  p_frost:{base:'potion_health', hue:200},
+  p_rage:{base:'potion_health', hue:20},
+  p_purge:{base:'potion_health', m:[0.9,0.1,0.1,0.1, 0.1,0.9,0.1,0.1, 0.1,0.1,0.9,0.12]},
+  p_gold:{base:'potion_health', m:[1,0.2,0,0.08, 0.7,0.3,0,0.04, 0.1,0.1,0,0]},
+  p_phoenix:{base:'potion_fire', hue:30, over:[['feather',0.4,56,-2]]},
+  p_giant:{base:'potion_health', hue:100, bs:[1,0,0]},
+  p_haste:{base:'potion_health', hue:160},
+  g_potion_health:{base:'potion_health', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_fire:{base:'potion_fire', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_iron:{base:'potion_iron', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_smoke:{base:'potion_smoke', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_bomb:{base:'bomb', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_venom:{base:'potion_venom', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_mana:{base:'potion_mana', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_chaos:{base:'potion_chaos', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_potion_luck:{base:'potion_luck', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_frost:{base:'p_frost', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_rage:{base:'p_rage', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_purge:{base:'p_purge', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_gold:{base:'p_gold', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_phoenix:{base:'p_phoenix', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_giant:{base:'p_giant', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_p_haste:{base:'p_haste', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_hammer:{base:'hammer', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_t_grenade:{base:'t_grenade', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_t_net:{base:'t_net', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_t_darts:{base:'t_darts', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
+  g_t_caltrops:{base:'t_caltrops', bs:[0.92,4,8], over:[['acc_tiara',0.62,19,-10]]},
   pet_owl1:{base:'owl', hue:210, bs:[0.9,5,10], over:[['acc_halo',0.8,10,-4]]},
   pet_owl2:{base:'owl', m:[0.4,0.2,0.4,0.05, 0.2,0.3,0.4,0.05, 0.4,0.2,0.8,0.12], bs:[0.86,7,14], under:['acc_runes'], over:[['acc_crown',0.36,32,-4]]},
   pet_golem1:{base:'golem', m:[0.6,0.2,0.2,0.05, 0.2,0.6,0.2,0.05, 0.2,0.2,0.75,0.08], bs:[0.86,7,14], under:['acc_crystals']},
