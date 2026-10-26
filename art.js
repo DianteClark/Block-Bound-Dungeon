@@ -311,6 +311,7 @@ const ART = {
   laurel: () => both(ln('M46 90 C28 82 20 60 26 16','#2a9a58',3) + [[84,0],[70,1],[56,2],[42,3],[28,4]].map(([y,i])=>{ const x = 24 + (y-16)*0.12 - 8; return `<g transform="rotate(${-55+i*8} ${x} ${y})">`+p(`M${x} ${y-12} C${x+9} ${y-6} ${x+9} ${y+6} ${x} ${y+12} C${x-9} ${y+6} ${x-9} ${y-6} ${x} ${y-12}Z`, i%2?'#86e6a8':'#45c674')+`</g>` + `<g transform="rotate(${55-i*8} ${x+14} ${y-4})">`+p(`M${x+14} ${y-14} C${x+21} ${y-9} ${x+21} ${y+1} ${x+14} ${y+6} C${x+7} ${y+1} ${x+7} ${y-9} ${x+14} ${y-14}Z`, i%2?'#45c674':'#86e6a8')+`</g>`; }).join('')) + p('M40 90 L50 82 L60 90 L50 98Z','#ef5258'),
   totem: () => r(30,8,40,28,6,'#c98a4b') + glow(40,22,3,'#ffd23f') + glow(60,22,3,'#ffd23f') + both(p('M30 12 L14 4 L24 22Z','#ef5258')) + r(30,36,40,28,6,'#4ab0a0') + e(50,50,10,6,'#1d1424') + both(cn(40,44,3,K)) + r(30,64,40,30,6,'#8a5a34') + ink('M36 72 L64 72 M36 80 L64 80 M36 88 L64 88',2.5),
   whistle: () => r(14,38,56,28,12,'#c9c2d4') + pn('M50 38 L58 38 C64 38 70 44 70 52 C70 60 64 66 58 66 L50 66Z','#a9a2b8') + r(14,38,56,28,12,'none') + c(70,52,14,'#c9c2d4') + c(70,52,6,'#1d1424') + r(18,44,14,8,3,'#1d1424') + ln('M20 40 C10 30 10 18 22 14','#ef5258',3) + hl(30,44,8,3,-5,.6),
+  bone_treat: () => `<g transform="rotate(-30 50 50)">` + p('M30 40 C20 30 8 36 12 46 C4 50 8 64 20 60 L80 60 C92 64 96 50 88 46 C92 36 80 30 70 40Z','#f3ead6') + pn('M30 52 L70 52 L80 60 L20 60Z','#d9ccb0') + `</g>` + hl(36,40,6,3,-30,.6),
   /* ---------- floor bosses (new) ---------- */
   vampirelord: () => p('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z','#a8203a') + pn('M68 58 L86 44 L92 96 L72 96Z','#7a1028') + po('M8 96 L14 44 L32 58 L50 50 L68 58 L86 44 L92 96Z')
     + p('M26 96 L30 66 L50 74 L70 66 L74 96Z','#2a2233') + p('M44 70 L50 90 L56 70Z','#f3ead6') + c(50,84,4.5,'#f7c936')
@@ -536,6 +537,20 @@ const ART = {
 const SVG_CACHE = {};
 /* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
+  pet_bat1:{base:'bat', m:[1.1,0,0,0.12, 0,0.4,0,0, 0,0,0.5,0.04], under:['acc_cape']},
+  pet_bat2:{base:'bat', m:[0.5,0.1,0.4,0.05, 0.1,0.2,0.3,0, 0.4,0.1,0.8,0.08], bs:[0.88,6,12], under:['acc_horns'], over:[['acc_crown',0.36,32,-4]]},
+  pet_slime1:{base:'slime', hue:200, bs:[0.9,5,10], over:[['acc_horns',0.9,5,6]]},
+  pet_slime2:{base:'slime', hue:40, bs:[0.88,6,12], over:[['acc_crown',0.46,27,0]]},
+  pet_turtle1:{base:'turtle', m:[0.6,0.2,0.2,0.05, 0.2,0.6,0.2,0.05, 0.2,0.2,0.7,0.08], under:['acc_crystals']},
+  pet_turtle2:{base:'turtle', hue:30, bs:[0.88,6,12], under:['acc_runes'], over:[['acc_crown',0.36,32,-2]]},
+  pet_wisp1:{base:'ghost', m:[0.7,0,0,0.1, 0,0.8,0,0.1, 0,0,1.1,0.15], bs:[0.88,6,12], over:[['acc_halo',0.8,10,-2]]},
+  pet_wisp2:{base:'ghost', m:[1,0,0,0.12, 0,0.85,0,0.05, 0,0,0.4,0], bs:[0.86,7,14], under:['acc_runes'], over:[['acc_halo',0.8,10,-2]]},
+  pet_rat1:{base:'rat', hue:40, bs:[0.9,5,10], under:['acc_cape']},
+  pet_rat2:{base:'rat', m:[1,0.1,0,0.08, 0.7,0.3,0,0.04, 0.2,0.1,0,0], bs:[0.88,6,12], under:['acc_cape'], over:[['acc_crown',0.42,29,-4]]},
+  pet_spider1:{base:'spider', hue:200, under:['acc_web']},
+  pet_spider2:{base:'spider', m:[0.55,0,0.1,0.05, 0,0.35,0,0.02, 0.1,0,0.6,0.08], under:['acc_web'], over:[['acc_crown',0.3,35,10]]},
+  pet_imp1:{base:'imp', hue:20, bs:[0.88,6,12], under:['acc_flames']},
+  pet_imp2:{base:'imp', m:[1.2,0,0,0.1, 0,0.35,0,0, 0,0,0.3,0], bs:[0.86,7,14], under:['acc_flames','acc_horns']},
   doubloon:{base:'coin', m:[1,0.2,0,0.02, 0.6,0.3,0,0, 0.2,0.1,0,0]},
   hexcharm:{base:'idol', hue:250},
   gearbox:{base:'gear', hue:20},

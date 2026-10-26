@@ -254,7 +254,7 @@ const RELICS = {
   laurel:{name:'Victor\'s Laurel', spr:'laurel', desc:'+2 max HP for every foe you defeat.', r:0, starter:true},
   totem:{name:'Spirit Totem', spr:'totem', desc:'Every 4 moves, a random block on your grid turns Rainbow.', r:0, starter:true},
   frostshard:{name:'Frost Shard', spr:'frostshard', desc:'Ice never cracks into rubble, and ice in your clears deals 4 damage each.', r:0, starter:true},
-  whistle:{name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) run.pet = pick(Object.keys(PETS)); }},
+  whistle:{name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) setPet(pick(Object.keys(PETS))); }},
   lute:{name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +8 shield and heal 5.', r:0, starter:true},
   phial:{name:'Bottomless Phial', spr:'phial', desc:'The first potion you drink in each fight is not used up.', r:3},
   emberheart:{name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
@@ -434,20 +434,74 @@ const FLOORS = 5, STEPS = 8;
 
 /* ================= pets ================= */
 const PETS = {
-  bat:{name:'Bat Familiar', spr:'bat', every:4, desc:'Every 4 moves, bites the enemy for 6 (more on deeper floors).', act(){ damageEnemy(6 + 2*(Math.min(run.floor,8)-1), true); }},
-  slime:{name:'Pet Slime', spr:'slime', every:5, desc:'Every 5 moves, heals you for 7.', act(){ const b = run.hp; heal(7); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }},
-  turtle:{name:'Shell Buddy', spr:'turtle', every:4, desc:'Every 4 moves, gives you 8 shield.', act(){ cb.shield += 8; floatText($('#shieldStat'), '+8', '#a8ceff'); }},
-  wisp:{name:'Friendly Wisp', spr:'ghost', every:5, desc:'Every 5 moves, adds 2 charge to your special.', act(){ run.charge = Math.min(ULT().need, run.charge+2); floatText($('#ultBtn'), '+2', '#c8fbff'); }},
-  rat:{name:'Lucky Rat', spr:'rat', every:5, desc:'Every 5 moves, sniffs out 6 gold.', act(){ run.gold += 6; floatText($('#goldWrap'), '+6', '#ffe58a'); questAdd('gold', 6); }},
-  spider:{name:'Weaver', spr:'spider', every:4, desc:'Every 4 moves, poisons the enemy for 4.', act(){ cb.enemy.poison += 4; floatText(eArt(), '+4 poison', '#dcb6ff'); }},
-  imp:{name:'Ember Imp', spr:'imp', every:6, desc:'Every 6 moves, burns away all rubble and ice for 2 damage each.', act(){
-    const now = performance.now(); let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,5); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; n++; } });
-    if(n) damageEnemy(2*n, true); else floatText($('#board'), 'Nothing to burn', '#ffb07a'); }},
+  bat:{name:'Bat Familiar', spr:'bat', every:4, forms:[['Bat Familiar','bat'],['Vampire Bat','pet_bat1'],['Night Terror','pet_bat2']],
+    desc:m=>`Every few moves, bites the enemy for ${Math.round((6 + 2*(Math.min(run?run.floor:1,8)-1))*m)}.`, act(m){ damageEnemy(Math.round((6 + 2*(Math.min(run.floor,8)-1))*m), true); }},
+  slime:{name:'Pet Slime', spr:'slime', every:5, forms:[['Pet Slime','slime'],['Gel Guardian','pet_slime1'],['Slime Sovereign','pet_slime2']],
+    desc:m=>`Every few moves, heals you for ${Math.round(7*m)}.`, act(m){ const b = run.hp; heal(Math.round(7*m)); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }},
+  turtle:{name:'Shell Buddy', spr:'turtle', every:4, forms:[['Shell Buddy','turtle'],['Iron Shell','pet_turtle1'],['Fortress Tortoise','pet_turtle2']],
+    desc:m=>`Every few moves, gives you ${Math.round(8*m)} shield.`, act(m){ const s = Math.round(8*m); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); }},
+  wisp:{name:'Friendly Wisp', spr:'ghost', every:5, forms:[['Friendly Wisp','ghost'],['Star Wisp','pet_wisp1'],['Spirit Beacon','pet_wisp2']],
+    desc:m=>`Every few moves, adds ${Math.round(2*m)} charge to your special.`, act(m){ const n = Math.round(2*m); run.charge = Math.min(ULT().need, run.charge+n); floatText($('#ultBtn'), `+${n}`, '#c8fbff'); }},
+  rat:{name:'Lucky Rat', spr:'rat', every:5, forms:[['Lucky Rat','rat'],['Fortune Rat','pet_rat1'],['Rat Tycoon','pet_rat2']],
+    desc:m=>`Every few moves, sniffs out ${Math.round(6*m)} gold.`, act(m){ const n = Math.round(6*m); run.gold += n; floatText($('#goldWrap'), `+${n}`, '#ffe58a'); questAdd('gold', n); }},
+  spider:{name:'Weaver', spr:'spider', every:4, forms:[['Weaver','spider'],['Silk Queen','pet_spider1'],['Widow Empress','pet_spider2']],
+    desc:m=>`Every few moves, poisons the enemy for ${Math.round(4*m)}.`, act(m){ const n = Math.round(4*m); const e = cb.enemy; e.poison += n; floatText(eArt(e), `+${n} poison`, '#dcb6ff'); }},
+  imp:{name:'Ember Imp', spr:'imp', every:6, forms:[['Ember Imp','imp'],['Flame Imp','pet_imp1'],['Inferno Fiend','pet_imp2']],
+    desc:m=>`Every few moves, burns away all rubble, ice and webs for ${Math.round(2*m)} damage each.`, act(m){
+    const now = performance.now(); let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ shards(i,t,5); cb.fx.push({i,type:t,t0:now}); cb.board[i]=null; delete cb.bombs[i]; n++; } });
+    if(n) damageEnemy(Math.round(2*m*n), true); else floatText($('#board'), 'Nothing to burn', '#ffb07a'); }},
 };
+const PET_UPS = {
+  swift:{name:'Swift', spr:'boots', desc:'Acts 1 move sooner.'},
+  strong:{name:'Mighty', spr:'rage', desc:'Its effect is 50% stronger.'},
+  twice:{name:'Double Up', spr:'dice', desc:'Every time it acts, it acts twice.'},
+  guard:{name:'Bodyguard', spr:'shield', desc:'Also gives you 4 shield when it acts.'},
+  mend:{name:'Nurse', spr:'heart', desc:'Also heals you 3 when it acts.'},
+  charge:{name:'Spark', spr:'flame', desc:'Also adds 1 charge to your special when it acts.'},
+  loot:{name:'Pickpocket', spr:'coin', desc:'Also finds 3 gold when it acts.'},
+  fang:{name:'Fangs', spr:'fang', desc:'Also bites the enemy for 4 when it acts.'},
+};
+const PET_EVO = [3, 8];
+const petHas = id => !!(run && run.petUps && run.petUps.includes(id));
+const petTier = () => (run && run.petLv) || 0;
+const petPow = () => (1 + 0.4*petTier()) * (petHas('strong') ? 1.5 : 1);
+const petEvery = () => { const P = PETS[run.pet]; return Math.max(2, P.every - (setOn('wild')?1:0) - (has('whistle')?1:0) - (petHas('swift')?1:0)); };
+const petForm = (k, t) => { const P = PETS[k || run.pet]; const f = P.forms[t==null ? petTier() : t]; return {name:f[0], spr:f[1]}; };
+const petDesc = (k, t) => PETS[k].desc(t==null ? petPow() : 1 + 0.4*t) + (k===run.pet && run.petUps && run.petUps.length ? ' ' + run.petUps.map(u=>PET_UPS[u].name).join(', ') + '.' : '');
+function setPet(k){ run.pet = k; run.petLv = 0; run.petXp = 0; run.petUps = []; run.petEvo = 0; run.petOffer = null; }
+function petFire(){
+  const P = PETS[run.pet]; if(!P || !cb || cb.over) return;
+  const reps = petHas('twice') ? 2 : 1;
+  for(let r=0;r<reps;r++){
+    sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(petPow());
+    if(petHas('guard')){ cb.shield += 4; floatText($('#shieldStat'), '+4', '#a8ceff'); }
+    if(petHas('mend')) heal(3);
+    if(petHas('charge')) run.charge = Math.min(ULT().need, run.charge+1);
+    if(petHas('loot')){ run.gold += 3; }
+    if(petHas('fang') && aliveEnemies().length) damageEnemy(4, true);
+  }
+}
 function petTick(){
   if(!run.pet || !PETS[run.pet] || cb.over) return;
-  const P = PETS[run.pet]; cb.petT = (cb.petT||0) + 1;
-  if(cb.petT >= P.every - (setOn('wild')?1:0) - (has('whistle')?1:0)){ cb.petT = 0; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); }
+  cb.petT = (cb.petT||0) + 1;
+  if(cb.petT >= petEvery()){ cb.petT = 0; petFire(); }
+}
+function gainPetXP(n){
+  if(!run.pet) return;
+  run.petXp = (run.petXp||0) + n;
+  while(petTier() + (run.petEvo||0) < 2 && run.petXp >= PET_EVO[petTier() + (run.petEvo||0)]) run.petEvo = (run.petEvo||0) + 1;
+}
+function petEvoScreen(then){
+  show('reward');
+  const from = petForm(run.pet), to = petForm(run.pet, petTier()+1);
+  if(!run.petOffer || !run.petOffer.length) run.petOffer = shuffle(Object.keys(PET_UPS).filter(k=>!petHas(k))).slice(0,2);
+  saveRun(); sfx('levelup'); setTimeout(()=>confetti(50), 80);
+  view(`<div class="scene"><div class="art evo">${img(from.spr,80)}<svg class="evoarrow" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M6 4 L26 15 L6 26Z" fill="#ffcf7a" stroke="#1d1424" stroke-width="3" stroke-linejoin="round"/></svg>${img(to.spr,112)}</div><h2 class="title">${from.name} evolved!</h2><p class="muted">It is now a <b style="color:var(--torch2)">${to.name}</b> and 40% stronger. Teach it a trick:</p></div>
+    <div class="choices">${run.petOffer.map(k=>`<button class="choice" data-id="${k}">${img(PET_UPS[k].spr,46)}<div><b>${PET_UPS[k].name}</b><small>${PET_UPS[k].desc}</small></div></button>`).join('')}</div>`);
+  document.querySelectorAll('#view .choice').forEach(b=>b.onclick = ()=>{
+    run.petUps = (run.petUps||[]).concat(b.dataset.id); run.petLv = petTier()+1; run.petEvo = Math.max(0, (run.petEvo||1)-1); run.petOffer = null;
+    unlock('evolve'); if(run.petLv>=2) unlock('evolve2');
+    sfx('relic'); saveRun(); renderRunbar(); then(); });
 }
 
 /* ================= daily quests ================= */
@@ -517,6 +571,8 @@ const ACH = {
   daily:{name:'Daily Devotion', desc:'Finish a Daily Challenge run.', spr:'calendar'},
   mutant:{name:'Glutton for Punishment', desc:'Win a run with 3 or more mutators.', spr:'mutator'},
   decorator:{name:'Interior Decorator', desc:'Unlock a new board theme.', spr:'palette'},
+  evolve:{name:'It\'s Evolving!', desc:'Evolve a pet.', spr:'pet_bat1'},
+  evolve2:{name:'Final Form', desc:'Evolve a pet to its final form.', spr:'pet_bat2'},
   collector:{name:'Window Shopper', desc:'Buy something in the Bazaar.', spr:'shard'},
   level8:{name:'Seasoned', desc:'Reach level 8 in a single run.', spr:'trophy'},
   bossdex:{name:'Boss Hunter', desc:'Defeat 10 different bosses.', spr:'r_boss'},
@@ -695,7 +751,7 @@ function validSave(s){
 }
 function migrate(r){
   if(!validSave(r)) throw new Error('bad save');
-  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, muts:[], daily:null, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}, level:1, xp:0, perks:{}, lvUp:0}, r);
+  r = Object.assign({heat:0, charge:0, path:[], potionSlots:3, bosses:0, rooms:0, pet:null, room:null, ultBonus:0, muts:[], daily:null, bestHit:0, bestLines:0, dmg:0, kills:0, lvl:{sword:0,shield:0,heal:0,coin:0}, level:1, xp:0, perks:{}, lvUp:0, petLv:0, petXp:0, petUps:[], petEvo:0}, r);
   if(!r.map){ r.map = genMap(); r.path = []; r.step = 0; }
   delete r.choices;
   r.relics = r.relics.filter(id=>RELICS[id]);
@@ -839,7 +895,7 @@ function openRelics(){
     <div id="setInfo">${Object.entries(SETS).filter(([k])=>setOn(k)).map(([k,S])=>`<div class="setinfo" style="--sc:${S.col}"><b>${S.name} set bonus active</b>${S.bonus}</div>`).join('')}</div>
     ${run.relics.map(id=>{ const R = RELICS[id], sk = setOf(id); return `<div class="troph">${img(R.spr,40)}<div><b>${R.name}${sk?` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name}</span>`:''}</b><small>${R.desc}</small></div></div>`; }).join('')}
     <div class="troph">${img(ULT().spr,40)}<div><b>Special: ${ULT().name}</b><small>${ULT().desc} Needs ${ULT().need} lines.</small></div></div>
-    ${run.pet&&PETS[run.pet]?`<div class="troph">${img(PETS[run.pet].spr,40)}<div><b>Pet: ${PETS[run.pet].name}</b><small>${PETS[run.pet].desc}</small></div></div>`:''}
+    ${run.pet&&PETS[run.pet]?`<div class="troph">${img(petForm().spr,40)}<div><b>Pet: ${petForm().name}${petTier()<2?` <span class="muted" style="font-size:12px">XP ${run.petXp||0}/${PET_EVO[petTier()]}</span>`:''}</b><small>${petDesc(run.pet)}</small></div></div>`:''}
     <button class="btn" id="closeBtn">Close</button></div>`;
   $('#closeBtn').onclick = closeSettings; m.onclick = e=>{ if(e.target===m) closeSettings(); };
   m.querySelectorAll('.setpill').forEach(p=>p.onclick=()=>{ const k = p.dataset.s, S = SETS[k], n = setCount(k); sfx('click');
@@ -1220,7 +1276,7 @@ function codexScreen(tab){
   } else if(tab==='k'){
     body = `<p class="center muted">Win fights to earn XP. Each level lets you pick 1 of 3 perks for the rest of the run.</p>${Object.values(PERKS).map(P=>`<div class="troph">${img(P.spr,40)}<div><b>${P.name} <span class="muted" style="font-size:12px">max ${P.max}</span></b><small>${P.desc}</small></div></div>`).join('')}`;
   } else if(tab==='p'){
-    body = `<p class="center muted">Find pets in Beast Dens and some events.</p>${Object.entries(PETS).map(([k,P])=>`<div class="troph">${img(P.spr,44)}<div><b>${P.name}</b><small>${P.desc}</small></div></div>`).join('')}`;
+    body = `<p class="center muted">Find pets in Beast Dens, at merchants and in events. Pets earn XP from fights and evolve twice.</p>${Object.entries(PETS).map(([k,P])=>`<div class="troph petrow"><div class="petforms">${P.forms.map(f=>img(f[1],38)).join('')}</div><div><b>${P.forms.map(f=>f[0]).join(', then ')}</b><small>${P.desc(1)}</small></div></div>`).join('')}`;
   } else {
     const ids = Object.keys(RELICS), n = ids.filter(id=>s.r[id]).length;
     body = `<p class="center muted">${n} / ${ids.length} discovered</p><div class="grid">${ids.map(id=>{ const k = s.r[id]; return `<div class="cell ${k?'':'unk'}" data-r="${id}">${img(RELICS[id].spr,50)}${k?RELICS[id].name:'???'}</div>`; }).join('')}</div>`;
@@ -1439,7 +1495,8 @@ function shopScreen(){
       ${choiceBtn({id:'a:add',spr:'bagicon',name:'Hire Blocks',desc:'Add 2 blocks of a type you choose to your bag.',price:P(30+10*(S.adds||0)),disabled:run.gold<P(30+10*(S.adds||0))})}
       ${S.cutSold?'':choiceBtn({id:'c:cut',spr:'bagicon',name:'Remove a Block Type',desc:'Remove up to 3 blocks of one type from your bag.',price:P(45),disabled:run.gold<P(45)||bagSize()-1<BAG_MIN})}
       ${S.boxSold?'':choiceBtn({id:'m:box',spr:'r_treasure',name:'Mystery Box',desc:'Could be a relic, potions, a pile of gold... or a pet.',price:P(50),disabled:run.gold<P(50)})}
-      ${run.pet||S.petSold?'':choiceBtn({id:'q:pet',spr:PETS[S.pet||(S.pet=pick(Object.keys(PETS)))].spr,name:`Adopt: ${PETS[S.pet].name}`,desc:PETS[S.pet].desc,price:P(65),disabled:run.gold<P(65)})}
+      ${run.pet||S.petSold?'':choiceBtn({id:'q:pet',spr:PETS[S.pet||(S.pet=pick(Object.keys(PETS)))].spr,name:`Adopt: ${PETS[S.pet].name}`,desc:petDesc(S.pet,0),price:P(65),disabled:run.gold<P(65)})}
+      ${run.pet && petTier()<2 && !S.treatSold ? choiceBtn({id:'t:treat',spr:'bone_treat',name:'Pet Treat',desc:`+3 XP for your ${petForm().name}.`,price:P(30),disabled:run.gold<P(30)}) : ''}
       ${S.healSold?'':choiceBtn({id:'h:heal',spr:'heal_icon',name:'Bandages',desc:'Heal 30% of your max HP.',price:P(35),disabled:run.gold<P(35)||run.hp>=run.maxHp})}
       <button class="btn ghost" id="rerollShop" ${run.gold<rerollPrice()?'disabled':''}>Restock relics and potions (${rerollPrice()} gold)</button>
       <button class="btn ghost" id="leaveBtn">Leave</button>`);
@@ -1460,8 +1517,9 @@ function shopScreen(){
         if(roll<0.4 && offers.length) gainRelic(offers[0]);
         else if(roll<0.65 && canPotion()){ givePotion(); if(canPotion()) givePotion(); toast('<b>Mystery Box</b><br>Potions!', 'potion_health'); }
         else if(roll<0.85 || run.pet){ run.gold += 90; toast('<b>Mystery Box</b><br>90 gold!', 'coin'); questAdd('gold', 90); }
-        else { run.pet = pick(Object.keys(PETS)); unlock('petpal'); toast(`<b>Mystery Box</b><br>A ${PETS[run.pet].name} hops out and joins you!`, PETS[run.pet].spr); } }
-      else if(kind==='q'){ if(run.gold<P(65)||S.petSold||run.pet) return; run.gold -= P(65); S.petSold = true; run.pet = S.pet; unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[S.pet].name}</b> joins you!`, PETS[S.pet].spr); }
+        else { setPet(pick(Object.keys(PETS))); unlock('petpal'); toast(`<b>Mystery Box</b><br>A ${PETS[run.pet].name} hops out and joins you!`, PETS[run.pet].spr); } }
+      else if(kind==='q'){ if(run.gold<P(65)||S.petSold||run.pet) return; run.gold -= P(65); S.petSold = true; setPet(S.pet); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[S.pet].name}</b> joins you!`, PETS[S.pet].spr); }
+      else if(kind==='t'){ if(run.gold<P(30)||S.treatSold) return; run.gold -= P(30); S.treatSold = true; gainPetXP(3); sfx('heal'); toast(`<b>${petForm().name}</b><br>+3 pet XP${run.petEvo?'. Ready to evolve after your next fight!':''}`, petForm().spr); }
       else if(kind==='h'){ if(run.gold<P(35)||S.healSold) return; run.gold-=P(35); S.healSold=true; heal(Math.round(run.maxHp*0.3)); sfx('heal'); }
       else { if(run.gold<packPrice||S.packSold) return; run.gold-=packPrice; S.packSold=true; run.potionSlots++; sfx('buy'); }
       renderRunbar(); render(); saveRun();
@@ -1473,11 +1531,12 @@ function shopScreen(){
 function denScreen(){
   show('den');
   const R = run.room; if(!R.pets){ R.pets = shuffle(Object.keys(PETS).filter(k=>k!==run.pet)).slice(0,2); saveRun(); }
-  const cur = run.pet && PETS[run.pet];
-  view(`${scene('r_den','Beast Den', cur?`Your ${cur.name} sniffs at the newcomers. You can only keep one companion.`:'Creatures peek out from the straw. One of them could join you.')}
-    ${R.pets.map(k=>choiceBtn({id:k, spr:PETS[k].spr, name:PETS[k].name, desc:PETS[k].desc})).join('')}
+  const cur = run.pet && PETS[run.pet] ? petForm() : null;
+  view(`${scene('r_den','Beast Den', cur?`Your ${cur.name} sniffs at the newcomers. You can only keep one companion${petTier()?', and a new one starts unevolved':''}.`:'Creatures peek out from the straw. One of them could join you.')}
+    ${R.pets.map(k=>choiceBtn({id:k, spr:PETS[k].spr, name:PETS[k].name, desc:petDesc(k,0)})).join('')}
+    ${cur && petTier()<2 ? choiceBtn({id:'treat', spr:'bone_treat', name:`Train your ${cur.name}`, desc:'Play with your pet: +2 pet XP.'}) : ''}
     <button class="btn ghost" id="leaveBtn">${cur?`Keep ${cur.name}`:'Leave'}</button>`);
-  bindChoices(k=>{ run.pet = k; unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[k].name}</b> joins you!`, PETS[k].spr); advance(); });
+  bindChoices(k=>{ if(k==='treat'){ gainPetXP(2); sfx('heal'); toast(`<b>${cur.name}</b><br>+2 pet XP${run.petEvo?'. It is ready to evolve after your next fight!':''}`, cur.spr); return advance(); } setPet(k); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[k].name}</b> joins you!`, PETS[k].spr); advance(); });
   $('#leaveBtn').onclick = ()=>{ sfx('click'); advance(); };
 }
 function forgeScreen(){
@@ -1554,7 +1613,7 @@ const EVENTS = [
     {name:'Walk away', spr:'r_event', desc:'Move on.', go(){} },
   ]}),
   ()=>({spr:'r_den', title:'Stray Companion', text:'A small creature follows you out of the shadows, looking hopeful.', opts:[
-    {name:'Adopt it', spr:'r_den', desc:'Gain a random pet companion (replaces your current one).', go(){ const k = pick(Object.keys(PETS).filter(k=>k!==run.pet)); run.pet = k; sfx('heal'); toast(`<b>${PETS[k].name}</b> joins you!<br>${PETS[k].desc}`, PETS[k].spr, 3200); }},
+    {name:'Adopt it', spr:'r_den', desc:'Gain a random pet companion (replaces your current one).', go(){ const k = pick(Object.keys(PETS).filter(k=>k!==run.pet)); setPet(k); sfx('heal'); toast(`<b>${PETS[k].name}</b> joins you!<br>${petDesc(k,0)}`, PETS[k].spr, 3200); }},
     {name:'Shoo it away', spr:'r_event', desc:'Move on.', go(){} },
   ]}),
   ()=>({spr:'rock', title:'Collapsing Bridge', text:'The bridge ahead groans. Gold glints in the rubble below.', opts:[
@@ -1585,7 +1644,7 @@ const EVENTS = [
     {name:'No thanks', spr:'r_event', desc:'Move on.', go(){} },
   ]}),
   ()=>({spr:'r_den', title:'Mysterious Egg', text:'A warm, speckled egg sits in a nest of bones. It wobbles.', opts:[
-    {name:'Keep it warm', spr:'heart', desc:run.pet?'It hatches... and runs off, leaving 35 gold behind.':'It hatches into a random pet that joins you.', go(){ if(run.pet){ run.gold+=35; sfx('coin'); } else { run.pet = pick(Object.keys(PETS)); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[run.pet].name}</b> hatches and joins you!`, PETS[run.pet].spr); } }},
+    {name:'Keep it warm', spr:'heart', desc:run.pet?'It hatches... and runs off, leaving 35 gold behind.':'It hatches into a random pet that joins you.', go(){ if(run.pet){ run.gold+=35; sfx('coin'); } else { setPet(pick(Object.keys(PETS))); unlock('petpal'); sfx('heal'); confetti(30); toast(`<b>${PETS[run.pet].name}</b> hatches and joins you!`, PETS[run.pet].spr); } }},
     {name:'Cook it', spr:'flame', desc:'Heal 15 HP.', go(){ heal(15); sfx('heal'); }},
   ]}),
 ];
@@ -1608,6 +1667,7 @@ function eventScreen(){
 /* ================= rewards & end ================= */
 function rewardScreen(kind){
   if(run.lvUp>0) return levelScreen(()=>rewardScreen(kind));
+  if(run.petEvo>0 && run.pet) return petEvoScreen(()=>rewardScreen(kind));
   show('reward');
   if(!run.room) run.room = {t:kind};
   const RW = run.room.reward = run.room.reward || {kind};
@@ -2364,6 +2424,7 @@ function checkEnd(){
     const kind = cb.kind;
     const xp = {combat:10, elite:20, boss:32, goblin:8}[kind] || 10;
     gainXP(xp + (cb.enemies.length>1 ? 6 : 0));
+    gainPetXP({combat:1, elite:2, boss:3, goblin:1}[kind] || 1);
     if(pk('scav')) run.gold += 6*pk('scav');
     if(pk('medic')) heal(5*pk('medic'));
     setTimeout(()=>floatText($('#heroIcon'), `+${xp} XP`, '#ffd23f', true), 500);
@@ -2437,9 +2498,9 @@ function useUlt(){
     const ice = cb.board.filter(t=>t==='ice').length, s = 8 + 3*ice + 2*run.floor;
     aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += 2; }); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); flash('rgba(160,220,255,.5)'); sfx('ice');
   } else if(run.cls==='beastmaster'){
-    if(!run.pet) run.pet = pick(Object.keys(PETS));
-    const P = PETS[run.pet], fight = cb;
-    for(let k=0;k<3;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); renderHUD(); if(!checkEnd()) saveRun(); }, 220*k);
+    if(!run.pet) setPet(pick(Object.keys(PETS)));
+    const fight = cb;
+    for(let k=0;k<3;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; petFire(); renderHUD(); if(!checkEnd()) saveRun(); }, 220*k);
   } else if(run.cls==='paladin'){
     const d = cb.shield + 15 + 5*(run.floor-1); flash('rgba(255,240,170,.55)'); damageEnemy(d, true);
   } else if(run.cls==='ranger'){
@@ -2563,7 +2624,8 @@ function renderHUD(){
   $('#comboStat').classList.toggle('hot', cb.streak>=3);
   $('#rerollText').textContent = cb.rerolls;
   const pc = $('#petChip');
-  if(run.pet && PETS[run.pet]){ const P = PETS[run.pet]; pc.hidden = false; if(pc.dataset.k!==run.pet){ pc.innerHTML = `${img(P.spr,28)}<span id="petT"></span>`; pc.dataset.k = run.pet; } $('#petT').textContent = P.every - (cb.petT||0); pc.onclick = ()=>toast(`<b>${P.name}</b><br>${P.desc}<br><span class="muted">Acts in ${P.every-(cb.petT||0)} move(s).</span>`, P.spr); }
+  if(run.pet && PETS[run.pet]){ const F = petForm(), key = run.pet+petTier(); pc.hidden = false; if(pc.dataset.k!==key){ pc.innerHTML = `${img(F.spr,28)}<span id="petT"></span>`; pc.dataset.k = key; } const left = Math.max(1, petEvery() - (cb.petT||0)); $('#petT').textContent = left;
+    pc.onclick = ()=>toast(`<b>${F.name}</b><br>${petDesc(run.pet)}<br><span class="muted">Acts in ${left} move(s).${petTier()<2?` Pet XP ${run.petXp||0}/${PET_EVO[petTier()]}.`:''}</span>`, F.spr, 3200); }
   else pc.hidden = true;
   $('#rerollBtn').disabled = cb.rerolls<=0 || cb.over;
   const C = ULT(), pct = Math.min(100, 100*run.charge/C.need);
