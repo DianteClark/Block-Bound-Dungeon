@@ -483,6 +483,19 @@ function bossFor(fl){
   if(run.bossPick[fl]==null) run.bossPick[fl] = run.daily ? withSeed(runSeed('boss'+fl), ()=>rand(0, list.length-1)) : rand(0, list.length-1);
   return list[run.bossPick[fl] % list.length];
 }
+const hasMod = (e, k) => !!e && (e.mod===k || (e.mods||[]).includes(k));
+const modList = e => e && e.mod ? [e.mod, ...(e.mods||[])] : [];
+const CURSES = {
+  armored:{name:'Iron Hide', spr:'armor', desc:'Enemies start every fight with 8 more armor.'},
+  regen:{name:'Undying', spr:'heart', desc:'Enemies regenerate 2 HP every turn.'},
+  brutal:{name:'Brutal', spr:'rage', desc:'Enemy attacks deal 12% more damage.'},
+  thick:{name:'Thick Skin', spr:'shield', desc:'Enemies have 12% more HP.'},
+  bombers:{name:'Bombers', spr:'bomb', desc:'Every fight starts with a bomb on your grid.'},
+  swift:{name:'Swift', spr:'boots', desc:'Every enemy\'s first move comes 1 turn sooner.'},
+  miasma:{name:'Miasma', spr:'poison', desc:'Lose 1 HP every 3 moves.'},
+  cursedhand:{name:'Cursed Hand', spr:'dice', desc:'1 fewer hand reroll every fight.'},
+};
+const curseN = k => (run && run.curses || []).filter(x=>x===k).length;
 const MODS = {
   shielded:{name:'Shielded', col:'#8dbcff', desc:'Starts with heavy armor and regains 6 armor every turn.'},
   vampiric:{name:'Vampiric', col:'#ff8a9a', desc:'Heals for all the damage its attacks deal to you.'},
@@ -517,7 +530,7 @@ const FLOORS = 5, STEPS = 8;
 const PETS = {
   bat:{name:'Bat Familiar', spr:'bat', role:'Hunter', need:5, forms:[['Bat Familiar','bat'],['Vampire Bat','pet_bat1'],['Night Terror','pet_bat2']],
     passive:'Weak spots deal 40% more.', desc:m=>`Swoop: strikes every enemy for ${Math.round((9 + 3*(Math.min(curFloor(),8)-1))*m)} and marks a new weak spot.`,
-    act(m){ aliveEnemies().filter(e=>!e.guarded).forEach(e=>damageEnemy(Math.round((9 + 3*(Math.min(run.floor,8)-1))*m), true, false, e)); spawnWeak(1); }},
+    act(m){ aliveEnemies().filter(e=>!guardedE(e)).forEach(e=>damageEnemy(Math.round((9 + 3*(Math.min(run.floor,8)-1))*m), true, false, e)); spawnWeak(1); }},
   slime:{name:'Pet Slime', spr:'slime', role:'Janitor', need:6, forms:[['Pet Slime','slime'],['Gel Guardian','pet_slime1'],['Slime Sovereign','pet_slime2']],
     passive:'Clearing rubble, ice or webs heals 1 each.', desc:m=>`Gobble: eats every rubble, ice, web and bomb on your grid, turning them into hearts, and heals ${Math.round(5*m)}.`,
     act(m){ const now = performance.now(); cb.board.forEach((t,i)=>{ if(JUNK(t)){ cb.board[i] = 'heal'; delete cb.bombs[i]; if(cb.webs) delete cb.webs[i]; cb.fx.push({i,type:'heal',t0:now,drop:true}); } }); cb.chains = []; const b = run.hp; heal(Math.round(5*m)); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }},
@@ -542,7 +555,7 @@ const PETS = {
     act(m){ cb.hand = cb.hand.map(p=>p.used?p:newPiece()); let g2 = 0; while(!cb.hand.every(p=>p.used || fitsAnyRot(p)) && g2++<20) cb.hand = cb.hand.map(p=>p.used || fitsAnyRot(p) ? p : newPiece()); aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += m>=1.6?2:1; }); floatText($('#board'), 'Foresight!', '#c8fbff'); }},
   golem:{name:'Pebble Golem', spr:'golem', role:'Bulwark', need:7, forms:[['Pebble Golem','pet_golem0'],['Stone Sentinel','pet_golem1'],['Mountain Warden','pet_golem2']],
     passive:'The first hit you take each fight is halved.', desc:m=>`Slam: gain ${Math.round(8*m)} shield, then deal half your shield to every enemy.`,
-    act(m){ const s = Math.round(8*m); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); const d = Math.floor(cb.shield/2); aliveEnemies().filter(e=>!e.guarded).forEach(e=>damageEnemy(d, true, false, e)); shake(); }},
+    act(m){ const s = Math.round(8*m); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); const d = Math.floor(cb.shield/2); aliveEnemies().filter(e=>!guardedE(e)).forEach(e=>damageEnemy(d, true, false, e)); shake(); }},
 };
 const PET_UPS = {
   swift:{name:'Swift', spr:'boots', desc:'Acts 1 move sooner.'},
@@ -719,6 +732,9 @@ const ACH = {
   bossrelic:{name:'Cursed Treasure', desc:'Take a boss relic.', spr:'b_crown'},
   weekly:{name:'Weekly Warrior', desc:'Finish a Weekly Challenge.', spr:'trophy'},
   heart:{name:'Heartbreaker', desc:'Defeat the secret Dungeon Heart.', spr:'dungeonheart'},
+  legend:{name:'Legend Has It', desc:'Face a Legendary boss.', spr:'r_boss'},
+  legendkill:{name:'Mythbreaker', desc:'Defeat a Legendary boss.', spr:'crown'},
+  ascended:{name:'Ascension', desc:'Witness an enemy evolve mid-battle.', spr:'mark'},
   collector:{name:'Window Shopper', desc:'Buy something in the Bazaar.', spr:'shard'},
   level8:{name:'Seasoned', desc:'Reach level 8 in a single run.', spr:'trophy'},
   bossdex:{name:'Boss Hunter', desc:'Defeat 10 different bosses.', spr:'r_boss'},
@@ -1730,7 +1746,7 @@ function goMap(){
   }));
   view(`
     <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${floorName()}</div></div>
-      <span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${run.daily?`<span class="heatchip" style="background:#3a2a5a;border-color:#c77dff;color:#f0d6ff">${img(run.weekly?'trophy':'calendar',20)}${run.weekly?'Weekly':'Daily'}</span>`:''}${(run.rules||[]).map(k=>`<span class="heatchip mut" title="${RULES[k].name}">${img(RULES[k].spr,20)}</span>`).join('')}${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}${(run.muts||[]).map(k=>`<span class="heatchip mut" title="${MUTS[k].name}">${img(MUTS[k].spr,20)}</span>`).join('')}</span></div>
+      <span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${run.daily?`<span class="heatchip" style="background:#3a2a5a;border-color:#c77dff;color:#f0d6ff">${img(run.weekly?'trophy':'calendar',20)}${run.weekly?'Weekly':'Daily'}</span>`:''}${(run.rules||[]).map(k=>`<span class="heatchip mut" title="${RULES[k].name}">${img(RULES[k].spr,20)}</span>`).join('')}${[...new Set(run.curses||[])].map(k=>`<span class="heatchip curse" data-c="${k}">${img(CURSES[k].spr,20)}${curseN(k)>1?curseN(k):''}</span>`).join('')}${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}${(run.muts||[]).map(k=>`<span class="heatchip mut" title="${MUTS[k].name}">${img(MUTS[k].spr,20)}</span>`).join('')}</span></div>
     <p class="muted center" style="font-size:13px">Descend toward <b style="color:var(--torch2)">${bossFor().name}</b>. Tap a glowing room.<br><span style="font-size:12px">${bossFor().sigd||''}</span></p>
     ${!run.path.length?`<div class="starttoken">${img(CLASSES[run.cls].spr,40)}<span>You are here</span></div>`:''}
     <div class="map" style="height:${H}px"><svg viewBox="0 0 100 ${H}" preserveAspectRatio="none">${lines}</svg>${nodesHtml}</div>
@@ -1740,6 +1756,7 @@ function goMap(){
   $('#view').querySelectorAll('.mnode.avail').forEach(b=>b.onclick=()=>{ if(used) return; used = true; sfx('map'); enterRoom(+b.dataset.r, +b.dataset.i); });
   const target = $('#view .mnode.avail');
   if(target && row>1) setTimeout(()=>{ const r = target.getBoundingClientRect(), bar = $('#runbar').getBoundingClientRect().height + 20; const y = window.scrollY + r.top - Math.max(bar + 60, innerHeight*0.45); window.scrollTo({top: Math.max(0, y), behavior:'smooth'}); }, 120);
+  document.querySelectorAll('.heatchip.curse').forEach(ch=>ch.onclick = ()=>{ const k = ch.dataset.c; toast(`<b>Depth curse: ${CURSES[k].name}</b>${curseN(k)>1?` x${curseN(k)}`:''}<br>${CURSES[k].desc}`, CURSES[k].spr, 3200); });
   if(row===0) coach('map', 'Your path', 'Pick any glowing room. Lines show which rooms connect. The boss waits at the bottom.', $('#view .mnode.avail'), false);
 }
 function enterRoom(r, i){
@@ -1775,6 +1792,7 @@ function advance(){
     if(run.floor===FLOORS+1 && !run.won){ if(!run.secretDone && !run.daily && secretWhy().length){ run.floor = FLOORS; run.room = {t:'gate'}; saveRun(); return gateScreen(); } return endScreen(true); }
     questAdd('floor', run.floor);
     if(run.floor>=FLOORS+3) unlock('endless');
+    if(run.floor>FLOORS){ const ck = pick(Object.keys(CURSES)); run.curses = (run.curses||[]).concat(ck); setTimeout(()=>toast(`<b>Depth curse: ${CURSES[ck].name}</b><br>${CURSES[ck].desc}${curseN(ck)>1?` (x${curseN(ck)})`:''}`, CURSES[ck].spr, 3800), 3400); }
     if(run.floor===FLOORS+1 && run.pet && !run.pet2) setTimeout(()=>toast('<b>Second companion slot</b><br>The next pet you adopt joins your current one.', 'r_den', 3600), 4200);
     if(run.floor===FLOORS+1){ run.slotBonus = (run.slotBonus||0)+4; setTimeout(()=>toast(`<b>+4 relic slots</b><br>The depths let you carry more. You can equip ${relicCap()} relics.`, 'r_treasure', 3600), 2600); }
     else if(run.floor>FLOORS+1 && (run.floor-FLOORS-1)%2===0 && relicCap()<16){ run.slotBonus = (run.slotBonus||0)+1; setTimeout(()=>toast(`<b>+1 relic slot</b>`, 'r_treasure'), 2600); }
@@ -2084,12 +2102,12 @@ function rewardScreen(kind){
   $('#skipBtn').onclick = ()=>{ sfx('click'); advance(); };
 }
 function rollReward(RW, kind){
-  let g = kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*Math.min(run.floor,FLOORS):rand(10,18);
+  let g = (RW.evo ? 1.5 : 1) * (RW.legend ? 2 : 1) * (kind==='boss'?rand(55,70):kind==='elite'?rand(25,35):kind==='goblin'?rand(50,70)+20*Math.min(run.floor,FLOORS):rand(10,18));
   if(has('magnet')) g = Math.round(g*rv('magnet',[1.4,1.6,1.9]));
   if(mut('rush')) g *= 2;
   if(has('glove')) g += rv('glove',[10,15,25]);
-  run.gold += g;
-  let extra = '';
+  g = Math.round(g); run.gold += g;
+  let extra = RW.evo ? ' The ascended foe dropped extra loot!' : RW.legend ? ' Legendary spoils!' : '';
   if(has('hoard')){ const hi = Math.floor(run.gold*rv('hoard',[0.2,0.3,0.4])); run.gold += hi; extra += ` +${hi} hoard interest.`; }
   if(has('crown')){ const i = Math.min(rv('crown',[15,25,40]), Math.floor(run.gold*rv('crown',[0.1,0.1,0.15]))); run.gold += i; extra += ` +${i} interest.`; }
   if(Math.random() < (kind==='combat'?0.35:0.5)){ const p = givePotion(); if(p) extra += ` Found a ${POTIONS[p].name}!`; }
@@ -2105,11 +2123,11 @@ function rollReward(RW, kind){
     const pool = BOONS.filter(b=>!b.ok||b.ok());
     let guard = 0;
     while(offers.length<3 && guard++<50){ const b = weighted(pool.map(x=>[x,x.w])); if(!offers.some(o=>o.id===b.id)) offers.push({id:b.id, boon:true}); }
-    if(Math.random()<(kind==='goblin'?1:0.3)){ const [id]=relicOffers(1); if(id) offers[2] = {id}; }
+    if(Math.random()<(kind==='goblin'||RW.evo?1:0.3)){ const [id]=relicOffers(1, RW.evo?2:1); if(id) offers[2] = {id}; }
     const upc = run.relics.filter(id=>RELICS[id] && rt(id)<3);
     if(run.floor>=3 && upc.length && Math.random()<0.3){ const u = pick(upc); offers[1] = {id:'up:'+u, up:u}; }
   } else {
-    offers = relicOffers(3+(skill('sense')?1:0)+rv('compass',[1,1,2]), kind==='boss'?2:1).map(id=>({id}));
+    offers = relicOffers(3+(skill('sense')?1:0)+rv('compass',[1,1,2])+(RW.evo?1:0)+(RW.legend?1:0), kind==='boss'||RW.evo?2:1).map(id=>({id}));
     const ups = shuffle(run.relics.filter(id=>RELICS[id] && rt(id)<3));
     const nUp = Math.min(ups.length, (offers.length<2 ? 2 : 0) + (run.floor>=4 ? 1 : 0) + (run.floor>FLOORS ? 1 : 0));
     for(let k=0;k<nUp;k++){ const slot = offers.length>2 ? offers.length-1-k : offers.length; offers[slot] = {id:'up:'+ups[k], up:ups[k]}; }
@@ -2320,10 +2338,10 @@ function startCombat(kind, forced){
   if(heat>=4 && kind==='elite' && !tpl.passive && !RM.tpls){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; tpls = [tpl, ...tpls.slice(1)]; }
   if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= rv('warhorn',[0.85,0.8,0.75]);
   hpMul *= endlessMul();
-  if(kind==='elite' && RM.mod==null){ RM.mod = run.daily ? withSeed(runSeed(`m${run.floor}-${RM.r}-${RM.i}`), ()=>pick(Object.keys(MODS))) : pick(Object.keys(MODS)); }
-  if(kind==='elite' && RM.mod) tpls = tpls.map((t,i)=>i===0 ? {...t, mod:RM.mod} : t);
-  if(kind==='elite' && RM.mod==='giant') hpMul *= 1.4;
-  const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (has('cursedcrown')?1.1:1) * (has('warbanner')?1.2:1) * (tpls.length>1 ? 0.58 : 1)));
+  if(kind==='elite' && RM.mod==null){ const nm = run.floor>FLOORS+6 ? 3 : run.floor>FLOORS+3 ? 2 : 1; const roll = ()=>shuffle(Object.keys(MODS)).slice(0,nm); const ms = run.daily ? withSeed(runSeed(`m${run.floor}-${RM.r}-${RM.i}`), roll) : roll(); RM.mod = ms[0]; RM.mods = ms.slice(1); }
+  if(kind==='elite' && RM.mod) tpls = tpls.map((t,i)=>i===0 ? {...t, mod:RM.mod, mods:RM.mods||[]} : t);
+  if(kind==='elite' && (RM.mod==='giant' || (RM.mods||[]).includes('giant'))) hpMul *= 1.4;
+  const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (1 + 0.12*curseN('thick')) * (has('cursedcrown')?1.1:1) * (has('warbanner')?1.2:1) * (tpls.length>1 ? 0.58 : 1)));
   RM.tpls = tpls; RM.maxHps = maxHps; RM.t = kind; delete RM.tpl; delete RM.maxHp;
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
@@ -2334,8 +2352,20 @@ function startCombat(kind, forced){
     enemies: tpls.map((t,i)=>makeEnemy(t, maxHps[i])),
   };
   attachEnemy(cb);
+  if(kind==='boss' && !tpls[0].secret && !RM.started){
+    const B = cb.enemies[0];
+    if(run.floor>FLOORS || (run.floor===FLOORS && (run.heat||0)>=4)){ B.legendary = true; B.name = 'Legendary ' + B.name.replace(/^The /,''); B.spr = 'leg_' + B.spr; B.maxHp = Math.round(B.maxHp*1.25); B.hp = B.maxHp; B.rage += 2; unlock('legend'); }
+    const vg = B.legendary || (run.floor>=2 && (run.daily ? withSeed(runSeed('vg'+run.floor), Math.random) : Math.random()) < 0.55);
+    if(vg) setTimeout(()=>{ if(cb && !cb.over && cb.moves===0){ addGuards(B.legendary || run.floor>=4 ? 2 : 1); layout(); saveRun(); } }, 50);
+  }
+  RM.started = true;
   if(run.carry){ cb.shield += run.carry; run.carry = 0; }
   if(petOn('turtle')) cb.shield += 6;
+  if((run.curses||[]).length && kind!=='goblin'){
+    cb.enemies.forEach(e=>{ e.armor += 8*curseN('armored'); if(curseN('swift') && e.intent && e.intent.left>1) e.intent.left--; });
+    for(let k=0;k<curseN('bombers');k++){ const em = emptyCells(); if(em.length){ const i = pick(em); cb.board[i] = 'bomb'; cb.bombs[i] = 4; } }
+    cb.rerolls = Math.max(0, cb.rerolls - curseN('cursedhand'));
+  }
   if(petOn('owl')) cb.rerolls += 1;
   cb.petCharge = petKeys().map(()=>0); cb.golemHit = petOn('golem');
   if(has('quickdraw')) cb.streak += rv('quickdraw',[1,2,3]);
@@ -2385,23 +2415,43 @@ function resumeFight(f){
 }
 let EUID = 1;
 function makeEnemy(tpl, maxHp){ const pas = tpl.passive || null; const e = {...tpl, uid:EUID++, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null, enraged:false, dead:false};
-  if(e.mod==='shielded') e.armor += Math.round(maxHp*0.15);
-  if(e.mod==='giant') e.rage += 3;
-  if(e.mod==='hasty') e.moves = e.moves.map(m=>({...m, t:Math.max(1, m.t-1)}));
+  if(hasMod(e,'shielded')) e.armor += Math.round(maxHp*0.15);
+  if(hasMod(e,'giant')) e.rage += 3;
+  if(hasMod(e,'hasty')) e.moves = e.moves.map(m=>({...m, t:Math.max(1, m.t-1)}));
   return e; }
 const MINIONS = {
   skeleton:{name:'Skeleton Minion', spr:'skeleton', minion:true, moves:[M('atk',5,2),M('armor',5,2)]},
   slimeling:{name:'Slimeling', spr:'slime', minion:true, moves:[M('atk',6,2),M('curse',2,2)]},
 };
+function evolveEnemy(e){
+  e.evolved = true; cb.evolved = true; e.name = 'Ascended ' + e.name.replace(/^(The |Legendary )/,''); e.spr = 'evo_' + e.spr.replace(/^evo_/,'');
+  const add = Math.round(e.maxHp*0.3); e.maxHp += add; e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp*0.3)); e.rage += 3; e.armor += Math.round(e.maxHp*0.06);
+  e.moves = e.moves.map(m=>({...m, v: m.k==='shuffle'||m.k==='flee' ? m.v : Math.round(m.v*1.25)}));
+  banner('EVOLUTION!', `${e.name} ascends to a stronger form`, 1900); flash('rgba(255,230,120,.6)'); sfx('levelup'); shake(); buzz(150);
+  renderHUD(); const el = eArt(e); if(el) burstAt(el, ['#ffd23f','#fff','#c77dff'], 40); unlock('ascended'); saveRun();
+}
+function addGuards(n){
+  const pool = floorPool().normal; let added = 0;
+  for(let k=0;k<n;k++){
+    const slot = [1,2].find(s=>!cb.enemies[s] || cb.enemies[s].dead || cb.enemies[s].hp<=0); if(slot==null) break;
+    const t = pick(pool), hp = Math.round(t.hp * FS([1.15,1.4,1.55,1.6,1.7]) * endlessMul() * 0.45);
+    const m = makeEnemy({...t, name:`${t.name} Guard`, minion:true, guard:true}, Math.max(10, hp)); nextIntent(m); m.intent.left++;
+    cb.enemies[slot] = m; markSeen('e', t.name); added++;
+  }
+  if(added){ renderHUD(); const be = eArt(cb.enemies[0]); if(be) floatText(be, 'Guards!', '#c9c2d4', true); sfx('phase'); }
+  return added;
+}
 function addMinion(key, hp){
-  const alive = cb.enemies[1] && !cb.enemies[1].dead && cb.enemies[1].hp>0;
-  if(alive){ const m = cb.enemies[1]; m.hp = m.maxHp; floatText(eArt(m), 'Restored!', '#86e6a8'); return false; }
+  const slot = [1,2].find(s=>!cb.enemies[s] || cb.enemies[s].dead || cb.enemies[s].hp<=0);
+  if(slot==null){ const m = cb.enemies[1]; m.hp = m.maxHp; floatText(eArt(m), 'Restored!', '#86e6a8'); return false; }
   const m = makeEnemy(MINIONS[key], Math.max(8, Math.round(hp))); nextIntent(m); m.intent.left++;
-  cb.enemies[1] = m; markSeen('e', m.name);
+  cb.enemies[slot] = m; markSeen('e', m.name);
   renderHUD(); const el = eArt(m); if(el){ burstAt(el, ['#c77dff','#fff','#86e6a8'], 18); }
   sfx('phase'); return true;
 }
-function attachEnemy(c){ Object.defineProperty(c, 'enemy', {get(){ return c.enemies.find(x=>!x.dead && x.hp>0) || c.enemies[0]; }, enumerable:false, configurable:true}); return c; }
+function attachEnemy(c){ Object.defineProperty(c, 'enemy', {get(){ return c.enemies.find(x=>!x.dead && x.hp>0 && !guardedE(x, c)) || c.enemies.find(x=>!x.dead && x.hp>0) || c.enemies[0]; }, enumerable:false, configurable:true}); return c; }
+function guardedE(e, c){ c = c || cb; return !!c && c.kind==='boss' && e===c.enemies[0] && c.enemies.some(m=>m.guard && !m.dead && m.hp>0); }
+const laneTargets = () => cb.enemies.filter(e=>!e.dead && e.hp>0 && !guardedE(e));
 const aliveEnemies = () => cb.enemies.filter(e=>!e.dead && e.hp>0);
 function eArt(e){ const i = Math.max(0, cb && cb.enemies ? cb.enemies.indexOf(e || cb.enemy) : 0); return document.querySelector(`#enemyPanel .ecard[data-e="${i}"] .eart`) || document.querySelector('#enemyPanel .eart'); }
 /* ---------- boss signature moves ---------- */
@@ -2530,7 +2580,8 @@ function hazardTick(){
   if(cb.webs) Object.keys(cb.webs).forEach(k=>{ const i = +k; if(cb.board[i]!=='web'){ delete cb.webs[k]; return; } if(--cb.webs[k]<=0){ delete cb.webs[k]; cb.board[i] = null; cb.fx.push({i,type:'web',t0:now}); } });
   if(cb.silence>0) cb.silence--;
   relicHook('onMove');
-  if(has('stormeye')) aliveEnemies().forEach(e=>{ if(!e.guarded) damageEnemy(rv('stormeye',[4,6,9]), true, false, e); });
+  if(curseN('miasma') && cb.moves % 3 === 0){ run.hp -= curseN('miasma'); floatText(hpEl(), `-${curseN('miasma')}`, '#c77dff'); if(run.hp<=0) setTimeout(()=>{ if(cb && !cb.over) checkEnd(); }, 30); }
+  if(has('stormeye')) aliveEnemies().forEach(e=>{ if(!guardedE(e)) damageEnemy(rv('stormeye',[4,6,9]), true, false, e); });
   if(cb.turret>0 && aliveEnemies().length){ cb.turret--; const tg = aliveEnemies()[0]; damageEnemy(5 + 2*Math.min(run.floor,8), true, false, tg); floatText($('#ultBtn'), 'Turret!', '#ffd23f'); sfx('hit'); }
   if(has('totem') && cb.moves && cb.moves%rv('totem',[4,3,3])===0){ for(let k=0;k<(rt('totem')>=3?2:1);k++){ const cand = liveCells().filter(i=>cb.board[i]!=='rainbow'); if(cand.length){ const i = pick(cand); cb.board[i] = 'rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); } } floatText($('#board'), 'Spirit!', '#f0d6ff'); }
   const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
@@ -2602,7 +2653,7 @@ function nextIntent(e){
   if(SIG[m.k] && SIG[m.k].start) SIG[m.k].start(e);
 }
 function peekIntent(e){ e = e || cb.enemy; return e.moves[e.mi % e.moves.length]; }
-function intentDamage(it, e){ e = e || cb.enemy; return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)) + (e ? e.rage : 0); }
+function intentDamage(it, e){ e = e || cb.enemy; return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)*(1 + 0.12*curseN('brutal'))) + (e ? e.rage : 0); }
 function addBlocks(type, n, silent){
   const empty = []; cb.board.forEach((v,i)=>{ if(!v) empty.push(i); });
   shuffle(empty).slice(0,n).forEach(i=>{ cb.board[i]=type; if(!silent) cb.fx.push({i, t0:performance.now(), drop:true, type}); });
@@ -2785,8 +2836,8 @@ function fireCells(set, o){
     if(DMG_T[t]){ if(inR && !inC) wRow += DMG_T[t]; else if(inC && !inR) wCol += DMG_T[t]; else { wRow += DMG_T[t]/2; wCol += DMG_T[t]/2; } (inC && !inR ? flyR : flyL).push([cellScreen(i), TYPES[t].c]); }
     else if(fly[t]) fly[t].push(cellScreen(i)); });
   if(!wRow && !wCol){ wRow = (o.rowIdx||[]).length; wCol = (o.colIdx||[]).length; if(!wRow && !wCol) wRow = 1; }
-  const al = aliveEnemies(), multi = cb.enemies.length>1 && al.length>1;
-  const tL = multi ? cb.enemies[0] : cb.enemy, tR = multi ? cb.enemies[1] : cb.enemy;
+  const TG = laneTargets(), multi = TG.length>1;
+  const tL = TG[0] || cb.enemy, tR = TG[1] || tL;
   flyL.slice(0,10).forEach(([pt,col])=>flyTo([pt], eArt(tL), col)); flyR.slice(0,10).forEach(([pt,col])=>flyTo([pt], eArt(tR), col));
   const tgt = {shield:'#shieldStat', heal:'#hpFill', coin:'#goldWrap'};
   Object.entries(fly).forEach(([t,pts])=>{ if(pts.length) flyTo(pts.slice(0,10), $(tgt[t]), TYPES[t].c); });
@@ -2826,8 +2877,8 @@ function fireCells(set, o){
   if(fx.dmg>0) cb.firstHit = false;
   if(lines>=2 && has('emberheart')){ cb.enemy.poison += rv('emberheart',[3,5,8]); }
   setTimeout(()=>{ if(cb && !cb.over) relicHook('onClear', fx, o); }, 0);
-  { const c = fx.cnt, tg = aliveEnemies().filter(e=>!e.guarded);
-    if(fx.zap>0 && tg.length){ setTimeout(()=>{ if(!cb || cb.over) return; aliveEnemies().filter(e=>!e.guarded).forEach(e=>damageEnemy(fx.zap, true, false, e)); flash('rgba(255,240,120,.35)'); renderHUD(); checkEnd(); }, 160); }
+  { const c = fx.cnt, tg = aliveEnemies().filter(e=>!guardedE(e));
+    if(fx.zap>0 && tg.length){ setTimeout(()=>{ if(!cb || cb.over) return; aliveEnemies().filter(e=>!guardedE(e)).forEach(e=>damageEnemy(fx.zap, true, false, e)); flash('rgba(255,240,120,.35)'); renderHUD(); checkEnd(); }, 160); }
     if(fx.arrow>0 && tg.length){ setTimeout(()=>{ if(!cb || cb.over) return; damageEnemy(fx.arrow, true, true); renderHUD(); checkEnd(); }, 120); }
     if(c.frost){ const d = Math.min(2, c.frost); aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += d; }); floatText($('#board'), `Frozen +${d}`, '#d8ecff'); }
     if(c.thorn){ cb.pthorns = Math.min(30, (cb.pthorns||0) + c.thorn*(2 + rv('brambles',[0,1,2]))); }
@@ -2841,7 +2892,7 @@ function fireCells(set, o){
     if(c.vine) setTimeout(()=>{ if(cb && !cb.over){ addBlocks('heal', c.vine); } }, 350);
   }
   if(has('goblet') && fx.dmg>=30){ const gg = rv('goblet',[3,5,8]); run.gold += gg; floatText($('#goldWrap'), `+${gg}`, '#ffe58a'); }
-  if(has('thunderrod') && !o.noCharge){ cb.thunder = (cb.thunder||0)+1; if(cb.thunder >= (rt('thunderrod')>=3?4:5)){ cb.thunder = 0; const td = rv('thunderrod',[15,25,40]); setTimeout(()=>{ if(!cb || cb.over) return; flash('rgba(180,220,255,.5)'); sfx('blast'); aliveEnemies().forEach(e=>{ if(!e.guarded) damageEnemy(td, true, false, e); }); renderHUD(); checkEnd(); }, 300); } }
+  if(has('thunderrod') && !o.noCharge){ cb.thunder = (cb.thunder||0)+1; if(cb.thunder >= (rt('thunderrod')>=3?4:5)){ cb.thunder = 0; const td = rv('thunderrod',[15,25,40]); setTimeout(()=>{ if(!cb || cb.over) return; flash('rgba(180,220,255,.5)'); sfx('blast'); aliveEnemies().forEach(e=>{ if(!guardedE(e)) damageEnemy(td, true, false, e); }); renderHUD(); checkEnd(); }, 300); } }
   if(has('echoshell') && !cb.echoUsed && o.lines>=3){ cb.echoUsed = true; const k = rv('echoshell',[0.5,0.75,1]); const ed = Math.round(fx.dmg*k), es = Math.round(fx.sh*k); setTimeout(()=>{ if(!cb || cb.over) return; floatText($('#board'), 'Echo!', '#7fd0ff', true); if(ed>0) damageEnemy(ed, true); if(es>0) cb.shield += es; renderHUD(); checkEnd(); }, 450); }
   if(has('gamblercoin') && fx.dmg>0 && Math.random() < rv('gamblercoin',[0.2,0.25,0.3])){ fx.dmg *= 2; floatText($('#board'), 'Lucky double!', '#ffd23f', true); }
   cb.enemies.forEach(e=>{ if(e.intent && e.intent.k==='doom' && e.intent.line && !e.intent.broken){ const L2 = e.intent.line; if((L2.r!=null && (o.rowIdx||[]).includes(L2.r)) || (L2.c!=null && (o.colIdx||[]).includes(L2.c))){ e.intent.broken = true; floatText($('#board'), 'Doom line cleared!', '#ffd23f', true); sfx('relic'); } } });
@@ -2855,7 +2906,8 @@ function fireCells(set, o){
 }
 function routeDamage(total, wRow, wCol, multi, ctx){
   const sum = (wRow + wCol) || 1;
-  const parts = multi ? [[cb.enemies[0], Math.round(total * wRow / sum), 'rows'], [cb.enemies[1], total - Math.round(total * wRow / sum), 'cols']]
+  const TG = laneTargets();
+  const parts = multi && TG.length>1 ? [[TG[0], Math.round(total * wRow / sum), 'rows'], [TG[1], total - Math.round(total * wRow / sum), 'cols']]
     : [[cb.enemy, total, null]];
   parts.forEach(([e, n, lane])=>{
     if(!e || n<=0) return;
@@ -2867,15 +2919,26 @@ function routeDamage(total, wRow, wCol, multi, ctx){
   });
 }
 function damageEnemy(n, noThorns, pierce, target){
-  let e = target || cb.enemy; if(e && (e.dead || e.hp<=0)) e = cb.enemy; let d = n;
+  let e = target || cb.enemy; if(e && (e.dead || e.hp<=0)) e = cb.enemy;
+  if(guardedE(e)){ const el0 = eArt(e); if(el0) floatText(el0, 'Guarded!', '#c9c2d4'); e = cb.enemy; if(guardedE(e)) return; }
+  let d = n;
   if(e.armor>0 && !pierce){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
   e.hp = Math.max(0, e.hp - d); run.dmg += d; run.bestHit = Math.max(run.bestHit, d);
   if(e.rit && e.intent && e.intent.k==='ritual'){ const was = e.rit.got < e.rit.need; e.rit.got += d; if(was && e.rit.got>=e.rit.need){ setTimeout(()=>floatText(eArt(e), 'Ritual broken!', '#ffd23f', true), 200); sfx('relic'); } }
   if(e.sig==='split' && !e.didSplit && e.hp>0 && e.hp<e.maxHp/2){ e.didSplit = true; setTimeout(()=>{ if(cb && !cb.over){ addMinion('slimeling', e.maxHp*0.3); floatText(eArt(e), 'Split!', '#ff8ad0', true); } }, 350); }
-  if(cb.kind==='boss' && e===cb.enemies[0] && !cb.phase && e.hp>0 && e.hp<e.maxHp/2){
+  if(cb.kind==='boss' && e===cb.enemies[0] && !cb.phase && e.hp>0 && e.hp<e.maxHp*(e.legendary?0.66:0.5)){
     cb.phase = 1; e.moves = e.moves.map(m=>({...m, v: m.k==='shuffle'||m.k==='flee' ? m.v : Math.round(m.v*1.2), t: Math.max(2, m.t-1)}));
     e.armor += Math.round(e.maxHp*0.08);
-    setTimeout(()=>{ banner('PHASE 2', `${e.name} grows furious`, 1600); flash('rgba(200,20,40,.45)'); sfx('phase'); shake(); buzz(120); renderHUD(); }, 300);
+    setTimeout(()=>{ banner('PHASE 2', `${e.name} grows furious`, 1600); flash('rgba(200,20,40,.45)'); sfx('phase'); shake(); buzz(120); if(!e.secret && run.floor>=3) addGuards(e.legendary || run.floor>=4 ? 2 : 1); renderHUD(); }, 300);
+  } else if(cb.kind==='boss' && e===cb.enemies[0] && e.legendary && cb.phase===1 && e.hp>0 && e.hp<e.maxHp*0.33){
+    cb.phase = 2; e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp*0.5)); e.rage += 3;
+    const pool = []; ENEMIES.forEach(F=>F.bosses.forEach(b=>b.moves.forEach(mv=>{ if(SIG[mv.k] && !e.moves.some(x=>x.k===mv.k)) pool.push(mv); })));
+    if(pool.length){ const nm = pick(pool); e.moves.push({...nm, v:Math.round(nm.v*1.3)}); e.learned = nm.k; }
+    setTimeout(()=>{ banner('PHASE 3', `${e.name} heals and learns a new trick`, 1900); flash('rgba(255,210,60,.5)'); sfx('phase'); shake(); buzz(160); addGuards(2); renderHUD(); }, 300);
+  }
+  if(!e.evoRolled && !e.minion && !e.secret && !e.rare && e.hp>0 && e.hp<e.maxHp*0.5){
+    e.evoRolled = true; const ch = window.__forceEvo ? 1 : cb.kind==='boss' ? (e.legendary?0.08:0.05) : cb.kind==='elite' ? 0.08 : 0.05;
+    if(Math.random() < ch) setTimeout(()=>{ if(cb && !cb.over && !e.dead && e.hp>0) evolveEnemy(e); }, 450);
   }
   if(e.passive && e.passive.id==='enrage' && !e.enraged && e.hp>0 && e.hp<e.maxHp/2){ e.enraged = true; e.rage += e.passive.v; setTimeout(()=>{ floatText(eArt(e), `ENRAGED +${e.passive.v}`, '#ff9d3c', true); sfx('rage'); flash('rgba(255,60,20,.35)'); }, 250); }
   if(d>=100) unlock('bighit');
@@ -2915,6 +2978,7 @@ function enemyTick(){
 function enemyAct(e){
   if(e.poison>0){ const p = e.poison; e.hp = Math.max(0, e.hp - p); run.dmg += p; if(!has('gravetome')) e.poison--; floatText(eArt(e), `-${p}`, '#dcb6ff'); if(e.hp<=0) return; }
   if(e.passive && e.passive.id==='regen' && e.hp<e.maxHp){ e.hp = Math.min(e.maxHp, e.hp+e.passive.v); }
+  if(curseN('regen') && e.hp<e.maxHp) e.hp = Math.min(e.maxHp, e.hp + 2*curseN('regen'));
   e.hist = (e.hist||[]).concat(e.hp).slice(-6);
   const it = e.intent;
   it.left--;
@@ -2961,11 +3025,11 @@ function enemyAct(e){
   }
   if(isAtk && cb.pthorns>0 && e.hp>0) damageEnemy(cb.pthorns, true, false, e);
   if(e.mod && isAtk){
-    if(e.mod==='vampiric'){ const took = Math.max(0, hpBefore - run.hp); if(took){ e.hp = Math.min(e.maxHp, e.hp + took); floatText(art, `+${took}`, '#ff8a9a'); } }
-    if(e.mod==='explosive'){ const em = emptyCells(); if(em.length){ const i = pick(em); cb.board[i] = 'bomb'; cb.bombs[i] = 4; cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); } }
-    if(e.mod==='crumbling') addBlocks('stone', 2);
+    if(hasMod(e,'vampiric')){ const took = Math.max(0, hpBefore - run.hp); if(took){ e.hp = Math.min(e.maxHp, e.hp + took); floatText(art, `+${took}`, '#ff8a9a'); } }
+    if(hasMod(e,'explosive')){ const em = emptyCells(); if(em.length){ const i = pick(em); cb.board[i] = 'bomb'; cb.bombs[i] = 4; cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); } }
+    if(hasMod(e,'crumbling')) addBlocks('stone', 2);
   }
-  if(e.mod==='shielded' && e.hp>0){ e.armor += 6; }
+  if(hasMod(e,'shielded') && e.hp>0){ e.armor += 6; }
   if(cb.over || e.dead) return;
   nextIntent(e);
 }
@@ -2990,9 +3054,9 @@ function checkEnd(){
   cb.enemies.forEach(e=>{ if(e.hp<=0 && !e.dead && e.sig==='rebirth' && !e.reborn){ e.reborn = true; e.hp = Math.round(e.maxHp*0.5); e.armor = 0; e.poison = 0; cb.phase = 1;
     setTimeout(()=>{ banner('REBIRTH', `${e.name} rises from the ashes`, 1600); flash('rgba(255,140,40,.5)'); sfx('phase'); const el = eArt(e); if(el){ el.classList.remove('dead'); burstAt(el, ['#ffd23f','#ff8a3c','#ef5258'], 30); } renderHUD(); }, 200); } });
   if(cb.kind==='boss' && cb.enemies[0].hp<=0) cb.enemies.forEach(e=>{ if(e.minion) e.hp = 0; });
-  cb.enemies.forEach((e,idx)=>{ if(e.hp<=0 && !e.dead && e.mod==='splitting' && !e.didSplitDeath && idx===0 && !(cb.enemies[1] && !cb.enemies[1].dead && cb.enemies[1].hp>0)){
+  cb.enemies.forEach((e,idx)=>{ const fs = [1,2].find(s=>!cb.enemies[s] || cb.enemies[s].dead || cb.enemies[s].hp<=0); if(e.hp<=0 && !e.dead && hasMod(e,'splitting') && !e.didSplitDeath && idx===0 && fs!=null){
     e.didSplitDeath = true; const m = makeEnemy({name:`${e.name.replace(/^The /,'')} Shard`, spr:e.spr, minion:true, moves:e.moves.map(x=>({...x, v: x.k==='shuffle'||x.k==='flee' ? x.v : Math.round(x.v*0.6)}))}, Math.round(e.maxHp*0.35));
-    nextIntent(m); m.intent.left++; cb.enemies[1] = m; setTimeout(()=>{ renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
+    nextIntent(m); m.intent.left++; cb.enemies[fs] = m; setTimeout(()=>{ renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
   fresh.forEach(e=>{ e.dead = true; run.kills++; relicHook('onKill', e); if(has('bloodring')) heal(rv('bloodring',[5,8,12])); if(has('soulharvest')){ run.charge = Math.min(ULT().need, run.charge + rv('soulharvest',[2,3,4])); if(rt('soulharvest')>=3){ run.maxHp += 3; run.hp += 3; } } if(has('laurel')){ const lh = rv('laurel',[2,3,4]); run.maxHp += lh; run.hp += lh; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
@@ -3020,7 +3084,8 @@ function checkEnd(){
     if(petOn('rat')) run.gold += 3;
     if(pk('medic')) heal(5*pk('medic'));
     setTimeout(()=>floatText($('#heroIcon'), `+${xp} XP`, '#ffd23f', true), 500);
-    run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind}; saveRun();
+    run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind, evo:!!cb.evolved, legend:!!cb.enemies[0].legendary}; saveRun();
+    if(cb.enemies[0].legendary) unlock('legendkill');
     setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, T(kind==='boss'?1700:1300)); return true;
   }
   if(run.hp<=0 && checkDeath()){
@@ -3136,7 +3201,10 @@ function enemySheet(idx){
     <div class="scene">${img(e.spr,96)}<h2 class="title" style="font-size:24px">${e.name}</h2>
     <p class="muted">${cb.kind==='boss'?'Boss':cb.kind==='elite'?'Elite':cb.kind==='goblin'?'Rare':'Monster'} · ${e.hp} / ${e.maxHp} HP${e.armor?` · ${e.armor} armor`:''}${e.poison?` · ${e.poison} poison`:''}${e.rage?` · +${e.rage} rage`:''}</p></div>
     ${e.sigd?`<div class="troph">${img('r_boss',34)}<div><b>Signature</b><small>${e.sigd}</small></div></div>`:''}
-    ${e.mod?`<div class="troph">${img('r_elite',34)}<div><b>${MODS[e.mod].name}</b><small>${MODS[e.mod].desc}</small></div></div>`:''}
+    ${modList(e).map(k=>`<div class="troph">${img('r_elite',34)}<div><b>${MODS[k].name}</b><small>${MODS[k].desc}</small></div></div>`).join('')}
+    ${e.legendary?`<div class="troph">${img('r_boss',34)}<div><b>Legendary</b><small>Three phases. At a third of its health it heals half its HP and learns a new move.</small></div></div>`:''}
+    ${e.evolved?`<div class="troph">${img('mark',34)}<div><b>Ascended</b><small>It evolved mid-battle: tougher and deadlier, but it drops better rewards.</small></div></div>`:''}
+    ${guardedE(e)?`<div class="troph">${img('shield',34)}<div><b>Guarded</b><small>It can't be hurt while its guards stand. Defeat them first.</small></div></div>`:''}
     ${e.passive?`<div class="troph">${img('rage',34)}<div><b>${PASSIVES[e.passive.id].name}</b><small>${PASSIVES[e.passive.id].desc(e.passive.v)}</small></div></div>`:''}
     ${cb.enemies.length>1?`<div class="troph">${img('r_combat',34)}<div><b>${cb.enemies.indexOf(e)===0?'Hit by rows':'Hit by columns'}</b><small>In fights with two foes, cleared rows damage the left one and cleared columns damage the right one.</small></div></div>`:''}
     ${cb.kind==='boss'&&e===cb.enemies[0]?`<div class="troph">${img('r_boss',34)}<div><b>Phase 2</b><small>${cb.phase?'Active: moves are faster and stronger.':'At half HP it gains armor and its moves get faster and stronger.'}</small></div></div>`:''}
@@ -3168,30 +3236,35 @@ function intentInfo(it, e){
 function renderEnemies(){
   const P = $('#enemyPanel'), list = cb.enemies, multi = list.length>1;
   const sig = list.map(e=>e.spr+':'+e.uid).join('|') + (multi?'|m':'');
+  P.classList.toggle('three', list.length>2);
   if(P.dataset.sig !== sig){
     const wasMulti = P.classList.contains('multi');
     P.dataset.sig = sig; P.classList.toggle('multi', multi);
     if(wasMulti!==multi && L.cs) requestAnimationFrame(()=>{ if(cb && !$('#combat').hidden) layout(); });
     P.innerHTML = list.map((e,i)=>`<div class="ecard" data-e="${i}">
-      <div class="eart">${img(e.spr, multi?44:92)}</div>
+      <div class="eart">${img(e.spr, list.length>2?36:multi?44:92)}</div>
       <div class="einfo"><div class="ename"><span class="enm">${e.name}</span><span class="etags"></span></div>
         <div class="erow"><div class="hpbar ebar"><i class="trail etrail"></i><i class="efill"></i><span class="etext"></span></div><span class="ebadges"></span></div>
-        <div class="intent"></div>${multi?`<div class="lane">${i===0?'Hit by rows':'Hit by columns'}</div>`:''}</div></div>`).join('');
+        <div class="intent"></div>${multi?`<div class="lane"></div>`:''}</div></div>`).join('');
     P.querySelectorAll('.ecard').forEach(c=>{ const k = +c.dataset.e; c.querySelector('.eart').onclick = ()=>enemySheet(k); c.querySelector('.enm').onclick = ()=>enemySheet(k); });
   }
   list.forEach((e,i)=>{
     const c = P.querySelector(`.ecard[data-e="${i}"]`); if(!c) return;
     const gone = e.dead || e.hp<=0; c.classList.toggle('gone', gone);
+    const gd = guardedE(e); c.classList.toggle('guarded', gd);
+    const ln = c.querySelector('.lane'); if(ln){ const TG = laneTargets(), ti = TG.indexOf(e); ln.textContent = gone ? '' : gd ? 'Guarded' : TG.length>1 ? (ti===0?'Hit by rows':'Hit by columns') : 'Takes all hits'; }
     let tags = i===0 ? (cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':cb.kind==='goblin'?'<span class="tag" style="background:#7a5608;color:#ffe58a">Rare</span>':'') : '';
     if(e.passive) tags += `<span class="tag pass">${PASSIVES[e.passive.id].name}</span>`;
-    if(e.mod) tags += `<span class="tag mod" data-mod="${e.mod}" style="background:${MODS[e.mod].col};color:#1d1424">${MODS[e.mod].name}</span>`;
-    if(i===0 && cb.phase) tags += '<span class="tag phase">Phase 2</span>';
+    modList(e).forEach(k=>{ tags += `<span class="tag mod" data-mod="${k}" style="background:${MODS[k].col};color:#1d1424">${MODS[k].name}</span>`; });
+    if(e.legendary) tags += '<span class="tag legend">Legendary</span>';
+    if(e.evolved) tags += '<span class="tag evo">Ascended</span>';
+    if(i===0 && cb.phase) tags += `<span class="tag phase">Phase ${cb.phase+1}</span>`;
     const et = c.querySelector('.etags'); et.innerHTML = tags;
     const pt = et.querySelector('.pass'); if(pt) pt.onclick = ()=>toast(`<b>${PASSIVES[e.passive.id].name}</b><br>${PASSIVES[e.passive.id].desc(e.passive.v)}`, e.spr);
-    const mt = et.querySelector('.mod'); if(mt) mt.onclick = ()=>toast(`<b>${MODS[e.mod].name}</b><br>${MODS[e.mod].desc}`, e.spr);
+    et.querySelectorAll('.mod').forEach(mt=>{ const k = mt.dataset.mod; mt.onclick = ()=>toast(`<b>${MODS[k].name}</b><br>${MODS[k].desc}`, e.spr); });
     const ep = (100*Math.max(0,e.hp)/e.maxHp)+'%';
     c.querySelector('.efill').style.width = ep; c.querySelector('.etrail').style.width = ep;
-    c.querySelector('.etext').textContent = `${Math.max(0,e.hp)} / ${e.maxHp}`;
+    c.querySelector('.etext').textContent = list.length>2 ? `${Math.max(0,e.hp)}` : `${Math.max(0,e.hp)} / ${e.maxHp}`;
     let badges = '';
     if(e.armor>0) badges += `<span class="badge" data-b="armor">${img('armor',multi?18:22)}${e.armor}</span>`;
     if(e.poison>0) badges += `<span class="badge" data-b="poison" style="color:#dcb6ff">${img('poison',multi?18:22)}${e.poison}</span>`;

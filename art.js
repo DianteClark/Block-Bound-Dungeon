@@ -772,6 +772,10 @@ const OUT = 6.5;
 const SIL = (cls, col, w) => `.${cls} *{fill:${col}!important;stroke:${col}!important;stroke-width:${w}px!important;opacity:1!important;stroke-linejoin:round!important;stroke-linecap:round!important}`;
 const STICKER_CSS = `<style>${SIL('sk','#000',OUT*2+1)}${SIL('se','#d9d1e4',OUT*2+2.6)}${SIL('sw','#ffffff',OUT*2)}</style>`;
 function innerArt(name){
+  if(!VARIANTS[name] && !ART[name]){
+    if(name.startsWith('leg_')) VARIANTS[name] = {base:name.slice(4), m:[1.15,0.1,0,0.06, 0.05,0.95,0,0.04, 0,0.05,0.85,0.02], bs:[0.86,7,14], under:['acc_flames'], over:[['acc_crown',0.34,33,-6]]};
+    else if(name.startsWith('evo_')) VARIANTS[name] = {base:name.slice(4), m:[1.05,0.15,0,0.08, 0.1,1,0.05,0.06, 0.1,0.1,1.1,0.08], bs:[0.88,6,12], under:['acc_runes'], over:[['acc_halo',0.7,15,-4]]};
+  }
   const V = VARIANTS[name];
   if(!V){ const fn = ART[name]; if(!fn) throw new Error('missing art '+name); return fn(); }
   const baseFn = ART[V.base] ? ART[V.base] : (VARIANTS[V.base] ? ()=>innerArt(V.base) : null);
