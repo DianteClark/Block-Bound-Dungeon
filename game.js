@@ -73,8 +73,9 @@ const TYPES = {
   stone:  {c:'#736b7f', d:'#38333f', l:'#a69eb2', name:'Rubble'},
   ice:    {c:'#a6def4', d:'#4f8fb0', l:'#f0fbff', name:'Ice'},
   bomb:   {c:'#4a3a58', d:'#1d1424', l:'#8f7fa6', name:'Bomb'},
+  web:    {c:'#b9b2c8', d:'#6f6784', l:'#efeaf6', name:'Web'},
 };
-const JUNK = t => t==='stone' || t==='ice' || t==='bomb';
+const JUNK = t => t==='stone' || t==='ice' || t==='bomb' || t==='web';
 const bombDmg = () => 4 + 2*Math.min(run.floor, 8);
 const weakBonus = () => 5 + 2*Math.min(run.floor, 8);
 const SHAPE_SRC = [
@@ -250,7 +251,14 @@ const ENEMIES = [
       {name:'Ogre', spr:'ogre', hp:85, moves:[M('armor',10,3),M('atk',15,5)]},
       {name:'Fungal Hulk', spr:'shroom', hp:75, passive:{id:'regen',v:2}, moves:[M('curse',4,3),M('atk',9,3),M('atk',9,3)]},
     ],
-    boss:{name:'The Bone King', spr:'boneking', hp:150, passive:{id:'armor',v:10}, moves:[M('atk',10,3),M('curse',4,2),M('armor',15,2),M('multi',4,4,3)]},
+    bosses:[
+      {name:'The Bone King', spr:'boneking', hp:150, passive:{id:'armor',v:10}, sigd:'Raises Skeleton Minions to fight beside it.', moves:[M('summon',28,2),M('atk',10,3),M('armor',12,2),M('multi',4,4,3)]},
+      {name:'The Rat King', spr:'ratking', hp:145, sigd:'Gnaws away your best blocks.', moves:[M('atk',9,2),M('gnaw',4,3),M('multi',3,3,3),M('curse',3,2)]},
+      {name:'The Slime Queen', spr:'slimequeen', hp:165, sig:'split', sigd:'At half HP she splits off a Slimeling.', moves:[M('atk',8,2),M('curse',3,2),M('atk',12,3),M('heal',10,3)]},
+      {name:'The Spore Mother', spr:'shroomqueen', hp:155, passive:{id:'regen',v:2}, sigd:'Rubble on your grid spreads like mold.', moves:[M('curse',2,2),M('overgrow',4,2),M('atk',10,3)]},
+      {name:'The Kobold Chief', spr:'koboldchief', hp:140, sigd:'Snatches pieces right out of your hand.', moves:[M('snatch',1,2),M('atk',9,2),M('steal',12,3),M('multi',4,3,3)]},
+      {name:'The Brood Mother', spr:'spidermatron', hp:150, sigd:'Spins webs over your empty cells.', moves:[M('web',5,2),M('atk',8,2),M('multi',3,4,3)]},
+    ],
   },
   { normal:[
       {name:'Skeleton', spr:'skeleton', hp:52, moves:[M('armor',8,2),M('atk',12,4)]},
@@ -264,7 +272,14 @@ const ENEMIES = [
       {name:'Warlock', spr:'warlock', hp:115, moves:[M('curse',5,3),M('atk',12,2),M('heal',15,3)]},
       {name:'Mimic', spr:'mimic', hp:125, passive:{id:'thorns',v:2}, moves:[M('multi',5,4,3),M('chain',3,2),M('armor',12,2),M('atk',15,4)]},
     ],
-    boss:{name:'The Hydra', spr:'hydra', hp:240, passive:{id:'regen',v:3}, moves:[M('multi',5,3,3),M('curse',5,3),M('atk',18,4),M('ice',4,2)]},
+    bosses:[
+      {name:'The Hydra', spr:'hydra', hp:240, passive:{id:'regen',v:3}, sigd:'Grows new heads: each one adds a hit to its multi-attacks.', moves:[M('multi',5,3,3),M('grow',1,3),M('curse',4,3),M('atk',16,4)]},
+      {name:'The Vampire Lord', spr:'vampirelord', hp:230, sigd:'Feasts on your heart blocks to heal.', moves:[M('feast',10,3),M('drain',12,3),M('atk',15,3)]},
+      {name:'The Grave Warden', spr:'gravewarden', hp:235, sigd:'Hexes the pieces in your hand into rubble.', moves:[M('hex',2,3),M('atk',14,3),M('armor',12,2),M('curse',3,2)]},
+      {name:'The Wailing Bride', spr:'wailingbride', hp:220, passive:{id:'ethereal'}, sigd:'Haunts your grid, swapping your rows around.', moves:[M('haunt',2,2),M('atk',13,2),M('sap',3,3)]},
+      {name:'The Pharaoh', spr:'pharaoh', hp:250, passive:{id:'armor',v:10}, sigd:'Pours sand that falls to the bottom of your grid.', moves:[M('sandfall',5,2),M('atk',15,3),M('curse',3,3)]},
+      {name:'The Bone Colossus', spr:'bonecolossus', hp:260, passive:{id:'thorns',v:2}, sigd:'Quakes the ground: every block falls to the bottom.', moves:[M('quake',10,3),M('armor',14,2),M('atk',18,4)]},
+    ],
   },
   { normal:[
       {name:'Fire Imp', spr:'imp', hp:60, moves:[M('atk',7,2),M('bomb',2,2),M('atk',7,2)]},
@@ -277,7 +292,14 @@ const ENEMIES = [
       {name:'Stone Golem', spr:'golem', hp:165, passive:{id:'armor',v:20}, moves:[M('armor',15,3),M('atk',17,3),M('curse',5,3)]},
       {name:'Dark Knight', spr:'darkknight', hp:150, passive:{id:'thorns',v:3}, moves:[M('atk',20,4),M('armor',12,2),M('multi',7,3,2)]},
     ],
-    boss:{name:'Ancient Dragon', spr:'dragon', hp:340, passive:{id:'armor',v:20}, moves:[M('curse',6,3),M('atk',22,4),M('rage',3,2),M('multi',6,4,4),M('ice',5,3)]},
+    bosses:[
+      {name:'Ancient Dragon', spr:'dragon', hp:340, passive:{id:'armor',v:20}, sigd:'Breathes fire down your fullest column, burning every block in it.', moves:[M('breath',3,3),M('atk',22,4),M('rage',3,2),M('multi',6,4,4)]},
+      {name:'The Magma Titan', spr:'magmatitan', hp:350, passive:{id:'thorns',v:3}, sigd:'Erupts, turning a 3x3 patch of your grid to rock.', moves:[M('erupt',0,3),M('atk',20,3),M('armor',15,2)]},
+      {name:'The Firebird', spr:'firebird', hp:280, sig:'rebirth', sigd:'Rises from its ashes once at half health.', moves:[M('atk',16,2),M('bomb',2,2),M('multi',6,3,3)]},
+      {name:'The Fire Giant', spr:'firegiant', hp:360, sigd:'Inferno: hits harder the more blocks sit on your grid.', moves:[M('inferno',1,3),M('atk',20,3),M('rage',3,2)]},
+      {name:'The High Priest', spr:'highpriest', hp:320, sigd:'Channels a deadly ritual. Hit it hard enough to break it.', moves:[M('ritual',40,4),M('drain',12,3),M('heal',20,3)]},
+      {name:'The Obsidian Golem', spr:'obsidiangolem', hp:360, passive:{id:'armor',v:20}, sigd:'Its ward makes it immune to rows or to columns.', moves:[M('ward',0,2),M('atk',22,3),M('petrify',3,3)]},
+    ],
   },
   { normal:[
       {name:'Frost Wisp', spr:'frostwisp', hp:70, passive:{id:'ethereal'}, moves:[M('ice',3,2),M('atk',12,2)]},
@@ -290,7 +312,14 @@ const ENEMIES = [
       {name:'Frost Golem', spr:'frostgolem', hp:190, passive:{id:'armor',v:25}, moves:[M('armor',18,3),M('ice',5,3),M('atk',20,3)]},
       {name:'Ice Witch', spr:'icewitch', hp:165, moves:[M('ice',6,3),M('atk',14,2),M('sap',3,3),M('heal',20,3)]},
     ],
-    boss:{name:'The Frost Lich', spr:'lich', hp:380, passive:{id:'regen',v:4}, moves:[M('ice',6,3),M('petrify',4,3),M('multi',6,4,4),M('sap',4,3),M('atk',24,4)]},
+    bosses:[
+      {name:'The Frost Lich', spr:'lich', hp:380, passive:{id:'regen',v:4}, sigd:'Freezes an entire row of your grid solid.', moves:[M('freezerow',0,3),M('petrify',4,3),M('multi',6,4,4),M('sap',4,3),M('atk',24,4)]},
+      {name:'The Glacier Queen', spr:'glacierqueen', hp:390, sigd:'Pushes a wall of ice up from the bottom of your grid.', moves:[M('rise',0,3),M('atk',20,3),M('ice',4,2)]},
+      {name:'The Yeti King', spr:'yetiking', hp:400, sigd:'Its roar silences your special for a few moves.', moves:[M('roar',3,3),M('atk',24,3),M('rage',4,2)]},
+      {name:'The Frost Wyrm', spr:'frostwyrm', hp:370, sigd:'Shatters every ice block on your grid into shrapnel.', moves:[M('ice',6,2),M('shatter',3,3),M('atk',20,3)]},
+      {name:'The Mirror Witch', spr:'mirrorwitch', hp:360, sigd:'Raises a mirror that reflects half of your next hit.', moves:[M('reflect',0,2),M('atk',18,2),M('shuffle',0,3)]},
+      {name:'The Frozen Behemoth', spr:'mammoth', hp:420, sig:'shell', sigd:'Its icy hide halves damage unless your clear includes a pure line.', moves:[M('atk',26,4),M('ice',4,2),M('armor',15,3)]},
+    ],
   },
   { normal:[
       {name:'Void Imp', spr:'voidimp', hp:86, moves:[M('atk',11,2),M('bomb',2,2),M('shuffle',0,2),M('atk',11,2)]},
@@ -303,7 +332,14 @@ const ENEMIES = [
       {name:'Abyssal Knight', spr:'abyssknight', hp:220, passive:{id:'thorns',v:4}, moves:[M('atk',26,4),M('chain',4,2),M('armor',18,2),M('multi',9,3,3)]},
       {name:'Chaos Wyrm', spr:'chaoswyrm', hp:205, passive:{id:'enrage',v:6}, moves:[M('atk',22,3),M('ice',5,3),M('petrify',4,3)]},
     ],
-    boss:{name:'The Demon Lord', spr:'demonlord', hp:470, passive:{id:'enrage',v:8}, moves:[M('curse',6,3),M('atk',28,4),M('shuffle',0,2),M('multi',8,4,4),M('petrify',5,3),M('sap',5,3),M('rage',4,2)]},
+    bosses:[
+      {name:'The Demon Lord', spr:'demonlord', hp:470, passive:{id:'enrage',v:8}, sigd:'Flips your whole grid like a mirror.', moves:[M('flip',0,3),M('atk',28,4),M('multi',8,4,4),M('petrify',5,3),M('sap',5,3)]},
+      {name:'The Leviathan', spr:'leviathan', hp:480, sigd:'Its undertow drags your grid one column sideways.', moves:[M('tide',0,2),M('atk',26,3),M('drain',16,3)]},
+      {name:'The Chaos Jester', spr:'jester', hp:440, sigd:'Scrambles the types of every block on your grid.', moves:[M('scramble',0,2),M('multi',7,4,3),M('shuffle',0,2),M('atk',24,3)]},
+      {name:'The Chronomancer', spr:'chronomancer', hp:450, sigd:'Rewinds time, undoing the damage you dealt.', moves:[M('atk',26,3),M('sap',5,2),M('rewind',0,4),M('ice',5,3)]},
+      {name:'The Doom Watcher', spr:'doomwatcher', hp:460, passive:{id:'thorns',v:3}, sigd:'Marks a line for doom. Clear it in time or take a huge hit.', moves:[M('doom',40,4),M('atk',24,3),M('petrify',4,3)]},
+      {name:'The Nameless Maw', spr:'nameless', hp:500, sigd:'Devours a chunk of your grid and heals from it.', moves:[M('devour',0,3),M('atk',28,3),M('curse',5,2),M('multi',8,3,4)]},
+    ],
   },
 ];
 const FS = arr => arr[Math.min(run.floor, arr.length)-1];
@@ -312,7 +348,13 @@ const floorPool = () => ENEMIES[floorIdx()];
 const endlessMul = () => run.floor>5 ? 1 + 0.3*(run.floor-5) : 1;
 const floorName = () => run.floor<=5 ? FLOOR_NAMES[run.floor-1] : `Endless Depth ${run.floor-5}`;
 const GOBLIN = {name:'Treasure Goblin', spr:'goldgoblin', hp:34, rare:true, moves:[M('flee',0,7)]};
-const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), {...f.boss,floor:i+1,boss:true}]), {...GOBLIN, floor:0}];
+const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), ...f.bosses.map(b=>({...b,floor:i+1,boss:true}))]), {...GOBLIN, floor:0}];
+function bossFor(fl){
+  fl = fl || run.floor; run.bossPick = run.bossPick || {};
+  const list = (fl<=5 ? ENEMIES[fl-1] : ENEMIES[2 + ((fl-6) % 3)]).bosses;
+  if(run.bossPick[fl]==null) run.bossPick[fl] = run.daily ? withSeed(runSeed('boss'+fl), ()=>rand(0, list.length-1)) : rand(0, list.length-1);
+  return list[run.bossPick[fl] % list.length];
+}
 const PASSIVES = {
   regen:{name:'Regenerates', desc:v=>`Heals ${v} HP every turn.`},
   armor:{name:'Armored', desc:v=>`Starts the fight with ${v} armor.`},
@@ -507,7 +549,7 @@ function snapFight(){
     stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
     tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
-    enemies:JSON.parse(JSON.stringify(cb.enemies)), bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
+    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
 }
 function saveRun(){
   if(!run) return;
@@ -1140,12 +1182,12 @@ function goMap(){
     const p = pos(r,i), done = onPath(r,i), isAvail = r===row && avail.includes(i);
     const here = done && run.path.length && run.path[run.path.length-1][0]===r && run.path[run.path.length-1][1]===i;
     const cls = ['mnode', n.t==='boss'?'boss':'', done?'done':'', here?'here':'', isAvail?'avail':'', (!done && !isAvail && r<=row)?'locked':''].join(' ');
-    nodesHtml += `<button class="${cls}" style="left:${p.x}%;top:${p.y}px" data-r="${r}" data-i="${i}" aria-label="${ROOMS[n.t].name}" ${isAvail?'':'tabindex="-1"'}>${img(ROOMS[n.t].spr, n.t==='boss'?54:40)}${here?`<span class="token">${img(CLASSES[run.cls].spr,34)}</span>`:''}</button>`;
+    nodesHtml += `<button class="${cls}" style="left:${p.x}%;top:${p.y}px" data-r="${r}" data-i="${i}" aria-label="${ROOMS[n.t].name}" ${isAvail?'':'tabindex="-1"'}>${n.t==='boss'?img(bossFor().spr,58):img(ROOMS[n.t].spr,40)}${here?`<span class="token">${img(CLASSES[run.cls].spr,34)}</span>`:''}</button>`;
   }));
   view(`
     <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${floorName()}</div></div>
       <span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${run.daily?`<span class="heatchip" style="background:#3a2a5a;border-color:#c77dff;color:#f0d6ff">${img('calendar',20)}Daily</span>`:''}${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}${(run.muts||[]).map(k=>`<span class="heatchip mut" title="${MUTS[k].name}">${img(MUTS[k].spr,20)}</span>`).join('')}</span></div>
-    <p class="muted center" style="font-size:13px">Descend toward the boss. Tap a glowing room.</p>
+    <p class="muted center" style="font-size:13px">Descend toward <b style="color:var(--torch2)">${bossFor().name}</b>. Tap a glowing room.<br><span style="font-size:12px">${bossFor().sigd||''}</span></p>
     ${!run.path.length?`<div class="starttoken">${img(CLASSES[run.cls].spr,40)}<span>You are here</span></div>`:''}
     <div class="map" style="height:${H}px"><svg viewBox="0 0 100 ${H}" preserveAspectRatio="none">${lines}</svg>${nodesHtml}</div>
     <div class="legend2">${['combat','elite','rest','shop','treasure','event','den','forge'].map(k=>`<span>${img(ROOMS[k].spr,20)}${ROOMS[k].name}</span>`).join('')}</div>
@@ -1465,7 +1507,7 @@ function endScreen(won){
   show('end'); Sound.music(won?'map':'menu');
   sfx(won?'victory':'defeat');
   if(won){ confetti(160); banner('VICTORY', 'The dungeon is conquered', 2600); }
-  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':wasEndless?'The depths claim you...':'You have fallen...', won?'The Demon Lord is banished. Legends will be told.':wasEndless?`${CLASSES[run.cls].name} reached Endless Depth ${run.floor-FLOORS}.`:`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
+  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':wasEndless?'The depths claim you...':'You have fallen...', won?`${run.lastBoss||'The final guardian'} is banished. Legends will be told.`:wasEndless?`${CLASSES[run.cls].name} reached Endless Depth ${run.floor-FLOORS}.`:`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
     ${heatMsg}
     ${dailyMsg}
     ${mAfter>mBefore?`<div class="card center" style="color:#ffcf7a;font-family:var(--display);font-size:18px">${CLASSES[run.cls].name} reached Mastery ${mAfter}!<div class="muted" style="font-family:var(--body);font-size:13px">${MASTERY_PERKS[mAfter-1]}</div></div>`:''}
@@ -1544,7 +1586,7 @@ function startCombat(kind, forced){
   const RM = run.room;
   if(RM.fight) return resumeFight(RM.fight);
   const F = floorPool();
-  const pickTpl = () => kind==='boss' ? F.boss : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal);
+  const pickTpl = () => kind==='boss' ? bossFor() : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal);
   const rollTpls = () => { const list = [pickTpl()];
     if(kind==='combat' && run.floor>=2 && Math.random() < (run.floor>=4 ? 0.38 : 0.3)){ let t2 = pick(F.normal); if(t2.name===list[0].name) t2 = pick(F.normal); list.push(t2); }
     return list; };
@@ -1563,7 +1605,7 @@ function startCombat(kind, forced){
   RM.tpls = tpls; RM.maxHps = maxHps; RM.t = kind; delete RM.tpl; delete RM.maxHp;
   cb = {
     kind, board:Array(N*N).fill(null), hand:[], stash:null, stashUsed:false, fx:[], parts:[], beams:[], pops:[], over:false, firstClear:true, doubleNext:false, phase:0, petT:0, firstHit:true,
-    bombs:{}, chains:[], weak:[], weakT:0,
+    bombs:{}, chains:[], weak:[], weakT:0, webs:{}, silence:0,
     streak: (has('drum') ? 2 : 0) + skill('momentum'), tookDmg:false, mirror:has('mirror'), moves:0,
     shield: (has('chainmail')?8:0) + (has('oath')?6:0) + 4*skill('fort') + (setOn('iron')?10:0),
     rerolls: 1+(has('dice')?1:0)+(has('goldendice')?1:0)+skill('hands'),
@@ -1590,17 +1632,140 @@ function resumeFight(f){
   $('#hint').style.display = (settings.tips && !store.get('rotated', false)) ? '' : 'none';
   const enemies = f.enemies || (f.enemy ? [f.enemy] : []);
   cb = {...f, enemies, fx:[], parts:[], beams:[], pops:[], over:false, fled:false, hand:f.hand.map(p=>({...p, rotT:0})), stash: f.stash ? {...f.stash, used:false, rotT:0} : null,
-    bombs: f.bombs||{}, chains: f.chains||[], weak: f.weak||[], weakT: f.weakT||0};
+    bombs: f.bombs||{}, chains: f.chains||[], weak: f.weak||[], weakT: f.weakT||0, webs: f.webs||{}, silence: f.silence||0};
+  enemies.forEach(e=>{ if(!e.uid) e.uid = EUID++; else EUID = Math.max(EUID, e.uid+1); });
   delete cb.enemy; attachEnemy(cb);
   cb.enemies.forEach(e=>{ if(!e.intent) nextIntent(e); });
   $('#enemyPanel').dataset.sig = '';
   show('combat'); renderEnemies(); layout(); renderHUD();
   toast('<b>Fight resumed</b><br>Right where you left off.', cb.enemy.spr, 2000);
 }
-function makeEnemy(tpl, maxHp){ const pas = tpl.passive || null; return {...tpl, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null, enraged:false, dead:false}; }
+let EUID = 1;
+function makeEnemy(tpl, maxHp){ const pas = tpl.passive || null; return {...tpl, uid:EUID++, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null, enraged:false, dead:false}; }
+const MINIONS = {
+  skeleton:{name:'Skeleton Minion', spr:'skeleton', minion:true, moves:[M('atk',5,2),M('armor',5,2)]},
+  slimeling:{name:'Slimeling', spr:'slime', minion:true, moves:[M('atk',6,2),M('curse',2,2)]},
+};
+function addMinion(key, hp){
+  const alive = cb.enemies[1] && !cb.enemies[1].dead && cb.enemies[1].hp>0;
+  if(alive){ const m = cb.enemies[1]; m.hp = m.maxHp; floatText(eArt(m), 'Restored!', '#86e6a8'); return false; }
+  const m = makeEnemy(MINIONS[key], Math.max(8, Math.round(hp))); nextIntent(m); m.intent.left++;
+  cb.enemies[1] = m; markSeen('e', m.name);
+  renderHUD(); const el = eArt(m); if(el){ burstAt(el, ['#c77dff','#fff','#86e6a8'], 18); }
+  sfx('phase'); return true;
+}
 function attachEnemy(c){ Object.defineProperty(c, 'enemy', {get(){ return c.enemies.find(x=>!x.dead && x.hp>0) || c.enemies[0]; }, enumerable:false, configurable:true}); return c; }
 const aliveEnemies = () => cb.enemies.filter(e=>!e.dead && e.hp>0);
 function eArt(e){ const i = Math.max(0, cb && cb.enemies ? cb.enemies.indexOf(e || cb.enemy) : 0); return document.querySelector(`#enemyPanel .ecard[data-e="${i}"] .eart`) || document.querySelector('#enemyPanel .eart'); }
+/* ---------- boss signature moves ---------- */
+const BADGE_TXT = {
+  ward: e=>`<b>Obsidian Ward</b><br>Immune to damage from cleared ${e.ward==='rows'?'rows':'columns'}. Hit it with ${e.ward==='rows'?'columns':'rows'}.`,
+  reflect: ()=>`<b>Mirror</b><br>Half of the damage from your next clear bounces back at you.`,
+  shell: ()=>`<b>Icy Hide</b><br>Takes half damage unless your clear includes a pure line (all one block type) or empties the grid.`,
+  heads: e=>`<b>${e.heads} heads</b><br>Each head adds a hit to its multi-attacks.`,
+};
+function permuteBoard(fn){
+  const nb = Array(N*N).fill(null), bombs = {}, now = performance.now();
+  cb.board.forEach((t,i)=>{ if(!t) return; const j = fn(i); if(j!=null && j>=0 && j<N*N) nb[j] = t; });
+  Object.entries(cb.bombs).forEach(([k,v])=>{ const j = fn(+k); if(j!=null && nb[j]==='bomb') bombs[j] = v; });
+  cb.chains = cb.chains.map(ch=>({...ch, i:fn(ch.i)})).filter(ch=>ch.i!=null && nb[ch.i]);
+  if(cb.webs){ const w = {}; Object.entries(cb.webs).forEach(([k,v])=>{ const j = fn(+k); if(j!=null && nb[j]==='web') w[j] = v; }); cb.webs = w; }
+  cb.board = nb; cb.bombs = bombs;
+  nb.forEach((t,i)=>{ if(t) cb.pops.push({i, t0:now}); });
+}
+const rc = i => [Math.floor(i/N), i%N];
+const liveCells = () => { const a = []; cb.board.forEach((t,i)=>{ if(t && !JUNK(t)) a.push(i); }); return a; };
+const emptyCells = () => { const a = []; cb.board.forEach((t,i)=>{ if(!t) a.push(i); }); return a; };
+function zap(i, n){ const t = cb.board[i]; if(!t) return; shards(i, t, n||5); cb.fx.push({i, type:t, t0:performance.now()}); cb.board[i] = null; delete cb.bombs[i]; if(cb.webs) delete cb.webs[i]; }
+function setCell(i, t){ if(cb.board[i]===t) return; delete cb.bombs[i]; cb.board[i] = t; cb.fx.push({i, type:t, t0:performance.now(), drop:true}); }
+const SIG = {
+  summon:{ic:'skeleton', info:(it,e)=>[`Summon`, `Raises a Skeleton Minion (${Math.round(it.v*bossScale())} HP), or restores the one it has`], act(e,it){ addMinion('skeleton', it.v*bossScale()); floatText($('#board'), 'Rise, minion!', '#d08bff', true); }},
+  gnaw:{ic:'rat', info:it=>[`x${it.v}`, `Gnaws away ${it.v} of your best blocks`], act(e,it){
+    const pri = t=>({rainbow:6,blast:5,sword:4,venom:3,heal:2,shield:2,coin:1}[t]||0);
+    shuffle(liveCells()).sort((a,b)=>pri(cb.board[b])-pri(cb.board[a])).slice(0,it.v).forEach(i=>zap(i,6));
+    floatText($('#board'), 'Gnawed!', '#ffb07a', true); sfx('steal'); shake(); }},
+  overgrow:{ic:'shroom', info:it=>[`x${it.v}`, `Mold spreads: up to ${it.v} rubble blocks grow next to the rubble on your grid`], act(e,it){
+    let grown = 0; const stones = shuffle(cb.board.map((t,i)=>t==='stone'?i:-1).filter(i=>i>=0));
+    for(const s of stones){ if(grown>=it.v) break; const [r,c] = rc(s); const nb = shuffle([[1,0],[-1,0],[0,1],[0,-1]]).map(([dr,dc])=>[r+dr,c+dc]).find(([rr,cc])=>rr>=0&&cc>=0&&rr<N&&cc<N&&!cb.board[rr*N+cc]); if(nb){ setCell(nb[0]*N+nb[1], 'stone'); grown++; } }
+    if(!grown) addBlocks('stone', Math.ceil(it.v/2));
+    floatText($('#board'), 'Overgrowth!', '#c8ff8a'); sfx('rubble'); }},
+  snatch:{ic:'glove', info:it=>[`x${it.v}`, `Snatches ${it.v} piece${it.v>1?'s':''} out of your hand`], act(e,it){
+    if(has('glove')){ floatText($('#board'), 'Guarded!', '#ffe58a'); sfx('block'); return; }
+    shuffle(cb.hand.map((p,i)=>p.used?-1:i).filter(i=>i>=0)).slice(0,it.v).forEach(i=>{ cb.hand[i].used = true; });
+    if(cb.hand.every(p=>p.used)) dealHand();
+    floatText($('#board'), 'Snatched!', '#ffe58a', true); sfx('steal'); }},
+  web:{ic:'spider', info:it=>[`x${it.v}`, `Spins ${it.v} webs over empty cells. Webs fill the space and vanish after 3 moves`], act(e,it){
+    cb.webs = cb.webs || {}; shuffle(emptyCells()).slice(0,it.v).forEach(i=>{ setCell(i,'web'); cb.webs[i] = 3; });
+    floatText($('#board'), 'Webbed!', '#efeaf6'); sfx('rubble'); }},
+  grow:{ic:'hydra', info:(it,e)=>[`+1 head`, `Grows another head (multi-attacks hit ${e.heads?e.heads:1} more time${(e.heads||1)>1?'s':''}) and heals ${Math.round(e.maxHp*0.06)}`], act(e){
+    e.heads = (e.heads||1)+1; const h = Math.round(e.maxHp*0.06); e.hp = Math.min(e.maxHp, e.hp+h);
+    floatText(eArt(e), `${e.heads} heads!`, '#86e6a8', true); sfx('rage'); }},
+  feast:{ic:'heart', info:(it,e,d)=>[`${d}`, `Bites for ${d}, then eats your heart blocks (heals 6 each, ${cb?cb.board.filter(t=>t==='heal').length:0} on your grid now)`], act(e,it,d){
+    hitPlayer(d); let n = 0; cb.board.forEach((t,i)=>{ if(t==='heal'){ zap(i,4); n++; } });
+    if(n){ e.hp = Math.min(e.maxHp, e.hp + 6*n); floatText(eArt(e), `+${6*n}`, '#86e6a8'); } }},
+  hex:{ic:'bones', info:it=>[`x${it.v}`, `Hexes ${it.v} piece${it.v>1?'s':''} in your hand into rubble`], act(e,it){
+    if(has('stoneward')){ floatText($('#board'), 'Warded!', '#c9c2d4'); sfx('block'); return; }
+    shuffle(cb.hand.filter(p=>!p.used && p.type!=='stone')).slice(0,it.v).forEach(p=>{ p.type = 'stone'; p.rotT = performance.now(); });
+    floatText($('#board'), 'Hexed!', '#86e6a8', true); sfx('petrify'); }},
+  haunt:{ic:'ghost', info:it=>[`x${it.v}`, `Swaps your rows around ${it.v} time${it.v>1?'s':''}`], act(e,it){
+    for(let k=0;k<it.v;k++){ const rows = shuffle([...Array(N).keys()]); const a = rows[0], b = rows[1]; permuteBoard(i=>{ const [r,c] = rc(i); return (r===a?b:r===b?a:r)*N+c; }); }
+    floatText($('#board'), 'Haunted!', '#e8e0f8', true); sfx('shuffle'); flash('rgba(200,180,255,.3)'); }},
+  sandfall:{ic:'hourglass', info:it=>[`x${it.v}`, `Pours ${it.v} sand blocks that fall to the bottom of your grid`], act(e,it){
+    for(let k=0;k<it.v;k++){ const cols = shuffle([...Array(N).keys()]).filter(c=>!cb.board[c]); if(!cols.length) break; const c = cols[0]; let r = 0; while(r+1<N && !cb.board[(r+1)*N+c]) r++; setCell(r*N+c, 'stone'); }
+    floatText($('#board'), 'Sandfall!', '#ffe7a0'); sfx('rubble'); }},
+  quake:{ic:'rock', info:(it,e,d)=>[`${d}`, `Quakes for ${d}: every block on your grid falls to the bottom`], act(e,it,d){
+    const map = {}; for(let c=0;c<N;c++){ let w = N-1; for(let r=N-1;r>=0;r--){ const i = r*N+c; if(cb.board[i]){ map[i] = w*N+c; w--; } } }
+    permuteBoard(i=>map[i]); hitPlayer(d); shake(); sfx('cavein'); floatText($('#board'), 'Quake!', '#c9c2d4', true); }},
+  breath:{ic:'flame', info:(it,e)=>{ const n = fullestCol().n, d = breathDmg(it,e,n); return [`${d}`, `Burns your fullest column: removes its ${n} blocks and deals ${d}`]; }, act(e,it){
+    const {c,n} = fullestCol(); for(let r=0;r<N;r++) zap(r*N+c, 7); hitPlayer(breathDmg(it,e,n));
+    cb.beams.push({c, t0:performance.now()}); flash('rgba(255,120,30,.45)'); sfx('blast'); shake(); floatText($('#board'), 'Dragon fire!', '#ff8a3c', true); }},
+  erupt:{ic:'blastblock', info:()=>[`3x3`, `Erupts: a 3x3 patch of your grid turns to rubble`], act(){
+    const r0 = rand(0,N-3), c0 = rand(0,N-3); for(let r=r0;r<r0+3;r++) for(let c=c0;c<c0+3;c++) setCell(r*N+c, 'stone');
+    flash('rgba(255,90,20,.4)'); sfx('blast'); shake(); floatText($('#board'), 'Eruption!', '#ff8a3c', true); }},
+  inferno:{ic:'potion_fire', info:(it,e)=>{ const d = infernoDmg(it,e); return [`${d}`, `Deals ${it.v} per block on your grid (${d} right now). Clear lines to cool it down`]; }, act(e,it){
+    hitPlayer(infernoDmg(it,e)); flash('rgba(255,90,20,.4)'); sfx('blast'); }},
+  ritual:{ic:'rune', info:(it,e,d)=>{ const left = e.rit ? Math.max(0, e.rit.need - e.rit.got) : 0; return [`${d}`, `Channels a ritual for ${d}. Deal ${left} more damage to it to break the ritual`]; },
+    start(e){ e.rit = {need:Math.round(e.maxHp*0.2), got:0}; },
+    act(e,it,d){ if(e.rit && e.rit.got>=e.rit.need){ floatText(eArt(e), 'Ritual broken!', '#ffd23f', true); sfx('kill'); } else { hitPlayer(d); flash('rgba(160,60,255,.45)'); } e.rit = null; }},
+  ward:{ic:'stoneward', info:(it,e)=>[`${e.ward==='rows'?'Cols':'Rows'}`, `Shifts its ward: it becomes immune to cleared ${e.ward==='rows'?'columns':'rows'}`], act(e){
+    e.ward = e.ward==='rows' ? 'cols' : 'rows'; floatText(eArt(e), `Immune to ${e.ward==='rows'?'rows':'columns'}`, '#c9b6ff', true); sfx('armor'); }},
+  freezerow:{ic:'snow', info:()=>[`Row`, `Freezes every empty cell in your emptiest row`], act(){
+    let best = -1, bn = 0; for(let r=0;r<N;r++){ let n = 0; for(let c=0;c<N;c++) if(!cb.board[r*N+c]) n++; if(n>bn){ bn = n; best = r; } }
+    if(best>=0) for(let c=0;c<N;c++) if(!cb.board[best*N+c]) setCell(best*N+c, 'ice');
+    flash('rgba(160,220,255,.4)'); sfx('ice'); floatText($('#board'), 'Frozen solid!', '#c8f0ff', true); }},
+  rise:{ic:'i_rise', info:()=>[`+1 row`, `Pushes a row of ice up from the bottom. Blocks in your top row are lost`], act(){
+    permuteBoard(i=>i-N>=0 ? i-N : null); const gap = rand(0,N-1); for(let c=0;c<N;c++) if(c!==gap) setCell((N-1)*N+c, 'ice');
+    sfx('ice'); shake(); floatText($('#board'), 'The ice rises!', '#c8f0ff', true); }},
+  roar:{ic:'i_silence', info:it=>[`${it.v} moves`, `Roars: your special is silenced for ${it.v} moves`], act(e,it){
+    cb.silence = Math.max(cb.silence||0, it.v); floatText($('#ultBtn'), 'Silenced!', '#ff8a80', true); sfx('rage'); shake(); renderHUD(); }},
+  shatter:{ic:'i_shatter', info:(it,e)=>{ const n = cb ? cb.board.filter(t=>t==='ice').length : 0, d = Math.round(n*it.v*bossScale()) + e.rage; return [`${d}`, `Shatters every ice block on your grid: ${Math.round(it.v*bossScale())} damage each (${d} right now)`]; }, act(e,it){
+    let n = 0; cb.board.forEach((t,i)=>{ if(t==='ice'){ zap(i,6); n++; } }); if(n) hitPlayer(Math.round(n*it.v*bossScale()) + e.rage); else floatText($('#board'), 'Nothing to shatter', '#c8f0ff');
+    sfx('ice'); shake(); }},
+  reflect:{ic:'mirror', info:()=>[`Mirror`, `Raises a mirror: half of your next clear's damage bounces back at you`], act(e){
+    e.reflect = true; floatText(eArt(e), 'Mirror up!', '#bfe6ff', true); sfx('armor'); }},
+  flip:{ic:'i_flip', info:()=>[`Flip`, `Flips your entire grid left to right`], act(){
+    permuteBoard(i=>{ const [r,c] = rc(i); return r*N + (N-1-c); }); sfx('shuffle'); shake(); flash('rgba(200,20,40,.3)'); floatText($('#board'), 'Flipped!', '#ff8a80', true); }},
+  tide:{ic:'i_tide', info:()=>[`Shift`, `Its undertow drags every block one column to the left (the left edge wraps around)`], act(){
+    permuteBoard(i=>{ const [r,c] = rc(i); return r*N + (c+N-1)%N; }); sfx('whoosh'); floatText($('#board'), 'Undertow!', '#7fd0ff', true); }},
+  scramble:{ic:'dice', info:()=>[`Mix`, `Scrambles the types of every block on your grid`], act(){
+    const cells = liveCells(), types = shuffle(cells.map(i=>cb.board[i])); cells.forEach((i,k)=>{ cb.board[i] = types[k]; cb.pops.push({i, t0:performance.now()}); });
+    sfx('shuffle'); floatText($('#board'), 'Chaos!', '#c77dff', true); }},
+  rewind:{ic:'hourglassx', info:(it,e)=>{ const to = rewindTo(e); return [`${to}`, `Rewinds time back to ${to} HP`]; }, act(e){
+    const to = rewindTo(e); if(to>e.hp){ floatText(eArt(e), `+${to-e.hp}`, '#86e6a8', true); e.hp = to; } sfx('phase'); flash('rgba(120,200,255,.35)'); }},
+  doom:{ic:'i_doom', info:(it,e,d)=>[`${d}`, `Marks a ${e.intent&&e.intent.line&&e.intent.line.r!=null?'row':'column'}. Clear it before the countdown ends or take ${d}`],
+    start(e){ const isRow = Math.random()<0.5, idx = rand(0,N-1); e.intent.line = isRow ? {r:idx} : {c:idx}; },
+    act(e,it,d){ if(it.broken){ floatText($('#board'), 'Doom averted!', '#ffd23f', true); sfx('relic'); } else { hitPlayer(d); flash('rgba(200,20,40,.5)'); } }},
+  devour:{ic:'fang', info:()=>[`3x3`, `Devours a 3x3 chunk of your grid and heals 4 for every block it eats`], act(e){
+    let best = null; for(let r0=0;r0<=N-3;r0++) for(let c0=0;c0<=N-3;c0++){ let n = 0; for(let r=r0;r<r0+3;r++) for(let c=c0;c<c0+3;c++) if(cb.board[r*N+c]) n++; if(!best || n>best.n) best = {r0,c0,n}; }
+    let n = 0; for(let r=best.r0;r<best.r0+3;r++) for(let c=best.c0;c<best.c0+3;c++) if(cb.board[r*N+c]){ zap(r*N+c,6); n++; }
+    if(n){ e.hp = Math.min(e.maxHp, e.hp + 4*n); floatText(eArt(e), `+${4*n}`, '#86e6a8'); }
+    sfx('kill'); shake(); floatText($('#board'), 'Devoured!', '#c77dff', true); }},
+};
+const bossScale = () => FS([1,1.1,1.2,1.3,1.4]) * (run.floor>5 ? 1+0.12*(run.floor-5) : 1);
+function fullestCol(){ let c = 0, n = -1; for(let k=0;k<N;k++){ let m = 0; for(let r=0;r<N;r++) if(cb && cb.board[r*N+k]) m++; if(m>n){ n = m; c = k; } } return {c, n:Math.max(0,n)}; }
+const breathDmg = (it,e,n) => Math.round((6 + n*it.v)*bossScale()) + (e?e.rage:0);
+const infernoDmg = (it,e) => Math.round((4 + (cb?cb.board.filter(Boolean).length:0)*it.v)*bossScale()) + (e?e.rage:0);
+const rewindTo = e => { const h = e.hist||[]; return Math.max(e.hp, h.length ? h[Math.max(0, h.length-3)] : e.hp); };
 /* ---------- grid hazards ---------- */
 function spawnWeak(n){
   const empty = []; cb.board.forEach((v,i)=>{ if(!v && !cb.weak.includes(i)) empty.push(i); });
@@ -1615,6 +1780,8 @@ function hazardTick(){
       floatText($('#board'), 'BOOM!', '#ff8a3c', true); sfx('blast'); shake(); hitPlayer(bombDmg()); }
   });
   cb.chains = cb.chains.filter(ch=>{ ch.t--; return ch.t>0 && cb.board[ch.i]; });
+  if(cb.webs) Object.keys(cb.webs).forEach(k=>{ const i = +k; if(cb.board[i]!=='web'){ delete cb.webs[k]; return; } if(--cb.webs[k]<=0){ delete cb.webs[k]; cb.board[i] = null; cb.fx.push({i,type:'web',t0:now}); } });
+  if(cb.silence>0) cb.silence--;
   const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
   if(cb.kind!=='goblin' && cb.weak.length < want && ++cb.weakT >= 3){ cb.weakT = 0; spawnWeak(1); }
 }
@@ -1622,6 +1789,7 @@ const streakStep = () => (has('daggers') ? 0.5 : 0.25) * (has('seerorb') ? 1.5 :
 function nextIntent(e){
   e = e || cb.enemy; const m = e.moves[e.mi % e.moves.length]; e.mi++;
   e.intent = {...m, left: Math.max(1, m.t + (has('hourglass')&&m.k!=='flee'?1:0) - (mut('hasty')&&m.k!=='flee'?1:0))};
+  if(SIG[m.k] && SIG[m.k].start) SIG[m.k].start(e);
 }
 function peekIntent(e){ e = e || cb.enemy; return e.moves[e.mi % e.moves.length]; }
 function intentDamage(it, e){ e = e || cb.enemy; return Math.round(it.v*FS([1.1,1.25,1.35,1.45,1.55])*((run.heat||0)>=2?1.15:1)*(run.floor>5?1+0.12*(run.floor-5):1)) + (e ? e.rage : 0); }
@@ -1702,7 +1870,7 @@ function planClear(board){
   return {set, lines, rows:rows.length, cols:cols.length, rowIdx:rows, colIdx:cols, pure, mult, blasted};
 }
 function computeEffects(board, set, o){
-  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0,bomb:0};
+  const cnt = {sword:0,shield:0,heal:0,coin:0,rainbow:0,venom:0,blast:0,stone:0,ice:0,bomb:0,web:0};
   set.forEach(i=>{ const t = board[i]; if(t) cnt[t]++; });
   const Lv = run.lvl, mult = o.mult, lines = o.lines;
   const swordVal = 2 + Lv.sword + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
@@ -1799,7 +1967,8 @@ function fireCells(set, o){
   if(cb.firstHit && has('ironfist') && fx.dmg>0){ fx.dmg += 15; }
   if(fx.dmg>0) cb.firstHit = false;
   if(lines>=2 && has('emberheart')){ cb.enemy.poison += 3; }
-  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
+  cb.enemies.forEach(e=>{ if(e.intent && e.intent.k==='doom' && e.intent.line && !e.intent.broken){ const L2 = e.intent.line; if((L2.r!=null && (o.rowIdx||[]).includes(L2.r)) || (L2.c!=null && (o.colIdx||[]).includes(L2.c))){ e.intent.broken = true; floatText($('#board'), 'Doom line cleared!', '#ffd23f', true); sfx('relic'); } } });
+  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi, {pure:o.pure, perfect:fx.perfect}); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
   if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText(eArt(), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
   if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
   if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); }
@@ -1807,17 +1976,25 @@ function fireCells(set, o){
   if(!o.noCharge) cb.lastClear = {dmg:fx.dmg, sh:fx.sh, hp:fx.hp, poison:fx.poison, gold:fx.gold};
   if(fx.gold>0){ run.gold += fx.gold; floatText($('#goldWrap'), `+${fx.gold}`, '#ffe58a'); sfx('coin'); burstAt($('#goldWrap'), ['#f7c936','#ffe58a'], 6); }
 }
-function routeDamage(total, wRow, wCol, multi){
-  if(!multi) return damageEnemy(total);
-  const A = cb.enemies[0], B = cb.enemies[1], sum = (wRow + wCol) || 1;
-  const a = Math.round(total * wRow / sum), b = total - a;
-  if(a>0) damageEnemy(a, false, false, A);
-  if(b>0) damageEnemy(b, false, false, B);
+function routeDamage(total, wRow, wCol, multi, ctx){
+  const sum = (wRow + wCol) || 1;
+  const parts = multi ? [[cb.enemies[0], Math.round(total * wRow / sum), 'rows'], [cb.enemies[1], total - Math.round(total * wRow / sum), 'cols']]
+    : [[cb.enemy, total, null]];
+  parts.forEach(([e, n, lane])=>{
+    if(!e || n<=0) return;
+    if(e.ward){ const blockedShare = lane ? (lane===e.ward ? 1 : 0) : (e.ward==='rows' ? wRow/sum : wCol/sum); const cut = Math.round(n*blockedShare); if(cut>0){ n -= cut; setTimeout(()=>floatText(eArt(e), 'Warded!', '#c9b6ff'), 120); } }
+    if(e.sig==='shell' && !(ctx && (ctx.pure || ctx.perfect))){ n = Math.ceil(n/2); setTimeout(()=>floatText(eArt(e), 'Icy hide!', '#c8f0ff'), 160); }
+    if(n<=0) return;
+    if(e.reflect){ e.reflect = false; const back = Math.round(n/2); setTimeout(()=>{ if(cb && !cb.over){ floatText(eArt(e), 'Reflected!', '#bfe6ff', true); hitPlayer(back, true); renderHUD(); } }, 250); }
+    damageEnemy(n, false, false, e);
+  });
 }
 function damageEnemy(n, noThorns, pierce, target){
   let e = target || cb.enemy; if(e && (e.dead || e.hp<=0)) e = cb.enemy; let d = n;
   if(e.armor>0 && !pierce){ const a = Math.min(e.armor, d); e.armor -= a; d -= a; }
   e.hp = Math.max(0, e.hp - d); run.dmg += d; run.bestHit = Math.max(run.bestHit, d);
+  if(e.rit && e.intent && e.intent.k==='ritual'){ const was = e.rit.got < e.rit.need; e.rit.got += d; if(was && e.rit.got>=e.rit.need){ setTimeout(()=>floatText(eArt(e), 'Ritual broken!', '#ffd23f', true), 200); sfx('relic'); } }
+  if(e.sig==='split' && !e.didSplit && e.hp>0 && e.hp<e.maxHp/2){ e.didSplit = true; setTimeout(()=>{ if(cb && !cb.over){ addMinion('slimeling', e.maxHp*0.3); floatText(eArt(e), 'Split!', '#ff8ad0', true); } }, 350); }
   if(cb.kind==='boss' && e===cb.enemies[0] && !cb.phase && e.hp>0 && e.hp<e.maxHp/2){
     cb.phase = 1; e.moves = e.moves.map(m=>({...m, v: m.k==='shuffle'||m.k==='flee' ? m.v : Math.round(m.v*1.2), t: Math.max(2, m.t-1)}));
     e.armor += Math.round(e.maxHp*0.08);
@@ -1853,16 +2030,17 @@ function enemyTick(){
 function enemyAct(e){
   if(e.poison>0){ const p = e.poison; e.hp = Math.max(0, e.hp - p); run.dmg += p; if(!has('gravetome')) e.poison--; floatText(eArt(e), `-${p}`, '#dcb6ff'); if(e.hp<=0) return; }
   if(e.passive && e.passive.id==='regen' && e.hp<e.maxHp){ e.hp = Math.min(e.maxHp, e.hp+e.passive.v); }
+  e.hist = (e.hist||[]).concat(e.hp).slice(-6);
   const it = e.intent;
   it.left--;
   if(it.left===1) sfx('warn');
   if(it.left>0) return;
   const dmg = intentDamage(it, e);
   const art = eArt(e) || $('#board');
-  if(['atk','multi','drain'].includes(it.k)){ bump(art,'lunge'); setTimeout(()=>art.classList.remove('lunge'),400); }
+  if(['atk','multi','drain','feast','quake','breath','inferno','ritual','doom','shatter'].includes(it.k)){ bump(art,'lunge'); setTimeout(()=>art.classList.remove('lunge'),400); }
   switch(it.k){
     case 'atk': hitPlayer(dmg); break;
-    case 'multi': for(let i=0;i<it.n;i++) hitPlayer(dmg, i>0); break;
+    case 'multi': for(let i=0;i<it.n + (e.heads?e.heads-1:0);i++) hitPlayer(dmg, i>0); break;
     case 'drain': { const before = run.hp; hitPlayer(dmg); const took = Math.max(0, before-run.hp); if(took){ e.hp = Math.min(e.maxHp, e.hp+took); floatText(art, `+${took}`, '#86e6a8'); } break; }
     case 'curse': addBlocks('stone', it.v); floatText($('#board'), `Rubble x${it.v}`, '#c9c2d4'); sfx('rubble'); shake(); break;
     case 'ice': addBlocks('ice', it.v); floatText($('#board'), `Ice x${it.v}`, '#c8f0ff'); sfx('ice'); break;
@@ -1888,7 +2066,9 @@ function enemyAct(e){
       const taken = new Set(cb.chains.map(c=>c.i)), filled = []; cb.board.forEach((t,i)=>{ if(t && !JUNK(t) && !taken.has(i)) filled.push(i); });
       const pickd = shuffle(filled).slice(0, it.v); pickd.forEach(i=>cb.chains.push({i, t:6}));
       floatText($('#board'), pickd.length?`Chained x${pickd.length}`:'Nothing to chain', '#c9d2df'); sfx('armor'); break; }
+    default: if(SIG[it.k]) SIG[it.k].act(e, it, dmg);
   }
+  if(cb.over || e.dead) return;
   nextIntent(e);
 }
 function checkStuck(){
@@ -1909,6 +2089,9 @@ function checkStuck(){
 function checkEnd(){
   if(!cb || cb.over) return true;
   const fight = cb;
+  cb.enemies.forEach(e=>{ if(e.hp<=0 && !e.dead && e.sig==='rebirth' && !e.reborn){ e.reborn = true; e.hp = Math.round(e.maxHp*0.5); e.armor = 0; e.poison = 0; cb.phase = 1;
+    setTimeout(()=>{ banner('REBIRTH', `${e.name} rises from the ashes`, 1600); flash('rgba(255,140,40,.5)'); sfx('phase'); const el = eArt(e); if(el){ el.classList.remove('dead'); burstAt(el, ['#ffd23f','#ff8a3c','#ef5258'], 30); } renderHUD(); }, 200); } });
+  if(cb.kind==='boss' && cb.enemies[0].hp<=0) cb.enemies.forEach(e=>{ if(e.minion) e.hp = 0; });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
   fresh.forEach(e=>{ e.dead = true; run.kills++; markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
@@ -1918,7 +2101,7 @@ function checkEnd(){
   if(cb.enemies.every(e=>e.dead)){
     cb.over = true; if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
     if(cb.kind==='goblin') unlock('goblin');
-    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
+    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
@@ -1943,6 +2126,7 @@ function checkEnd(){
 function useUlt(){
   if(!cb || cb.over) return;
   const C = ULT();
+  if(cb.silence>0){ toast(`<b>Silenced</b><br>Your special is sealed for ${cb.silence} more move${cb.silence>1?'s':''}.`, 'i_silence'); sfx('block'); return; }
   if(run.charge < C.need){ toast(`<b>${C.name}</b><br>${C.desc}<br><span class="muted">Charge: ${Math.floor(run.charge)}/${C.need} lines cleared.</span>`, C.spr); return; }
   document.querySelectorAll('.coach').forEach(c=>c.remove());
   run.charge = 0; sfx('ult'); flash('rgba(255,200,120,.5)'); buzz(60); questAdd('ults', 1);
@@ -2004,6 +2188,7 @@ function enemySheet(idx){
   m.innerHTML = `<div class="card" role="dialog" aria-label="${e.name}" style="max-height:84vh;overflow:auto">
     <div class="scene">${img(e.spr,96)}<h2 class="title" style="font-size:24px">${e.name}</h2>
     <p class="muted">${cb.kind==='boss'?'Boss':cb.kind==='elite'?'Elite':cb.kind==='goblin'?'Rare':'Monster'} · ${e.hp} / ${e.maxHp} HP${e.armor?` · ${e.armor} armor`:''}${e.poison?` · ${e.poison} poison`:''}${e.rage?` · +${e.rage} rage`:''}</p></div>
+    ${e.sigd?`<div class="troph">${img('r_boss',34)}<div><b>Signature</b><small>${e.sigd}</small></div></div>`:''}
     ${e.passive?`<div class="troph">${img('rage',34)}<div><b>${PASSIVES[e.passive.id].name}</b><small>${PASSIVES[e.passive.id].desc(e.passive.v)}</small></div></div>`:''}
     ${cb.enemies.length>1?`<div class="troph">${img('r_combat',34)}<div><b>${cb.enemies.indexOf(e)===0?'Hit by rows':'Hit by columns'}</b><small>In fights with two foes, cleared rows damage the left one and cleared columns damage the right one.</small></div></div>`:''}
     ${cb.kind==='boss'&&e===cb.enemies[0]?`<div class="troph">${img('r_boss',34)}<div><b>Phase 2</b><small>${cb.phase?'Active: moves are faster and stronger.':'At half HP it gains armor and its moves get faster and stronger.'}</small></div></div>`:''}
@@ -2013,9 +2198,10 @@ function enemySheet(idx){
 }
 function intentInfo(it, e){
   const d = it.k==='flee' ? 0 : intentDamage(it, e);
+  if(SIG[it.k]){ const [val, desc] = SIG[it.k].info(it, e || cb.enemy, d); return [SIG[it.k].ic, val, desc]; }
   switch(it.k){
     case 'atk': return ['sword', `${d}`, `Attacks for ${d}`];
-    case 'multi': return ['r_combat', `${d}x${it.n}`, `Attacks ${it.n} times for ${d}`];
+    case 'multi': { const n = it.n + ((e||cb.enemy).heads ? (e||cb.enemy).heads-1 : 0); return ['r_combat', `${d}x${n}`, `Attacks ${n} times for ${d}`]; }
     case 'drain': return ['drop', `${d}`, `Drains up to ${d} HP from you and heals itself by what it takes`];
     case 'curse': return ['rock', `x${it.v}`, `Drops ${it.v} rubble blocks on your grid`];
     case 'ice': return ['snow', `x${it.v}`, `Freezes ${it.v} empty cells. Ice cracks into rubble when cleared`];
@@ -2033,9 +2219,11 @@ function intentInfo(it, e){
 }
 function renderEnemies(){
   const P = $('#enemyPanel'), list = cb.enemies, multi = list.length>1;
-  const sig = list.map(e=>e.spr+':'+e.name).join('|') + (multi?'|m':'');
+  const sig = list.map(e=>e.spr+':'+e.uid).join('|') + (multi?'|m':'');
   if(P.dataset.sig !== sig){
+    const wasMulti = P.classList.contains('multi');
     P.dataset.sig = sig; P.classList.toggle('multi', multi);
+    if(wasMulti!==multi && L.cs) requestAnimationFrame(()=>{ if(cb && !$('#combat').hidden) layout(); });
     P.innerHTML = list.map((e,i)=>`<div class="ecard" data-e="${i}">
       <div class="eart">${img(e.spr, multi?44:92)}</div>
       <div class="einfo"><div class="ename"><span class="enm">${e.name}</span><span class="etags"></span></div>
@@ -2058,8 +2246,13 @@ function renderEnemies(){
     if(e.armor>0) badges += `<span class="badge" data-b="armor">${img('armor',multi?18:22)}${e.armor}</span>`;
     if(e.poison>0) badges += `<span class="badge" data-b="poison" style="color:#dcb6ff">${img('poison',multi?18:22)}${e.poison}</span>`;
     if(e.rage>0) badges += `<span class="badge" data-b="rage" style="color:#ffb07a">${img('rage',multi?18:22)}${e.rage}</span>`;
+    if(e.ward) badges += `<span class="badge" data-b="ward" style="color:#c9b6ff">${img('stoneward',multi?18:22)}${e.ward==='rows'?'Rows':'Cols'}</span>`;
+    if(e.reflect) badges += `<span class="badge" data-b="reflect" style="color:#bfe6ff">${img('mirror',multi?18:22)}</span>`;
+    if(e.sig==='shell') badges += `<span class="badge" data-b="shell" style="color:#c8f0ff">${img('armor',multi?18:22)}Hide</span>`;
+    if((e.heads||1)>1) badges += `<span class="badge" data-b="heads" style="color:#86e6a8">${img('hydra',multi?18:22)}${e.heads}</span>`;
     const eb = c.querySelector('.ebadges'); eb.innerHTML = badges;
     eb.querySelectorAll('.badge').forEach(b=>b.onclick=()=>{ const k=b.dataset.b;
+      if(BADGE_TXT[k]) return toast(BADGE_TXT[k](e), k==='ward'?'stoneward':k==='reflect'?'mirror':k==='heads'?'hydra':'armor');
       toast(k==='armor'?`<b>Armor</b><br>Absorbs damage before HP.`:k==='poison'?`<b>Poison</b><br>Deals ${e.poison} damage each turn${has('gravetome')?'':', then drops by 1'}.`:`<b>Rage</b><br>Attacks deal +${e.rage} damage.`, k); });
     const intent = c.querySelector('.intent');
     if(gone || !e.intent){ intent.innerHTML = ''; intent.classList.remove('urgent'); return; }
@@ -2082,7 +2275,7 @@ function renderHUD(){
   else pc.hidden = true;
   $('#rerollBtn').disabled = cb.rerolls<=0 || cb.over;
   const C = ULT(), pct = Math.min(100, 100*run.charge/C.need);
-  const ub = $('#ultBtn'); ub.style.setProperty('--p', pct);
+  const ub = $('#ultBtn'); ub.style.setProperty('--p', pct); ub.classList.toggle('sealed', cb.silence>0);
   ub.classList.toggle('ready', pct>=100);
   if(!$('#ultIcon').dataset.k || $('#ultIcon').dataset.k!==run.cls){ $('#ultIcon').innerHTML = img(C.spr, 30); $('#ultIcon').dataset.k = run.cls; }
   $('#ultText').textContent = pct>=100 ? C.name : `${Math.floor(run.charge)}/${C.need}`;
@@ -2297,7 +2490,11 @@ function frame(){
 }
 
 function drawHazards(now){
-  const {cs,bx,by} = L;
+  const {cs,bx,by,bw} = L;
+  cb.enemies.forEach(e=>{ const it = e.intent; if(e.dead || !it || it.k!=='doom' || !it.line || it.broken) return;
+    const a = 0.18 + 0.12*Math.sin(now/160); ctx.save(); ctx.fillStyle = `rgba(255,40,60,${a})`; ctx.strokeStyle = `rgba(255,80,90,${0.6+a})`; ctx.lineWidth = 3;
+    if(it.line.r!=null){ rrect(bx-2, by+it.line.r*cs, bw+4, cs, 8); } else { rrect(bx+it.line.c*cs, by-2, cs, bw+4, 8); }
+    ctx.fill(); ctx.stroke(); ctx.restore(); });
   cb.weak.forEach(i=>{ const r = Math.floor(i/N), c = i%N, x = bx+c*cs+cs/2, y = by+r*cs+cs/2, pulse = 0.5+0.5*Math.sin(now/220 + i);
     ctx.save(); ctx.lineWidth = Math.max(2, cs*0.07); ctx.strokeStyle = `rgba(255,210,63,${0.55+0.4*pulse})`;
     ctx.beginPath(); ctx.arc(x, y, cs*(0.3+0.04*pulse), 0, Math.PI*2); ctx.stroke();

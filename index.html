@@ -187,6 +187,8 @@ html.lock #app{position:fixed;top:0;left:0;right:0;margin:0 auto;height:var(--ap
 #ultBtn::before{content:'';position:absolute;inset:4px;border-radius:50%;background:radial-gradient(circle,#3d3150,#1d1724)}
 #ultBtn .stk{position:relative}
 #ultBtn.ready{animation:ready 1.1s infinite}
+#ultBtn.sealed{filter:grayscale(1) brightness(.7);animation:none}
+#ultBtn.sealed::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:repeating-linear-gradient(45deg,transparent 0 7px,rgba(255,80,90,.55) 7px 10px);pointer-events:none}
 @keyframes ready{0%,100%{box-shadow:0 4px 0 #000,0 0 0 rgba(255,157,60,0)}50%{box-shadow:0 4px 0 #000,0 0 22px rgba(255,180,80,1)}}
 #ultBtn small{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);background:#000;border-radius:6px;padding:0 5px;font-family:var(--display);font-size:11px;white-space:nowrap}
 #board{display:block;margin:0 auto;touch-action:none;user-select:none;-webkit-user-select:none}
