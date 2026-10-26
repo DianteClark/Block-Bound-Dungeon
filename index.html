@@ -155,6 +155,19 @@ html.lock #app{position:fixed;top:0;left:0;right:0;margin:0 auto;height:var(--ap
 .eart::after{content:'';position:absolute;bottom:6px;left:18px;right:18px;height:10px;border-radius:50%;background:rgba(0,0,0,.5);filter:blur(2px);z-index:-1}
 .eart .stk{animation:bob 2.4s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.eart.squash .stk{animation:squash .34s cubic-bezier(.3,1.5,.5,1)}
+@keyframes squash{0%{transform:none}22%{transform:scale(calc(1 + var(--sq,.1)), calc(1 - var(--sq,.1))) translateX(6px);filter:brightness(1.9) saturate(.5)}55%{transform:scale(calc(1 - var(--sq,.1)/2), calc(1 + var(--sq,.1)/2))}100%{transform:none}}
+.eart.killshot .stk{animation:killshot 1s ease-out forwards!important}
+@keyframes killshot{0%{transform:scale(1)}15%{transform:scale(1.35) rotate(-6deg);filter:brightness(2.4)}60%{transform:scale(1.15) rotate(4deg);filter:brightness(1.4)}100%{transform:scale(.2) rotate(30deg) translateY(30px);opacity:0}}
+#board.finisher{animation:finisher .9s ease-out}
+@keyframes finisher{0%{transform:scale(1)}20%{transform:scale(1.025)}100%{transform:scale(1)}}
+#announcer{position:fixed;z-index:40;pointer-events:none;text-align:center;opacity:0;display:flex;flex-direction:column;align-items:center}
+#announcer b{font-family:var(--display);font-weight:400;line-height:1;-webkit-text-stroke:2px #120c16;paint-order:stroke fill;text-shadow:0 4px 0 rgba(0,0,0,.5)}
+#announcer small{font:800 12px var(--body);letter-spacing:.12em;text-transform:uppercase;color:#fff;-webkit-text-stroke:0;text-shadow:0 2px 0 #000;margin-top:2px}
+#announcer.go{animation:announce 1s ease-out forwards}
+@keyframes announce{0%{opacity:0;transform:scale(.4) rotate(-6deg)}15%{opacity:1;transform:scale(1.15) rotate(2deg)}30%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.95)}}
+body.slowmo .float{animation-duration:2.6s!important}
+@media (prefers-reduced-motion: reduce){ #announcer.go{animation-duration:.01s} }
 .eart.lunge .stk{animation:lunge .35s ease-out}
 @keyframes lunge{0%{transform:none}35%{transform:translate(14px,6px) scale(1.15) rotate(6deg)}100%{transform:none}}
 .eart.dead .stk{animation:peel .8s ease-in forwards}

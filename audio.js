@@ -152,7 +152,19 @@ const Sound = (() => {
     shop:  [[48,52,55],[45,48,52],[41,45,48],[43,47,50]],      // C Am F G
     rest:  [[45,48,52],[41,45,48],[48,52,55],[43,47,50]],      // Am F C G
     deep:  [[47,50,54],[48,51,55],[47,50,53],[46,50,53]],      // Bm Cm Bdim Bb
+    bones: [[52,55,59],[48,52,55],[50,54,57],[47,51,54]],      // Em C D B
+    fire:  [[52,55,59],[53,57,60],[52,55,59],[50,53,57]],      // Em F Em Dm (phrygian)
+    ice:   [[49,52,56],[45,49,52],[47,50,54],[44,47,51]],      // C#m A Bm G#m
+    void:  [[48,51,54],[47,50,54],[49,52,55],[46,50,53]],      // Cdim Bm C#dim Bb
   };
+  /* each floor has its own key, tempo and texture */
+  const FLOOR_MUS = [null,
+    {prog:'fight', calm:'calm', tempo:1, lead:'triangle'},
+    {prog:'bones', calm:'bones', tempo:1.05, lead:'square'},
+    {prog:'fire', calm:'fire', tempo:1.12, lead:'sawtooth'},
+    {prog:'ice', calm:'ice', tempo:0.94, lead:'triangle'},
+    {prog:'void', calm:'void', tempo:1.06, lead:'sawtooth'},
+  ];
   const MODES = {
     menu:   {tempo:62, prog:'calm'},
     map:    {tempo:70, prog:'calm'},
@@ -163,7 +175,9 @@ const Sound = (() => {
     endless:{tempo:118, prog:'deep'},
   };
   const Music = {
-    mode:'off', step:0, next:0, timer:null,
+    mode:'off', step:0, next:0, timer:null, floor:1,
+    setFloor(n){ n = Math.max(1, Math.min(5, n|0)); if(n===this.floor) return; this.floor = n; if(ctx && (this.mode==='map'||this.mode==='combat')){ const w = this.want; this.mode = 'off'; this.set(w); } },
+    progFor(M){ const F = FLOOR_MUS[this.floor] || FLOOR_MUS[1]; if(this.mode==='combat') return F.prog; if(this.mode==='map') return F.calm; return M.prog; },
     set(mode){
       this.want = mode; if(!ctx) return; if(mode===this.mode) return;
       const g = musicBus.gain, now = ctx.currentTime, v = vol.music*0.55;
@@ -176,13 +190,13 @@ const Sound = (() => {
     resync(){ if(ctx && this.next < ctx.currentTime) this.next = ctx.currentTime + 0.1; },
     tick(){
       if(!ctx || this.mode==='off' || !MODES[this.mode]) return;
-      const M = MODES[this.mode], spb = 60/M.tempo/4;
+      const M = MODES[this.mode], F = FLOOR_MUS[this.floor] || FLOOR_MUS[1], spb = 60/(M.tempo*((this.mode==='combat'||this.mode==='map')?F.tempo:1))/4;
       if(this.next < ctx.currentTime - 0.3) this.next = ctx.currentTime + 0.05;
       while(this.next < ctx.currentTime + 0.2){ this.play(this.step, this.next, M, spb); this.next += spb; this.step++; }
     },
     play(s, t, M, spb){
       if(vol.music<=0) return;
-      const P = PROGS[M.prog], bar = Math.floor(s/16) % P.length, ch = P[bar], st = s % 16, d = ctx.currentTime;
+      const P = PROGS[this.progFor(M)], FL = FLOOR_MUS[this.floor] || FLOOR_MUS[1], fl = this.floor, bar = Math.floor(s/16) % P.length, ch = P[bar], st = s % 16, d = ctx.currentTime;
       const at = t - d;
       const B = musicBus;
       // pad: once per bar
@@ -205,6 +219,12 @@ const Sound = (() => {
           tone({type:'triangle', f:mtof(m), dur:0.6, vol:0.05, bus:B, delay:at, echo:0.6, rev:0.4});
         }
         if(st===8 && bar%2===1) tone({type:'sine', f:mtof(ch[0]+36), dur:1.6, vol:0.025, bus:B, delay:at, rev:0.8});
+        if(this.mode==='map'){
+          if(fl===2 && (st===3||st===11)) tone({type:'sine', f:mtof(ch[1]+36), dur:0.08, vol:0.04, bus:B, delay:at, echo:0.4});
+          if(fl===3 && st===0) noise({f:180, f2:70, dur:0.9, vol:0.06, bus:B, delay:at, rev:0.4});
+          if(fl===4 && st%4===2) tone({type:'sine', f:mtof(ch[(st/4|0)%3]+48), dur:0.5, vol:0.018, bus:B, delay:at, rev:0.9});
+          if(fl===5 && st===12) tone({type:'sawtooth', f:mtof(ch[0]-24), f2:mtof(ch[0]-25), dur:2, vol:0.03, lp:300, bus:B, delay:at, rev:0.7});
+        }
         return;
       }
       // combat / boss
@@ -218,7 +238,14 @@ const Sound = (() => {
       // arpeggio
       const pat = [0,1,2,1, 0,2,1,2, 0,1,2,3, 2,1,0,1];
       const idx = pat[st], m = (idx===3 ? ch[0]+12 : ch[idx]) + 12;
-      if(st%2===0 || boss) tone({type:'triangle', f:mtof(m), dur:spb*1.4, vol:0.04, bus:B, delay:at, echo:0.25});
+      const lead = this.mode==='combat' ? FL.lead : 'triangle';
+      if(st%2===0 || boss) tone({type:lead, f:mtof(m), dur:spb*1.4, vol:lead==='triangle'?0.04:0.022, lp:lead==='triangle'?undefined:1400, bus:B, delay:at, echo:0.25});
+      if(this.mode==='combat'){
+        if(fl===2 && (st===3||st===7||st===11)) tone({type:'sine', f:mtof(m+24), dur:0.06, vol:0.035, bus:B, delay:at});
+        if(fl===3 && (st===2||st===10)) tone({type:'sine', f:150, f2:70, dur:0.2, vol:0.16, bus:B, delay:at});
+        if(fl===4 && (st===3||st===11)) tone({type:'sine', f:mtof(ch[2]+36), dur:0.7, vol:0.02, bus:B, delay:at, rev:0.9, echo:0.4});
+        if(fl===5 && st===0) tone({type:'sawtooth', f:mtof(ch[0]-24), dur:spb*16, vol:0.03, lp:260, bus:B, delay:at, detune:12});
+      }
     },
   };
 
@@ -232,5 +259,5 @@ const Sound = (() => {
     else { musicBus.gain.cancelScheduledValues(ctx.currentTime); musicBus.gain.value = v*0.55; }
   }
   function vibrate(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
-  return {unlock, play, music:(m)=>Music.set(m), setVolume, vibrate, get ready(){ return !!ctx; }};
+  return {unlock, play, music:(m)=>Music.set(m), floor:(n)=>Music.setFloor(n), setVolume, vibrate, get ready(){ return !!ctx; }};
 })();

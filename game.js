@@ -937,6 +937,7 @@ function show(which){
   document.documentElement.classList.toggle('lock', which==='combat');
   if(run) renderRunbar();
   updateDanger();
+  if(run) Sound.floor(run.floor<=FLOORS ? run.floor : 2 + ((run.floor-6) % 3) + 1);
   Sound.music(['title','heroes','codex','trophies','skills','journal','wardrobe'].includes(which) ? 'menu' : which==='combat' ? (cb&&cb.kind==='boss'?'boss':run&&run.floor>FLOORS?'endless':'combat') : which==='shop' ? 'shop' : which==='rest' ? 'rest' : 'map');
   window.scrollTo(0,0);
 }
@@ -2459,7 +2460,7 @@ function resolveClears(){
   cb.doubleNext = false; cb.firstClear = false;
   fireCells(plan.set, plan);
   cb.streak++;
-  if(cb.streak>=2) setTimeout(()=>sfx('combo', cb ? cb.streak : 2), 120);
+  if(cb.streak>=2){ setTimeout(()=>sfx('combo', cb ? cb.streak : 2), 120); announce(cb.streak); }
   if(has('lute') && cb.streak>0 && cb.streak%3===0){ cb.shield += 8; heal(5); floatText($('#shieldStat'), '+8', '#a8ceff'); floatText($('#board'), 'Chord!', '#ffb3e6', true); sfx('relic'); }
   if(setOn('arcane') && plan.lines>=2) run.charge = Math.min(ULT().need, run.charge+1);
 }
@@ -2555,6 +2556,8 @@ function damageEnemy(n, noThorns, pierce, target){
   const el = eArt(e); if(!el){ return; }
   floatText(el, d>0?`-${d}`:'Blocked', d>0?'#ff8a8d':'#c9c2d4', d>=25);
   el.classList.add('hitflash'); setTimeout(()=>el.classList.remove('hitflash'),110);
+  if(d>0){ const big = cb.kind==='boss' || e.mod; el.style.setProperty('--sq', Math.min(0.28, 0.05 + d/(big?140:220)).toFixed(3)); bump(el, 'squash'); clearTimeout(el._sq); el._sq = setTimeout(()=>el.classList.remove('squash'), 360);
+    if(big && d>=20){ hitstop(70); buzz(25); } }
   sfx(d>0?'hit':'armor', d>=25);
   if(d>=25){ shake(); flash('rgba(255,255,255,.3)'); burstAt(el, ['#fff','#ffcf7a','#ff8a3c'], 14); }
   if(!noThorns && d>0 && e.passive && e.passive.id==='thorns' && e.hp>0) hitPlayer(e.passive.v, true);
@@ -2668,6 +2671,7 @@ function checkEnd(){
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
+    { slowmo(T(kind==='boss'?1100:650)); flash('rgba(255,255,255,.55)'); const fe = eArt(cb.enemies[0]); if(fe) bump(fe, 'killshot'); bump($('#board'), 'finisher'); }
     if(cb.enemies[0].secret){ run.bossLog = (run.bossLog||[]).concat([[cb.enemies[0].name, cb.enemies[0].spr]]); run.secretDone = true; run.room = null; run.floor = FLOORS+1; unlock('heart'); bumpStats(s=>s.hearts=(s.hearts||0)+1); store.set('save', null); setTimeout(()=>{ if(cb===fight) endScreen(true, true); }, T(1600)); return true; }
     const xp = {combat:10, elite:20, boss:32, goblin:8}[kind] || 10;
     gainXP(xp + (cb.enemies.length>1 ? 6 : 0));
@@ -2678,7 +2682,7 @@ function checkEnd(){
     if(pk('medic')) heal(5*pk('medic'));
     setTimeout(()=>floatText($('#heroIcon'), `+${xp} XP`, '#ffd23f', true), 500);
     run.room = run.room || {t:kind}; run.room.fight = null; run.room.reward = {kind}; saveRun();
-    setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, T(1000)); return true;
+    setTimeout(()=>{ if(cb===fight) rewardScreen(kind); }, T(kind==='boss'?1700:1300)); return true;
   }
   if(run.hp<=0 && checkDeath()){
     cb.over = true; renderHUD(); store.set('save', null);
@@ -3044,6 +3048,19 @@ function shards(i, type, n){
   if(cb.parts.length>500) cb.parts.splice(0, cb.parts.length-500);
 }
 const BURST_COLS = ['#ef5258','#4a98ff','#45c674','#f7c936','#c77dff','#ff8a3c'];
+let TS = 1, hitstopUntil = 0, slowT = null;
+function slowmo(ms){ if(settings.motion) return; TS = 0.28; document.body.classList.add('slowmo'); clearTimeout(slowT); slowT = setTimeout(()=>{ TS = 1; document.body.classList.remove('slowmo'); }, ms); }
+function hitstop(ms){ if(settings.motion) return; hitstopUntil = performance.now() + ms; }
+const COMBO_WORDS = ['', '', 'Nice!', 'Great!', 'Awesome!', 'Amazing!', 'Incredible!', 'Unstoppable!', 'Legendary!', 'GODLIKE!'];
+function announce(streak){
+  if(!L.cs) return; let el = $('#announcer'); if(!el){ el = document.createElement('div'); el.id = 'announcer'; el.setAttribute('aria-hidden','true'); document.body.appendChild(el); }
+  const word = COMBO_WORDS[Math.min(streak, COMBO_WORDS.length-1)];
+  const cols = ['#fff','#fff','#86e6a8','#7fd0ff','#c77dff','#ffd23f','#ff9d3c','#ff5a6a','#ff3b5c','#ffd23f'];
+  const r = cv.getBoundingClientRect();
+  el.style.top = (r.top + L.by + L.bw*0.1) + 'px'; el.style.left = r.left + 'px'; el.style.width = r.width + 'px';
+  el.innerHTML = `<b style="font-size:${Math.min(64, 26 + streak*5)}px;color:${cols[Math.min(streak, cols.length-1)]}">${word}</b><small>${streak} in a row</small>`;
+  el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+}
 function burstParts(list, style, cx, cy, col, n, cs){
   for(let k=0;k<n;k++){
     const a = Math.random()*Math.PI*2, sp = 1.5+Math.random()*4.5;
@@ -3162,8 +3179,9 @@ function frame(){
     drawPiece(p, drag.x - p.w*cs/2, drag.y - drag.lift - p.h*cs/2, cs, drag.valid?0.97:0.8, true);
     if(drag.valid && drag.plan && drag.fx) drawPreview(drag.plan, drag.fx);
   }
+  const ts = now < hitstopUntil ? 0 : TS;
   cb.parts.forEach(q=>{
-    q.x+=q.vx; q.y+=q.vy; q.vy+=(q.g==null?0.28:q.g); q.vx*=0.985; q.rot+=q.vr; q.life-=q.decay;
+    if(ts){ q.x+=q.vx*ts; q.y+=q.vy*ts; q.vy+=(q.g==null?0.28:q.g)*ts; q.vx*=1-0.015*ts; q.rot+=q.vr*ts; q.life-=q.decay*ts; }
     drawPart(ctx, q);
   });
   cb.parts = cb.parts.filter(q=>q.life>0 && q.y<H+40 && q.y>-60);
@@ -3277,8 +3295,8 @@ function drawFx(){
       const x = u*u*p.sx + 2*u*e*p.mx + e*e*p.tx, y = u*u*p.sy + 2*u*e*p.my + e*e*p.ty;
       drawTrail(p, x, y); p.x = x; p.y = y; return;
     }
-    if(p.kind){ p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=0.985; p.rot+=p.vr; p.life-=p.decay; drawPart(fx2, p); return; }
-    p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=0.99; p.rot+=p.vr; p.life-=p.decay;
+    if(p.kind){ p.x+=p.vx*TS; p.y+=p.vy*TS; p.vy+=p.g*TS; p.vx*=1-0.015*TS; p.rot+=p.vr*TS; p.life-=p.decay*TS; drawPart(fx2, p); return; }
+    p.x+=p.vx*TS; p.y+=p.vy*TS; p.vy+=p.g*TS; p.vx*=1-0.01*TS; p.rot+=p.vr*TS; p.life-=p.decay*TS;
     fx2.save(); fx2.globalAlpha = Math.max(0, Math.min(1, p.life*1.5)); fx2.translate(p.x,p.y); fx2.rotate(p.rot); fx2.fillStyle = p.col;
     if(p.round){ fx2.beginPath(); fx2.arc(0,0,p.s/2,0,Math.PI*2); fx2.fill(); } else fx2.fillRect(-p.s/2,-p.s*0.3,p.s,p.s*0.6);
     fx2.restore();
