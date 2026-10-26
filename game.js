@@ -415,14 +415,27 @@ const floorIdx = () => run.floor<=5 ? run.floor-1 : 2 + ((run.floor-6) % 3);
 const floorPool = () => ENEMIES[floorIdx()];
 const endlessMul = () => run.floor>5 ? 1 + 0.3*(run.floor-5) : 1;
 const floorName = () => run.floor<=5 ? FLOOR_NAMES[run.floor-1] : `Endless Depth ${run.floor-5}`;
+const SECRET_BOSS = {name:'The Dungeon Heart', spr:'dungeonheart', hp:560, secret:true, passive:{id:'regen',v:5},
+  sigd:'The living heart of the dungeon. It uses the tricks of every guardian below.',
+  moves:[M('flip',0,3),M('multi',9,4,4),M('rise',0,3),M('summon',60,3),M('doom',55,4),M('devour',0,3),M('atk',34,3),M('scramble',0,2)]};
+const secretWhy = () => { const w = []; if((run.heat||0)>=3) w.push('You braved Heat 3 or higher'); if(Object.keys(SETS).some(k=>setOn(k))) w.push('You hold a complete relic set'); if(!run.drank) w.push('You never drank a potion'); return w; };
 const GOBLIN = {name:'Treasure Goblin', spr:'goldgoblin', hp:34, rare:true, moves:[M('flee',0,7)]};
-const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), ...f.bosses.map(b=>({...b,floor:i+1,boss:true}))]), {...GOBLIN, floor:0}];
+const ALL_ENEMIES = [...ENEMIES.flatMap((f,i)=>[...f.normal.map(e=>({...e,floor:i+1})), ...f.elite.map(e=>({...e,floor:i+1,elite:true})), ...f.bosses.map(b=>({...b,floor:i+1,boss:true}))]), {...SECRET_BOSS, floor:5, boss:true}, {...GOBLIN, floor:0}];
 function bossFor(fl){
   fl = fl || run.floor; run.bossPick = run.bossPick || {};
   const list = (fl<=5 ? ENEMIES[fl-1] : ENEMIES[2 + ((fl-6) % 3)]).bosses;
   if(run.bossPick[fl]==null) run.bossPick[fl] = run.daily ? withSeed(runSeed('boss'+fl), ()=>rand(0, list.length-1)) : rand(0, list.length-1);
   return list[run.bossPick[fl] % list.length];
 }
+const MODS = {
+  shielded:{name:'Shielded', col:'#8dbcff', desc:'Starts with heavy armor and regains 6 armor every turn.'},
+  vampiric:{name:'Vampiric', col:'#ff8a9a', desc:'Heals for all the damage its attacks deal to you.'},
+  splitting:{name:'Splitting', col:'#86e6a8', desc:'When defeated, a smaller copy splits off.'},
+  hasty:{name:'Hasty', col:'#ffd23f', desc:'Every move comes 1 turn sooner.'},
+  giant:{name:'Giant', col:'#ff9d3c', desc:'40% more HP and hits harder.'},
+  explosive:{name:'Explosive', col:'#ff8a3c', desc:'Every attack also plants a bomb on your grid.'},
+  crumbling:{name:'Crumbling', col:'#c9c2d4', desc:'Every attack also drops 2 rubble on your grid.'},
+};
 const PASSIVES = {
   regen:{name:'Regenerates', desc:v=>`Heals ${v} HP every turn.`},
   armor:{name:'Armored', desc:v=>`Starts the fight with ${v} armor.`},
@@ -542,6 +555,20 @@ const QUESTS = {
   rooms:{text:'Enter 12 rooms', goal:12, spr:'r_event'},
   pets:{text:'Have your pet act 6 times', goal:6, spr:'r_den'},
 };
+function weekKey(){ const d = new Date(); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = t.getUTCFullYear(); const wk = Math.ceil(((t - Date.UTC(y,0,1))/86400000 + 1)/7); return `${y}-W${wk}`; }
+const RULES = {
+  lines:{name:'Straight Lines', spr:'sword', desc:'Every piece is a straight line.'},
+  noheal:{name:'No Hearts', spr:'heart', desc:'Heart blocks are replaced by shields.'},
+  pairs:{name:'Pack Hunters', spr:'r_combat', desc:'Every regular fight has two foes, from floor 1.'},
+  inferno:{name:'Inferno', spr:'rage', desc:'Plays at Heat 3.'},
+  rich:{name:'Fat Purse', spr:'coin', desc:'Start with 150 gold, but shops cost 50% more.'},
+  rubble:{name:'Cave-In', spr:'rock', desc:'Every fight starts with extra rubble on your grid.'},
+};
+const rule = k => !!(run && run.rules && run.rules.includes(k));
+function weeklyInfo(){
+  const key = weekKey(), seed = hashStr('weekly|' + key);
+  return withSeed(seed, ()=>({key, cls:pick(Object.keys(CLASSES)), rules:shuffle(Object.keys(RULES)).slice(0,2), muts:shuffle(Object.keys(MUTS).filter(k=>k!=='blessed'&&k!=='rush')).slice(0,1)}));
+}
 function todayKey(){ const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
 function quests(){
   let q = store.get('quests', null);
@@ -598,6 +625,8 @@ const ACH = {
   evolve2:{name:'Final Form', desc:'Evolve a pet to its final form.', spr:'pet_bat2'},
   empower:{name:'Empowered', desc:'Upgrade a block type to its + version.', spr:'anvil'},
   bossrelic:{name:'Cursed Treasure', desc:'Take a boss relic.', spr:'b_crown'},
+  weekly:{name:'Weekly Warrior', desc:'Finish a Weekly Challenge.', spr:'trophy'},
+  heart:{name:'Heartbreaker', desc:'Defeat the secret Dungeon Heart.', spr:'dungeonheart'},
   collector:{name:'Window Shopper', desc:'Buy something in the Bazaar.', spr:'shard'},
   level8:{name:'Seasoned', desc:'Reach level 8 in a single run.', spr:'trophy'},
   bossdex:{name:'Boss Hunter', desc:'Defeat 10 different bosses.', spr:'r_boss'},
@@ -759,7 +788,10 @@ function newRun(cls, opts){
   if(ml>=2){ run.maxHp += 5; run.hp += 5; }
   if(ml>=3) givePotion();
   if(ml>=4){ const [id] = relicOffers(1); if(id){ run.relics.push(id); markSeen('r', id); } }
-  run.daily = opts.daily || null;
+  run.daily = opts.daily || null; run.weekly = opts.weekly || null; run.rules = (opts.rules || []).slice();
+  if(rule('inferno')) run.heat = 3;
+  if(rule('rich')) run.gold = 150;
+  if(rule('noheal') && run.bag.heal){ run.bag.shield = (run.bag.shield||0) + run.bag.heal; delete run.bag.heal; }
   run.muts = opts.daily ? opts.muts.slice() : (opts.muts || []).filter(k=>MUTS[k]);
   if(mut('glass')){ run.maxHp = Math.round(run.maxHp*0.7); run.hp = run.maxHp; }
   if(mut('dry')) run.potions = [];
@@ -934,7 +966,7 @@ function potionTap(i){
   selPotion = -1;
   if(inFight && has('phial') && !cb.phialUsed){ cb.phialUsed = true; floatText($('#potionBar'), 'Refilled!', '#ffb3e6'); }
   else run.potions.splice(i,1);
-  bumpStats(s=>s.potions++); questAdd('potions', 1);
+  bumpStats(s=>s.potions++); questAdd('potions', 1); run.drank = (run.drank||0)+1;
   sfx('potion'); P.use();
   renderRunbar();
   if(inFight){ if(!checkEnd()){ checkStuck(); renderHUD(); } }
@@ -1105,6 +1137,13 @@ function dailyCard(){
     <div class="dailyrow">${img(C.spr,48)}<div><b>${C.name}</b>${D.muts.map(k=>`<span class="mchip">${img(MUTS[k].spr,16)}${MUTS[k].name}</span>`).join('')}<small>Same dungeon for everyone today. ${rec.key===D.key&&rec.rewarded?'Bonus claimed.':'First finish: +40 Soul Shards.'}</small></div></div>
     <button class="btn" id="dailyBtn" style="font-size:18px;padding:9px">Play today's challenge</button></div>`;
 }
+function weeklyCard(){
+  if(stats().runs < 3) return '';
+  const W = weeklyInfo(), rec = store.get('weekly', {}), best = rec.key===W.key ? rec.best : 0, C = CLASSES[W.cls];
+  return `<div class="card dailycard weekcard"><div class="row"><h3 class="title" style="font-size:20px;display:flex;align-items:center;gap:6px">${img('trophy',28)}Weekly Challenge</h3><span class="muted" style="font-size:12px">${best?`Best ${best.toLocaleString()}`:'Not played yet'}</span></div>
+    <div class="dailyrow">${img(C.spr,48)}<div><b>${C.name}</b>${W.rules.map(k=>`<span class="mchip">${img(RULES[k].spr,16)}${RULES[k].name}</span>`).join('')}${W.muts.map(k=>`<span class="mchip">${img(MUTS[k].spr,16)}${MUTS[k].name}</span>`).join('')}<small>${W.rules.map(k=>RULES[k].desc).join(' ')} New every Monday. ${rec.key===W.key&&rec.rewarded?'Bonus claimed.':'First finish: +80 Soul Shards.'}</small></div></div>
+    <button class="btn" id="weeklyBtn" style="font-size:18px;padding:9px;background:linear-gradient(#c77dff,#8a3fd1);color:#fff;text-shadow:0 1px 0 #000">Play this week's challenge</button></div>`;
+}
 function titleScreen(){
   run = null; cb = null; show('title');
   let save = store.get('save', null);
@@ -1118,6 +1157,7 @@ function titleScreen(){
     ${save?`<button class="btn" id="contBtn">Continue: ${CLASSES[save.cls].name}, ${save.floor>FLOORS?`Depth ${save.floor-FLOORS}`:`Floor ${save.floor}`}</button>`:''}
     <button class="btn ${save?'ghost':''}" id="startBtn">${save?'New Run':'Enter the Dungeon'}</button>
     ${dailyCard()}
+    ${weeklyCard()}
     ${questCard()}
     <div class="navgrid">
       <button class="navb" id="skillBtn">${img('rune',36)}<b>Skill Tree</b><small>${img('shard',14)} ${soulShards()}</small></button>
@@ -1139,6 +1179,8 @@ function titleScreen(){
   $('#journalBtn').onclick = ()=>{ sfx('click'); journalScreen(); };
   $('#wardBtn').onclick = ()=>{ sfx('click'); wardrobeScreen(); };
   $('#setBtn2').onclick = openSettings;
+  const wb = $('#weeklyBtn'); if(wb) wb.onclick = ()=>{ if(store.get('save', null) && wb.dataset.armed!=='1'){ wb.dataset.armed = '1'; wb.textContent = 'Tap again: replaces your saved run'; sfx('warn'); return; }
+    const W = weeklyInfo(); sfx('door'); newRun(W.cls, {daily:'W'+W.key, weekly:W.key, rules:W.rules, muts:W.muts}); };
   const db = $('#dailyBtn'); if(db) db.onclick = ()=>{
     if(store.get('save', null) && db.dataset.armed!=='1'){ db.dataset.armed = '1'; sfx('warn'); toast('Starting the Daily Challenge replaces your saved run. Tap again to start.', 'calendar', 3000); return; }
     const D = dailyInfo(); sfx('door'); newRun(D.cls, {daily:D.key, muts:D.muts}); };
@@ -1416,7 +1458,7 @@ function goMap(){
   }));
   view(`
     <div class="maphead"><div><h2 class="title">Floor ${run.floor}</h2><div class="muted" style="font-size:14px">${floorName()}</div></div>
-      <span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${run.daily?`<span class="heatchip" style="background:#3a2a5a;border-color:#c77dff;color:#f0d6ff">${img('calendar',20)}Daily</span>`:''}${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}${(run.muts||[]).map(k=>`<span class="heatchip mut" title="${MUTS[k].name}">${img(MUTS[k].spr,20)}</span>`).join('')}</span></div>
+      <span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${run.daily?`<span class="heatchip" style="background:#3a2a5a;border-color:#c77dff;color:#f0d6ff">${img(run.weekly?'trophy':'calendar',20)}${run.weekly?'Weekly':'Daily'}</span>`:''}${(run.rules||[]).map(k=>`<span class="heatchip mut" title="${RULES[k].name}">${img(RULES[k].spr,20)}</span>`).join('')}${run.heat?`<span class="heatchip">${img('rage',22)}Heat ${run.heat}</span>`:''}${(run.muts||[]).map(k=>`<span class="heatchip mut" title="${MUTS[k].name}">${img(MUTS[k].spr,20)}</span>`).join('')}</span></div>
     <p class="muted center" style="font-size:13px">Descend toward <b style="color:var(--torch2)">${bossFor().name}</b>. Tap a glowing room.<br><span style="font-size:12px">${bossFor().sigd||''}</span></p>
     ${!run.path.length?`<div class="starttoken">${img(CLASSES[run.cls].spr,40)}<span>You are here</span></div>`:''}
     <div class="map" style="height:${H}px"><svg viewBox="0 0 100 ${H}" preserveAspectRatio="none">${lines}</svg>${nodesHtml}</div>
@@ -1448,6 +1490,8 @@ function openRoom(){
   else if(t==='treasure') treasureScreen();
   else if(t==='den') denScreen();
   else if(t==='forge') forgeScreen();
+  else if(t==='gate') gateScreen();
+  else if(t==='secret') startCombat('boss', SECRET_BOSS);
   else eventScreen();
 }
 function advance(){
@@ -1456,7 +1500,7 @@ function advance(){
   if(last && last[0]===STEPS-1){
     run.floor++;
     bumpStats(s=>s.bestFloor=Math.max(s.bestFloor, Math.min(run.floor,FLOORS)));
-    if(run.floor===FLOORS+1 && !run.won) return endScreen(true);
+    if(run.floor===FLOORS+1 && !run.won){ if(!run.secretDone && !run.daily && secretWhy().length){ run.floor = FLOORS; run.room = {t:'gate'}; saveRun(); return gateScreen(); } return endScreen(true); }
     questAdd('floor', run.floor);
     if(run.floor>=FLOORS+3) unlock('endless');
     if(run.floor===2) unlock('floor2'); if(run.floor===3) unlock('floor3'); if(run.floor===4) unlock('floor4'); if(run.floor===5) unlock('floor5');
@@ -1468,6 +1512,18 @@ function advance(){
   goMap();
 }
 
+function gateScreen(){
+  show('event');
+  const why = secretWhy();
+  view(`${scene('dungeonheart','The Sealed Gate', 'Behind the fallen guardian, a door of black stone grinds open. Something vast beats on the other side.')}
+    <div class="card"><p class="muted center" style="font-size:13px;margin:0 0 6px">The gate answers to those who proved themselves:</p>${(why.length?why:['The gate is already open']).map(w=>`<div class="inline" style="font-size:14px;margin:2px 0">${img('mark',20)}${w}</div>`).join('')}</div>
+    ${choiceBtn({id:'in', spr:'dungeonheart', name:'Enter the Heart', desc:'Face the secret final boss. Win for a true ending, bonus Soul Shards and a rare reward.'})}
+    ${choiceBtn({id:'out', spr:'r_boss', name:'Leave in victory', desc:'Your run ends as a win.'})}`);
+  bindChoices(k=>{
+    if(k==='out'){ run.floor = FLOORS+1; run.room = null; return endScreen(true); }
+    run.room = {t:'secret'}; run.secretFight = true; saveRun(); banner('THE HEART', 'The dungeon itself awakens', 2400); Sound.play('phase'); startCombat('boss', SECRET_BOSS);
+  });
+}
 /* ================= non-combat rooms ================= */
 function restScreen(){
   show('rest');
@@ -1502,7 +1558,7 @@ function treasureScreen(){
 }
 function shopScreen(){
   show('shop');
-  const disc = (has('clover') ? 0.8 : 1) * (mut('rush') ? 1.5 : 1), P = x => Math.round(x*disc);
+  const disc = (has('clover') ? 0.8 : 1) * (mut('rush') ? 1.5 : 1) * (rule('rich') ? 1.5 : 1), P = x => Math.round(x*disc);
   const R = run.room;
   if(!R.shop){ R.shop = {
     stock: relicOffers(3).map(id=>({id, price:P([0,55,80,115][RELICS[id].r]+rand(-5,5)), sold:false})),
@@ -1744,7 +1800,7 @@ function rollReward(RW, kind){
   Object.assign(RW, {g, extra, offers});
   renderRunbar();
 }
-function endScreen(won){
+function endScreen(won, secret){
   cb = null; store.set('save', null);
   const wasEndless = run.floor>FLOORS+1 || run.won;
   if(run.won) won = false;
@@ -1757,13 +1813,19 @@ function endScreen(won){
     const mh = store.get('heat',0);
     if(run.heat>=mh && mh<HEAT.length-1){ store.set('heat', mh+1); heatMsg = `<p class="center" style="color:#ff8a80;font-family:var(--display);font-size:18px">${HEAT[mh+1].name} unlocked!</p>`; }
   }
-  let earned = run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0) + Math.max(0, run.floor-FLOORS-1)*20 + (has('bluelantern')?2*(run.rooms||0):0);
+  let earned = (secret?120:0) + run.kills + (Math.min(run.floor,FLOORS)-1)*10 + (run.bosses||0)*15 + (won?50:0) + Math.max(0, run.floor-FLOORS-1)*20 + (has('bluelantern')?2*(run.rooms||0):0);
   earned = Math.round(earned * (1 + 0.15*(run.heat||0)) * (has('souljar')?1.5:1) * mutBonus(run.muts));
   earned = Math.max(0, earned - (run.awarded||0)); run.awarded = (run.awarded||0) + earned; run.killsCounted = run.kills;
   const mBefore = masteryLevel(run.cls); const mm = store.get('mastery', {}); mm[run.cls] = (mm[run.cls]||0) + earned; store.set('mastery', mm);
   const mAfter = masteryLevel(run.cls);
   let dailyMsg = '';
-  if(run.daily){
+  if(run.weekly){
+    const score = Math.min(run.floor,FLOORS+1)*1000 + Math.max(0,run.floor-FLOORS-1)*1500 + run.kills*25 + (run.bosses||0)*400 + (won||wasEndless?3000:0) + (secret?5000:0) + Math.round(run.dmg/10);
+    const d = store.get('weekly', {}); const same = d.key===run.weekly; const best = same ? Math.max(d.best||0, score) : score;
+    let bonus = 0; if(!same || !d.rewarded){ bonus = 80; store.set('shards', soulShards()+bonus); }
+    store.set('weekly', {key:run.weekly, best, rewarded:true, last:score}); unlock('weekly');
+    dailyMsg = `<div class="card center"><div class="title" style="font-size:20px">Weekly score: ${score.toLocaleString()}</div><div class="muted" style="font-size:13px">This week's best: ${best.toLocaleString()}${bonus?` · +${bonus} bonus Soul Shards`:''}</div></div>`;
+  } else if(run.daily){
     const score = Math.min(run.floor,FLOORS+1)*1000 + Math.max(0,run.floor-FLOORS-1)*1500 + run.kills*25 + (run.bosses||0)*400 + (won||wasEndless?3000:0) + Math.round(run.dmg/10);
     const d = store.get('daily', {}); const same = d.key===run.daily; const best = same ? Math.max(d.best||0, score) : score;
     let bonus = 0; if(!same || !d.rewarded){ bonus = 40; store.set('shards', soulShards()+bonus); }
@@ -1780,11 +1842,12 @@ function endScreen(won){
   checkHeroUnlocks();
   show('end'); Sound.music(won?'map':'menu');
   sfx(won?'victory':'defeat');
-  if(won){ confetti(160); banner('VICTORY', 'The dungeon is conquered', 2600); }
-  view(`${scene(won?'r_boss':'bones', won?'You conquered the dungeon!':wasEndless?'The depths claim you...':'You have fallen...', won?`${run.lastBoss||'The final guardian'} is banished. Legends will be told.`:wasEndless?`${CLASSES[run.cls].name} reached Endless Depth ${run.floor-FLOORS}.`:`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
+  if(won){ confetti(secret?260:160); banner(secret?'TRUE ENDING':'VICTORY', secret?'The Heart of the dungeon falls silent':'The dungeon is conquered', 2600); }
+  view(`${secret ? scene('dungeonheart', 'The Heart is still', `${CLASSES[run.cls].name} silenced the Dungeon Heart. The halls crumble, the monsters scatter, and for the first time in an age, the dungeon sleeps.`) : ''}${secret?'':scene(won?'r_boss':'bones', won?'You conquered the dungeon!':wasEndless?'The depths claim you...':'You have fallen...', won?`${run.lastBoss||'The final guardian'} is banished. Legends will be told.`:wasEndless?`${CLASSES[run.cls].name} reached Endless Depth ${run.floor-FLOORS}.`:`${CLASSES[run.cls].name} fell on floor ${Math.min(run.floor,FLOORS)}, room ${run.step+1}.`)}
     ${heatMsg}
     ${dailyMsg}
     ${mAfter>mBefore?`<div class="card center" style="color:#ffcf7a;font-family:var(--display);font-size:18px">${CLASSES[run.cls].name} reached Mastery ${mAfter}!<div class="muted" style="font-family:var(--body);font-size:13px">${MASTERY_PERKS[mAfter-1]}</div></div>`:''}
+    ${secret ? `<div class="card center" style="color:#ff9ac8;font-family:var(--display);font-size:18px">True ending reached!<div class="muted" style="font-family:var(--body);font-size:13px">+120 bonus Soul Shards. The Heartbeat block skin is now in the Bazaar.</div></div>` : ''}
     ${won && !wasEndless ? `<button class="btn" id="endlessBtn" style="background:linear-gradient(#c77dff,#8a3fd1);color:#fff;text-shadow:0 1px 0 #000">Descend into Endless Depths</button>` : ''}
     <div class="card center" style="display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--display);font-size:22px">${img('shard',34)}+${earned} Soul Shards<span class="muted" style="font-size:14px;font-family:var(--body)">(${soulShards()} total)</span></div>
     <div class="card"><div class="stats3">
@@ -1843,7 +1906,8 @@ function shapeWeight(s){
   return w;
 }
 function newPiece(){
-  let s = weighted(SHAPES.map(x=>[x,shapeWeight(x)]));
+  const pool = rule('lines') ? SHAPES.filter(x=>x.h===1 && x.w>1) : SHAPES;
+  let s = weighted(pool.map(x=>[x,shapeWeight(x)]));
   for(let k=rand(0,3); k>0; k--) s = rotated(s);
   return {...s, type:rollType(), used:false, rotT:0};
 }
@@ -1875,7 +1939,7 @@ function startCombat(kind, forced){
   const F = floorPool();
   const pickTpl = () => kind==='boss' ? bossFor() : kind==='goblin' ? GOBLIN : pick(kind==='elite' ? F.elite : F.normal);
   const rollTpls = () => { const list = [pickTpl()];
-    if(kind==='combat' && run.floor>=2 && Math.random() < (run.floor>=4 ? 0.38 : 0.3)){ let t2 = pick(F.normal); if(t2.name===list[0].name) t2 = pick(F.normal); list.push(t2); }
+    if(kind==='combat' && (rule('pairs') || (run.floor>=2 && Math.random() < (run.floor>=4 ? 0.38 : 0.3)))){ let t2 = pick(F.normal); if(t2.name===list[0].name) t2 = pick(F.normal); list.push(t2); }
     return list; };
   let tpls = forced ? [forced] : RM.tpls || (RM.tpl ? [RM.tpl] : null) || (run.daily ? withSeed(runSeed(`e${run.floor}-${RM.r}-${RM.i}`), rollTpls) : rollTpls());
   let tpl = tpls[0];
@@ -1888,6 +1952,9 @@ function startCombat(kind, forced){
   if(heat>=4 && kind==='elite' && !tpl.passive && !RM.tpls){ const pid = pick(['regen','armor','thorns']); tpl = {...tpl, passive:{id:pid, v:pid==='regen'?3:pid==='armor'?15:2}}; tpls = [tpl, ...tpls.slice(1)]; }
   if(has('warhorn') && (kind==='elite'||kind==='boss')) hpMul *= 0.85;
   hpMul *= endlessMul();
+  if(kind==='elite' && RM.mod==null){ RM.mod = run.daily ? withSeed(runSeed(`m${run.floor}-${RM.r}-${RM.i}`), ()=>pick(Object.keys(MODS))) : pick(Object.keys(MODS)); }
+  if(kind==='elite' && RM.mod) tpls = tpls.map((t,i)=>i===0 ? {...t, mod:RM.mod} : t);
+  if(kind==='elite' && RM.mod==='giant') hpMul *= 1.4;
   const maxHps = RM.maxHps || (RM.maxHp ? [RM.maxHp] : null) || tpls.map(t=>Math.round(t.hp * hpMul * (has('cursedcrown')?1.1:1) * (tpls.length>1 ? 0.58 : 1)));
   RM.tpls = tpls; RM.maxHps = maxHps; RM.t = kind; delete RM.tpl; delete RM.maxHp;
   cb = {
@@ -1909,7 +1976,7 @@ function startCombat(kind, forced){
   if(pk('charged')) run.charge = Math.min(ULT().need, run.charge + 2*pk('charged'));
   tpls.forEach(t=>markSeen('e', t.name));
   run.charge = Math.min(ULT().need, run.charge + skill('focus'));
-  if(run.floor>1 && kind!=='goblin') addBlocks('stone', Math.min(6,(run.floor-1)*2), true);
+  if((run.floor>1 || rule('rubble')) && kind!=='goblin') addBlocks('stone', Math.min(6,(run.floor-1)*2) + (rule('rubble')?4:0), true);
   cb.enemies.forEach(e=>nextIntent(e)); dealHand();
   if(kind!=='goblin') spawnWeak(kind==='elite'||kind==='boss' ? 2 : 1);
   $('#enemyPanel').dataset.sig = '';
@@ -1936,7 +2003,11 @@ function resumeFight(f){
   toast('<b>Fight resumed</b><br>Right where you left off.', cb.enemy.spr, 2000);
 }
 let EUID = 1;
-function makeEnemy(tpl, maxHp){ const pas = tpl.passive || null; return {...tpl, uid:EUID++, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null, enraged:false, dead:false}; }
+function makeEnemy(tpl, maxHp){ const pas = tpl.passive || null; const e = {...tpl, uid:EUID++, maxHp, hp:maxHp, armor: pas&&pas.id==='armor'?pas.v:0, poison:0, rage:0, mi:0, intent:null, enraged:false, dead:false};
+  if(e.mod==='shielded') e.armor += Math.round(maxHp*0.15);
+  if(e.mod==='giant') e.rage += 3;
+  if(e.mod==='hasty') e.moves = e.moves.map(m=>({...m, t:Math.max(1, m.t-1)}));
+  return e; }
 const MINIONS = {
   skeleton:{name:'Skeleton Minion', spr:'skeleton', minion:true, moves:[M('atk',5,2),M('armor',5,2)]},
   slimeling:{name:'Slimeling', spr:'slime', minion:true, moves:[M('atk',6,2),M('curse',2,2)]},
@@ -2405,6 +2476,7 @@ function enemyAct(e){
   if(it.left>0) return;
   const dmg = intentDamage(it, e);
   const art = eArt(e) || $('#board');
+  const hpBefore = run.hp, isAtk = ['atk','multi','drain','feast','quake','breath','inferno','ritual','doom','shatter'].includes(it.k);
   if(['atk','multi','drain','feast','quake','breath','inferno','ritual','doom','shatter'].includes(it.k)){ bump(art,'lunge'); setTimeout(()=>art.classList.remove('lunge'),400); }
   switch(it.k){
     case 'atk': hitPlayer(dmg); break;
@@ -2436,6 +2508,12 @@ function enemyAct(e){
       floatText($('#board'), pickd.length?`Chained x${pickd.length}`:'Nothing to chain', '#c9d2df'); sfx('armor'); break; }
     default: if(SIG[it.k]) SIG[it.k].act(e, it, dmg);
   }
+  if(e.mod && isAtk){
+    if(e.mod==='vampiric'){ const took = Math.max(0, hpBefore - run.hp); if(took){ e.hp = Math.min(e.maxHp, e.hp + took); floatText(art, `+${took}`, '#ff8a9a'); } }
+    if(e.mod==='explosive'){ const em = emptyCells(); if(em.length){ const i = pick(em); cb.board[i] = 'bomb'; cb.bombs[i] = 4; cb.fx.push({i,type:'bomb',t0:performance.now(),drop:true}); } }
+    if(e.mod==='crumbling') addBlocks('stone', 2);
+  }
+  if(e.mod==='shielded' && e.hp>0){ e.armor += 6; }
   if(cb.over || e.dead) return;
   nextIntent(e);
 }
@@ -2460,6 +2538,9 @@ function checkEnd(){
   cb.enemies.forEach(e=>{ if(e.hp<=0 && !e.dead && e.sig==='rebirth' && !e.reborn){ e.reborn = true; e.hp = Math.round(e.maxHp*0.5); e.armor = 0; e.poison = 0; cb.phase = 1;
     setTimeout(()=>{ banner('REBIRTH', `${e.name} rises from the ashes`, 1600); flash('rgba(255,140,40,.5)'); sfx('phase'); const el = eArt(e); if(el){ el.classList.remove('dead'); burstAt(el, ['#ffd23f','#ff8a3c','#ef5258'], 30); } renderHUD(); }, 200); } });
   if(cb.kind==='boss' && cb.enemies[0].hp<=0) cb.enemies.forEach(e=>{ if(e.minion) e.hp = 0; });
+  cb.enemies.forEach((e,idx)=>{ if(e.hp<=0 && !e.dead && e.mod==='splitting' && !e.didSplitDeath && idx===0 && !(cb.enemies[1] && !cb.enemies[1].dead && cb.enemies[1].hp>0)){
+    e.didSplitDeath = true; const m = makeEnemy({name:`${e.name.replace(/^The /,'')} Shard`, spr:e.spr, minion:true, moves:e.moves.map(x=>({...x, v: x.k==='shuffle'||x.k==='flee' ? x.v : Math.round(x.v*0.6)}))}, Math.round(e.maxHp*0.35));
+    nextIntent(m); m.intent.left++; cb.enemies[1] = m; setTimeout(()=>{ renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
   fresh.forEach(e=>{ e.dead = true; run.kills++; if(has('laurel')){ run.maxHp += 2; run.hp += 2; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
@@ -2474,6 +2555,7 @@ function checkEnd(){
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
+    if(cb.enemies[0].secret){ run.secretDone = true; run.room = null; run.floor = FLOORS+1; unlock('heart'); bumpStats(s=>s.hearts=(s.hearts||0)+1); store.set('save', null); setTimeout(()=>{ if(cb===fight) endScreen(true, true); }, T(1600)); return true; }
     const xp = {combat:10, elite:20, boss:32, goblin:8}[kind] || 10;
     gainXP(xp + (cb.enemies.length>1 ? 6 : 0));
     gainPetXP({combat:1, elite:2, boss:3, goblin:1}[kind] || 1);
@@ -2597,6 +2679,7 @@ function enemySheet(idx){
     <div class="scene">${img(e.spr,96)}<h2 class="title" style="font-size:24px">${e.name}</h2>
     <p class="muted">${cb.kind==='boss'?'Boss':cb.kind==='elite'?'Elite':cb.kind==='goblin'?'Rare':'Monster'} · ${e.hp} / ${e.maxHp} HP${e.armor?` · ${e.armor} armor`:''}${e.poison?` · ${e.poison} poison`:''}${e.rage?` · +${e.rage} rage`:''}</p></div>
     ${e.sigd?`<div class="troph">${img('r_boss',34)}<div><b>Signature</b><small>${e.sigd}</small></div></div>`:''}
+    ${e.mod?`<div class="troph">${img('r_elite',34)}<div><b>${MODS[e.mod].name}</b><small>${MODS[e.mod].desc}</small></div></div>`:''}
     ${e.passive?`<div class="troph">${img('rage',34)}<div><b>${PASSIVES[e.passive.id].name}</b><small>${PASSIVES[e.passive.id].desc(e.passive.v)}</small></div></div>`:''}
     ${cb.enemies.length>1?`<div class="troph">${img('r_combat',34)}<div><b>${cb.enemies.indexOf(e)===0?'Hit by rows':'Hit by columns'}</b><small>In fights with two foes, cleared rows damage the left one and cleared columns damage the right one.</small></div></div>`:''}
     ${cb.kind==='boss'&&e===cb.enemies[0]?`<div class="troph">${img('r_boss',34)}<div><b>Phase 2</b><small>${cb.phase?'Active: moves are faster and stronger.':'At half HP it gains armor and its moves get faster and stronger.'}</small></div></div>`:''}
@@ -2644,9 +2727,11 @@ function renderEnemies(){
     const gone = e.dead || e.hp<=0; c.classList.toggle('gone', gone);
     let tags = i===0 ? (cb.kind==='boss'?'<span class="tag boss">Boss</span>':cb.kind==='elite'?'<span class="tag">Elite</span>':cb.kind==='goblin'?'<span class="tag" style="background:#7a5608;color:#ffe58a">Rare</span>':'') : '';
     if(e.passive) tags += `<span class="tag pass">${PASSIVES[e.passive.id].name}</span>`;
+    if(e.mod) tags += `<span class="tag mod" data-mod="${e.mod}" style="background:${MODS[e.mod].col};color:#1d1424">${MODS[e.mod].name}</span>`;
     if(i===0 && cb.phase) tags += '<span class="tag phase">Phase 2</span>';
     const et = c.querySelector('.etags'); et.innerHTML = tags;
     const pt = et.querySelector('.pass'); if(pt) pt.onclick = ()=>toast(`<b>${PASSIVES[e.passive.id].name}</b><br>${PASSIVES[e.passive.id].desc(e.passive.v)}`, e.spr);
+    const mt = et.querySelector('.mod'); if(mt) mt.onclick = ()=>toast(`<b>${MODS[e.mod].name}</b><br>${MODS[e.mod].desc}`, e.spr);
     const ep = (100*Math.max(0,e.hp)/e.maxHp)+'%';
     c.querySelector('.efill').style.width = ep; c.querySelector('.etrail').style.width = ep;
     c.querySelector('.etext').textContent = `${Math.max(0,e.hp)} / ${e.maxHp}`;
