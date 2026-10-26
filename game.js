@@ -127,6 +127,50 @@ const CLASSES = {
     desc:'Plays to the rhythm of combos. Every third clear in a row strikes a chord that shields and heals.',
     ult:{name:'Encore', need:7, spr:'lute', desc:'Replay your last clear: its damage, shield, healing, poison and gold all happen again.'},
     unlock:{text:'Reach Mastery 3 with any hero', cost:160, ok:()=>Object.keys(CLASSES).some(k=>masteryLevel(k)>=3)}},
+  monk:{name:'Monk', spr:'monk', hp:64, gold:25, relic:'prayerbeads', potions:['health'], bag:{sword:5, shield:4, heal:3, coin:2},
+    desc:'A calm, steady fighter. Missing a clear only lowers your combo streak by 1.',
+    ult:{name:'Flurry', need:7, spr:'prayerbeads', desc:'Strike 6 times (more damage on deeper floors) and add +2 to your combo streak.'},
+    unlock:{text:'Play 5 runs', cost:120, ok:s=>s.runs>=5}},
+  druid:{name:'Druid', spr:'druid', hp:62, gold:25, relic:'seedpod', potions:['health'], bag:{sword:4, shield:3, heal:5, coin:2},
+    desc:'Nature heals. Every fight starts with heart blocks already growing on the grid.',
+    ult:{name:'Overgrowth', need:7, spr:'seedpod', desc:'Turn all rubble, ice and webs into heart blocks and heal.'},
+    unlock:{text:'Defeat 120 foes in total', cost:180, ok:s=>s.kills>=120}},
+  samurai:{name:'Samurai', spr:'samurai', hp:60, gold:20, relic:'katana', potions:['fire'], bag:{sword:7, shield:3, heal:2, coin:2},
+    desc:'One perfect cut. Clearing exactly one line strikes for bonus damage.',
+    ult:{name:'Iaido', need:8, spr:'katana', desc:'A single draw-cut that pierces armor: 10 damage plus 1.5 for every block on your grid.'},
+    unlock:{text:'Deal 60 damage in one hit', cost:180, ok:s=>s.bestHit>=60}},
+  pirate:{name:'Pirate', spr:'pirate', hp:62, gold:70, relic:'doubloon', potions:['smoke'], bag:{sword:5, shield:2, heal:2, coin:6},
+    desc:'Plunder is power. Coin blocks also wound the enemy, and you start rich.',
+    ult:{name:'Broadside', need:7, spr:'doubloon', desc:'Fire the cannons: spend up to 30 gold and deal 2 damage per gold (at least 14).'},
+    unlock:{text:'Earn 300 Soul Shards in total', cost:200, ok:s=>s.shards>=300}},
+  witch:{name:'Witch', spr:'witch', hp:56, gold:30, relic:'hexcharm', potions:['venom'], bag:{sword:4, shield:3, heal:2, coin:2, venom:3},
+    desc:'Curses from the first move. Every enemy starts the fight already poisoned.',
+    ult:{name:'Hex', need:7, spr:'hexcharm', desc:'Double every enemy\'s poison (at least +6) and delay their next move.'},
+    unlock:{text:'Drink 25 potions in total', cost:200, ok:s=>s.potions>=25}},
+  tinkerer:{name:'Tinkerer', spr:'tinkerer', hp:58, gold:35, relic:'gearbox', potions:['bomb'], bag:{sword:5, shield:3, heal:2, coin:2, blast:2},
+    desc:'Gadgets and gunpowder. Blast blocks come built in and hit harder.',
+    ult:{name:'Turret', need:7, spr:'gearbox', desc:'Deploy a turret that shoots the enemy after each of your next 5 moves.'},
+    unlock:{text:'Clear 4 lines at once', cost:180, ok:s=>s.bestLines>=4}},
+  vampire:{name:'Vampire', spr:'vampire', hp:58, gold:25, relic:'bloodchalice', potions:['health'], bag:{sword:6, shield:2, heal:2, coin:2},
+    desc:'Drinks deep. Your clears heal you for part of the damage they deal.',
+    ult:{name:'Blood Feast', need:8, spr:'bloodchalice', desc:'A piercing bite that heals you for all the damage it deals.'},
+    unlock:{text:'Reach floor 4', cost:200, ok:s=>s.bestFloor>=4}},
+  gladiator:{name:'Gladiator', spr:'gladiator', hp:68, gold:20, relic:'laurel', potions:['iron'], bag:{sword:6, shield:4, heal:2, coin:2},
+    desc:'Grows with every victory. Each foe you defeat adds 2 max HP for the run.',
+    ult:{name:'Showstopper', need:7, spr:'laurel', desc:'Gain 10 shield and strike for 20 plus 6 per combo streak, then +2 streak.'},
+    unlock:{text:'Defeat 200 foes in total', cost:220, ok:s=>s.kills>=200}},
+  shaman:{name:'Shaman', spr:'shaman', hp:60, gold:30, relic:'totem', potions:['luck'], bag:{sword:5, shield:3, heal:3, coin:2},
+    desc:'Speaks with spirits. Every 4 moves a block on your grid turns Rainbow.',
+    ult:{name:'Thunder', need:8, spr:'totem', desc:'Lightning strikes 6 random blocks on your grid: each fires its effect at x2.'},
+    unlock:{text:'Clear 40 pure lines in total', cost:200, ok:s=>s.pures>=40}},
+  cryomancer:{name:'Cryomancer', spr:'cryomancer', hp:58, gold:25, relic:'frostshard', potions:['iron'], bag:{sword:5, shield:4, heal:2, coin:2},
+    desc:'At home in the cold. Ice never cracks into rubble and shatters for bonus damage.',
+    ult:{name:'Deep Freeze', need:8, spr:'frostshard', desc:'Delay every enemy by 2 moves and gain shield (more for each ice block on your grid).'},
+    unlock:{text:'Reach floor 5', cost:220, ok:s=>s.bestFloor>=5}},
+  beastmaster:{name:'Beastmaster', spr:'beastmaster', hp:66, gold:25, relic:'whistle', potions:['health'], bag:{sword:5, shield:3, heal:3, coin:3},
+    desc:'Never fights alone. Starts with a pet, and your pet acts a move sooner.',
+    ult:{name:'Stampede', need:6, spr:'whistle', desc:'Your pet acts 3 times in a row.'},
+    unlock:{text:'Play 10 runs', cost:200, ok:s=>s.runs>=10}},
 };
 function ULT(){ const u = CLASSES[run.cls].ult; return {...u, need: Math.max(3, u.need - (has('spellbook')?2:0) - (run.ultBonus||0))}; }
 const isUnlocked = id => !CLASSES[id].unlock || !!(store.get('heroes', {})[id]);
@@ -199,6 +243,17 @@ const RELICS = {
   packrat:{name:'Packrat\'s Pouch', spr:'packrat', desc:'Placing a piece from your Stash gives 4 shield.', r:1},
   compass:{name:'Hunter\'s Compass', spr:'compass', desc:'Elite and boss rewards offer one more relic to choose from.', r:2},
   goldendice:{name:'Golden Dice', spr:'goldendice', desc:'+1 hand reroll each fight. Every reroll also gives 5 gold.', r:2},
+  prayerbeads:{name:'Prayer Beads', spr:'prayerbeads', desc:'Missing a clear only lowers your combo streak by 1 instead of resetting it.', r:0, starter:true},
+  seedpod:{name:'Seed Pod', spr:'seedpod', desc:'Start every fight with 3 heart blocks on your grid. Heart blocks heal +1.', r:0, starter:true},
+  katana:{name:'Katana', spr:'katana', desc:'Clearing exactly one line deals +8 damage.', r:0, starter:true},
+  doubloon:{name:'Cursed Doubloon', spr:'doubloon', desc:'Coin blocks also deal 1 damage each and give +1 gold.', r:0, starter:true},
+  hexcharm:{name:'Hex Charm', spr:'hexcharm', desc:'Enemies start every fight with 5 poison.', r:0, starter:true},
+  gearbox:{name:'Gearbox', spr:'gearbox', desc:'Blast blocks deal +4 damage.', r:0, starter:true},
+  bloodchalice:{name:'Blood Chalice', spr:'bloodchalice', desc:'Heal 1 for every 6 damage your clears deal.', r:0, starter:true},
+  laurel:{name:'Victor\'s Laurel', spr:'laurel', desc:'+2 max HP for every foe you defeat.', r:0, starter:true},
+  totem:{name:'Spirit Totem', spr:'totem', desc:'Every 4 moves, a random block on your grid turns Rainbow.', r:0, starter:true},
+  frostshard:{name:'Frost Shard', spr:'frostshard', desc:'Ice never cracks into rubble, and ice in your clears deals 4 damage each.', r:0, starter:true},
+  whistle:{name:'Beast Whistle', spr:'whistle', desc:'Start with a random pet. Your pet acts 1 move sooner.', r:0, starter:true, onGet(){ if(!run.pet) run.pet = pick(Object.keys(PETS)); }},
   lute:{name:'Traveler\'s Lute', spr:'lute', desc:'Every 3rd clear in a row strikes a chord: +6 shield and heal 4.', r:0, starter:true},
   phial:{name:'Bottomless Phial', spr:'phial', desc:'The first potion you drink in each fight is not used up.', r:3},
   emberheart:{name:'Ember Heart', spr:'emberheart', desc:'Clearing 2+ lines at once also poisons the enemy for 3.', r:2},
@@ -391,7 +446,7 @@ const PETS = {
 function petTick(){
   if(!run.pet || !PETS[run.pet] || cb.over) return;
   const P = PETS[run.pet]; cb.petT = (cb.petT||0) + 1;
-  if(cb.petT >= P.every - (setOn('wild')?1:0)){ cb.petT = 0; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); }
+  if(cb.petT >= P.every - (setOn('wild')?1:0) - (has('whistle')?1:0)){ cb.petT = 0; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); }
 }
 
 /* ================= daily quests ================= */
@@ -549,7 +604,7 @@ function snapFight(){
     stash: cb.stash ? {cells:cb.stash.cells, h:cb.stash.h, w:cb.stash.w, type:cb.stash.type} : null, stashUsed: !!cb.stashUsed, lastClear: cb.lastClear||null, pile: (cb.pile||[]).slice(),
     shield:cb.shield, streak:cb.streak, rerolls:cb.rerolls, firstClear:cb.firstClear, doubleNext:cb.doubleNext,
     tookDmg:cb.tookDmg, mirror:cb.mirror, moves:cb.moves, phase:cb.phase||0, petT:cb.petT||0, firstHit:cb.firstHit,
-    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
+    enemies:JSON.parse(JSON.stringify(cb.enemies)), webs:{...(cb.webs||{})}, silence:cb.silence||0, turret:cb.turret||0, windUsed:!!cb.windUsed, bombs:{...(cb.bombs||{})}, chains:(cb.chains||[]).map(c=>({...c})), weak:(cb.weak||[]).slice(), weakT:cb.weakT||0};
 }
 function saveRun(){
   if(!run) return;
@@ -1028,40 +1083,45 @@ function heroScreen(){
   const hasSave = !!store.get('save', null);
   let msel = (store.get('mutSel', [])||[]).filter(k=>MUTS[k]);
   const mutsOpen = stats().runs >= 1;
+  let sel = store.get('heroSel', 'knight'); if(!CLASSES[sel]) sel = 'knight';
   view(`<div class="center"><h2 class="title">Choose your hero</h2>${hasSave?'<p class="muted" style="font-size:13px;color:#ffb07a">Starting a new run will replace your saved run.</p>':''}</div>
+    <div class="roster">${Object.entries(CLASSES).map(([id,C])=>`<button class="rpick ${isUnlocked(id)?'':'locked'} ${id===sel?'on':''}" data-h="${id}" aria-label="${C.name}">${img(C.spr,50)}<span>${C.name}</span>${(stats().winsBy||{})[id]?'<i class="rwin"></i>':''}</button>`).join('')}</div>
+    <div id="heroDetail"></div>
     ${mutsOpen ? `<div class="card mutcard"><div class="row"><h3 class="title" style="font-size:18px;display:flex;align-items:center;gap:6px">${img('mutator',26)}Mutators</h3><span class="muted" id="mutMul" style="font-size:13px"></span></div>
       <div class="mchips">${Object.entries(MUTS).map(([k,M])=>`<button class="mchip big ${msel.includes(k)?'on':''}" data-m="${k}">${img(M.spr,20)}${M.name}</button>`).join('')}</div>
       <small class="muted" id="mutDesc" style="font-size:12px">Optional twists for your run. Harder mutators earn more Soul Shards.</small></div>` : ''}
     ${maxHeat ? `<div class="card heatsel"><button id="hm" aria-label="Less heat">-</button><div class="mid"><b id="hn"></b><small id="hd"></small></div><button id="hp" aria-label="More heat">+</button></div>` : ''}
-    ${Object.entries(CLASSES).map(([id,C])=>{
-      const R = RELICS[C.relic], wins = (stats().winsBy||{})[id]||0;
-      if(!isUnlocked(id)) return `<button class="choice hero locked" data-id="lock:${id}"><span class="ic">${img(C.spr,70)}</span><span>
-        <b>${C.name} <span class="rar rar1">Locked</span></b><small>${C.desc}</small>
-        <span class="ult">Unlock: ${C.unlock.text}, or spend <b style="display:inline;font-size:13px">${C.unlock.cost} Soul Shards</b> (you have ${soulShards()}).</span></span></button>`;
-      return `<button class="choice hero" data-id="${id}"><span class="ic">${img(C.spr,70)}</span><span>
-        <b>${C.name}${wins?` <span class="rar rar3">${wins} win${wins>1?'s':''}</span>`:''}</b><small>${C.desc}</small>
-        <span class="bagmini">${Object.entries(C.bag||DEFAULT_BAG).map(([t,n])=>`<span>${blockChip(t)}${n}</span>`).join('')}</span>
-        <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
-        <span class="ult">Special: <b style="font-size:13px;display:inline">${C.ult.name}</b> - ${C.ult.desc}</span>
-        ${(()=>{ const lv = masteryLevel(id), x = masteryXp(id), nx = MASTERY[lv]; return `<span class="mastery"><span class="mlv">Mastery ${lv}</span><span class="qbar"><i style="width:${nx?Math.min(100,100*(x-MASTERY[lv-1])/(nx-MASTERY[lv-1])):100}%"></i></span><small>${nx?`Next: ${MASTERY_PERKS[lv]}`:'Max mastery'}</small></span>`; })()}
-      </span></button>`; }).join('')}
     <button class="btn ghost" id="backBtn">Back</button>`);
   const paintM = ()=>{ const el = $('#mutMul'); if(el){ const m = mutBonus(msel); el.textContent = msel.length ? `Soul Shards x${fmt(Math.round(m*100)/100)}` : 'None selected'; } };
   $('#view').querySelectorAll('.mchip.big').forEach(b=>b.onclick=()=>{ const k = b.dataset.m; msel = msel.includes(k) ? msel.filter(x=>x!==k) : [...msel, k]; store.set('mutSel', msel); b.classList.toggle('on'); $('#mutDesc').textContent = `${MUTS[k].name}: ${MUTS[k].desc}`; sfx('click'); paintM(); });
   paintM();
   const paint = ()=>{ if(!maxHeat) return; $('#hn').textContent = HEAT[heat].name; $('#hd').textContent = HEAT[heat].desc; $('#hm').disabled = heat<=0; $('#hp').disabled = heat>=maxHeat; store.set('heatSel', heat); };
   if(maxHeat){ $('#hm').onclick = ()=>{ heat--; sfx('click'); paint(); }; $('#hp').onclick = ()=>{ heat++; sfx('rage'); paint(); }; paint(); }
-  $('#view').querySelectorAll('.choice').forEach((b,i)=>{ b.style.setProperty('--i', i); b.onclick = ()=>{
-    const id = b.dataset.id;
-    if(id.startsWith('lock:')){
-      const k = id.slice(5), C = CLASSES[k];
-      if(soulShards() < C.unlock.cost){ sfx('invalid'); toast(`<b>${C.name}</b><br>${C.unlock.text} to unlock, or collect ${C.unlock.cost} Soul Shards.`, C.spr); return; }
-      if(b.dataset.armed!=='1'){ b.dataset.armed='1'; sfx('warn'); toast(`Tap again to unlock the ${C.name} for ${C.unlock.cost} Soul Shards.`, 'shard'); return; }
-      store.set('shards', soulShards() - C.unlock.cost); const h = store.get('heroes', {}); h[k] = 1; store.set('heroes', h); unlock('roster');
-      sfx('trophy'); confetti(60); heroScreen(); return;
-    }
-    sfx('click'); newRun(id, {muts: mutsOpen ? msel : []});
-  }; });
+  const detail = ()=>{
+    const id = sel, C = CLASSES[id], R = RELICS[C.relic], wins = (stats().winsBy||{})[id]||0, open = isUnlocked(id);
+    const lv = masteryLevel(id), x = masteryXp(id), nx = MASTERY[lv];
+    $('#heroDetail').innerHTML = `<div class="card hero hdetail"><div class="hd-top"><span class="ic">${img(C.spr,78)}</span><div>
+      <b class="hname">${C.name}${wins?` <span class="rar rar3">${wins} win${wins>1?'s':''}</span>`:''}${open?'':' <span class="rar rar1">Locked</span>'}</b><small class="muted">${C.desc}</small></div></div>
+      <span class="bagmini">${Object.entries(C.bag||DEFAULT_BAG).map(([t,n])=>`<span>${blockChip(t)}${n}</span>`).join('')}</span>
+      <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
+      <small class="muted" style="font-size:12px">${R.desc}</small>
+      <span class="ult">Special: <b style="font-size:13px;display:inline">${C.ult.name}</b> - ${C.ult.desc}</span>
+      ${open?`<span class="mastery"><span class="mlv">Mastery ${lv}</span><span class="qbar"><i style="width:${nx?Math.min(100,100*(x-MASTERY[lv-1])/(nx-MASTERY[lv-1])):100}%"></i></span><small>${nx?`Next: ${MASTERY_PERKS[lv]}`:'Max mastery'}</small></span>`
+        :`<span class="ult" style="color:#c9b6ff">Unlock: ${C.unlock.text}, or spend ${C.unlock.cost} Soul Shards (you have ${soulShards()}).</span>`}
+      <button class="btn" id="goHero">${open?`Start as ${C.name}`:soulShards()>=C.unlock.cost?`Unlock for ${C.unlock.cost} Soul Shards`:`Locked`}</button></div>`;
+    $('#goHero').disabled = !open && soulShards() < C.unlock.cost;
+    $('#goHero').onclick = ()=>{
+      if(!open){
+        const b = $('#goHero');
+        if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent = `Tap again to spend ${C.unlock.cost} Soul Shards`; sfx('warn'); return; }
+        store.set('shards', soulShards() - C.unlock.cost); const h = store.get('heroes', {}); h[id] = 1; store.set('heroes', h); unlock('roster');
+        sfx('trophy'); confetti(60); heroScreen(); return;
+      }
+      sfx('click'); newRun(id, {muts: mutsOpen ? msel : []});
+    };
+  };
+  detail();
+  $('#view').querySelectorAll('.rpick').forEach(b=>b.onclick = ()=>{ sel = b.dataset.h; store.set('heroSel', sel); $('#view').querySelectorAll('.rpick').forEach(x=>x.classList.toggle('on', x===b)); sfx('click'); detail(); });
   $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
 function codexScreen(tab){
@@ -1614,6 +1674,8 @@ function startCombat(kind, forced){
     enemies: tpls.map((t,i)=>makeEnemy(t, maxHps[i])),
   };
   attachEnemy(cb);
+  if(has('hexcharm')) cb.enemies.forEach(e=>{ if(!e.rare) e.poison += 5; });
+  if(has('seedpod') && kind!=='goblin') addBlocks('heal', 3, true);
   if(pk('charged')) run.charge = Math.min(ULT().need, run.charge + 2*pk('charged'));
   tpls.forEach(t=>markSeen('e', t.name));
   run.charge = Math.min(ULT().need, run.charge + skill('focus'));
@@ -1785,6 +1847,8 @@ function hazardTick(){
   cb.chains = cb.chains.filter(ch=>{ ch.t--; return ch.t>0 && cb.board[ch.i]; });
   if(cb.webs) Object.keys(cb.webs).forEach(k=>{ const i = +k; if(cb.board[i]!=='web'){ delete cb.webs[k]; return; } if(--cb.webs[k]<=0){ delete cb.webs[k]; cb.board[i] = null; cb.fx.push({i,type:'web',t0:now}); } });
   if(cb.silence>0) cb.silence--;
+  if(cb.turret>0 && aliveEnemies().length){ cb.turret--; const tg = aliveEnemies()[0]; damageEnemy(5 + 2*Math.min(run.floor,8), true, false, tg); floatText($('#ultBtn'), 'Turret!', '#ffd23f'); sfx('hit'); }
+  if(has('totem') && cb.moves && cb.moves%4===0){ const cand = liveCells().filter(i=>cb.board[i]!=='rainbow'); if(cand.length){ const i = pick(cand); cb.board[i] = 'rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); floatText($('#board'), 'Spirit!', '#f0d6ff'); } }
   const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
   if(cb.kind!=='goblin' && cb.weak.length < want && ++cb.weakT >= 3){ cb.weakT = 0; spawnWeak(1); }
 }
@@ -1937,10 +2001,10 @@ function computeEffects(board, set, o){
   const swordVal = 2 + Lv.sword + pk('sharp') + (has('whetstone')?1:0) + (has('bloodpact')?2:0) + (mut('glass')?2:0);
   let shieldVal = 2 + Lv.shield + pk('sturdy') + (has('tower')?1:0) + (has('oath')?1:0);
   if(mut('frail')) shieldVal = Math.max(1, Math.floor(shieldVal/2));
-  let healVal = 2 + Lv.heal + pk('mend');
+  let healVal = 2 + Lv.heal + pk('mend') + (has('seedpod')?1:0);
   let swordBonus = 0;
   if(has('bloodlust')){ swordBonus = Math.floor((1 - Math.max(0,run.hp)/run.maxHp)*5); healVal = Math.max(1, healVal-1); }
-  const coinVal = 1 + Lv.coin + pk('greed') + (has('idol')?1:0) + (has('daggers')?1:0) + (setOn('gold')?2:0);
+  const coinVal = 1 + Lv.coin + pk('greed') + (has('doubloon')?1:0) + (has('idol')?1:0) + (has('daggers')?1:0) + (setOn('gold')?2:0);
   let dmg = Math.round((cnt.sword*(swordVal+swordBonus) + cnt.rainbow*2 + cnt.blast*3) * mult);
   let sh  = Math.round((cnt.shield*shieldVal + cnt.rainbow) * mult);
   let hp  = Math.round((cnt.heal*healVal + cnt.rainbow) * mult);
@@ -1948,6 +2012,10 @@ function computeEffects(board, set, o){
   const gold = cnt.coin*coinVal;
   if(has('sledge')) dmg += (cnt.stone+cnt.ice)*4;
   dmg += (cnt.stone+cnt.ice+cnt.web)*2*pk('wrecker');
+  if(has('katana') && lines===1) dmg += 8;
+  if(has('doubloon')) dmg += cnt.coin;
+  if(has('gearbox')) dmg += cnt.blast*4;
+  if(has('frostshard')) dmg += cnt.ice*4;
   if(cb && cb.firstClear && pk('opener')) dmg += 10*pk('opener');
   if(lines>=3){ if(has('powder')) dmg += 12; if(has('orb')) dmg += 8; }
   if(has('crossed') && o.rows && o.cols) dmg += 8;
@@ -1959,7 +2027,7 @@ function computeEffects(board, set, o){
   dmg += Math.round(weakHits*weakBonus()*(1+0.5*pk('weak'))) + cnt.bomb*5;
   if(has('holysymbol')) dmg += Math.round(cnt.heal*2*mult);
   let perfect = true;
-  for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak')))){ perfect = false; break; } }
+  for(let i=0;i<N*N;i++){ const t = board[i]; if(t && (!set.has(i) || (t==='ice' && !has('warmcloak') && !has('frostshard')))){ perfect = false; break; } }
   if(perfect) dmg += 20 + 10*(run.floor-1) + 25*pk('finisher');
   const e = cb.enemy;
   if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
@@ -1969,7 +2037,7 @@ function computeEffects(board, set, o){
 function resolveClears(){
   const plan = planClear(cb.board);
   cb.lastCleared = !!plan;
-  if(!plan){ cb.streak = has('drum') ? 2 : 0; return; }
+  if(!plan){ cb.streak = has('prayerbeads') ? Math.max(has('drum')?2:0, cb.streak-1) : has('drum') ? 2 : 0; return; }
   cb.doubleNext = false; cb.firstClear = false;
   fireCells(plan.set, plan);
   cb.streak++;
@@ -1989,7 +2057,7 @@ function fireCells(set, o){
   set.forEach(i=>{ const t = cb.board[i]; if(!t) return; const inR = rowS.has(Math.floor(i/N)), inC = colS.has(i%N);
     if(DMG_T[t]){ if(inR && !inC) wRow += DMG_T[t]; else if(inC && !inR) wCol += DMG_T[t]; else { wRow += DMG_T[t]/2; wCol += DMG_T[t]/2; } (inC && !inR ? flyR : flyL).push([cellScreen(i), TYPES[t].c]); }
     else if(fly[t]) fly[t].push(cellScreen(i)); });
-  if(!wRow && !wCol){ wRow = (o.rowIdx||[]).length; wCol = (o.colIdx||[]).length; }
+  if(!wRow && !wCol){ wRow = (o.rowIdx||[]).length; wCol = (o.colIdx||[]).length; if(!wRow && !wCol) wRow = 1; }
   const al = aliveEnemies(), multi = cb.enemies.length>1 && al.length>1;
   const tL = multi ? cb.enemies[0] : cb.enemy, tR = multi ? cb.enemies[1] : cb.enemy;
   flyL.slice(0,10).forEach(([pt,col])=>flyTo([pt], eArt(tL), col)); flyR.slice(0,10).forEach(([pt,col])=>flyTo([pt], eArt(tR), col));
@@ -2004,7 +2072,7 @@ function fireCells(set, o){
   set.forEach(i=>{
     const t = cb.board[i]; if(!t) return;
     shards(i, t, o.lines>=3?7:5);
-    if(t==='ice' && !has('warmcloak')){ cb.board[i]='stone'; cb.fx.push({i,type:'ice',t0:now}); }
+    if(t==='ice' && !has('warmcloak') && !has('frostshard')){ cb.board[i]='stone'; cb.fx.push({i,type:'ice',t0:now}); }
     else { cb.fx.push({i, type:t, t0:now}); cb.board[i]=null; }
   });
   const lines = o.lines, mult = o.mult;
@@ -2031,7 +2099,7 @@ function fireCells(set, o){
   if(fx.dmg>0) cb.firstHit = false;
   if(lines>=2 && has('emberheart')){ cb.enemy.poison += 3; }
   cb.enemies.forEach(e=>{ if(e.intent && e.intent.k==='doom' && e.intent.line && !e.intent.broken){ const L2 = e.intent.line; if((L2.r!=null && (o.rowIdx||[]).includes(L2.r)) || (L2.c!=null && (o.colIdx||[]).includes(L2.c))){ e.intent.broken = true; floatText($('#board'), 'Doom line cleared!', '#ffd23f', true); sfx('relic'); } } });
-  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi, {pure:o.pure, perfect:fx.perfect}); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } }
+  if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi, {pure:o.pure, perfect:fx.perfect}); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } if(has('bloodchalice') && fx.dmg>=6){ const lh = Math.floor(fx.dmg/6); heal(lh); setTimeout(()=>floatText(hpEl(), `+${lh}`, '#ff8a9a'), 150); } }
   if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText(eArt(), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
   if(fx.sh>0){ cb.shield += fx.sh; floatText($('#shieldStat'), `+${fx.sh}`, '#a8ceff'); sfx('shield'); }
   if(fx.hp>0){ const before=run.hp; heal(fx.hp); const got=run.hp-before; if(got>0){ floatText(hpEl(), `+${got}`, '#86e6a8'); sfx('heal'); }
@@ -2158,7 +2226,7 @@ function checkEnd(){
     setTimeout(()=>{ banner('REBIRTH', `${e.name} rises from the ashes`, 1600); flash('rgba(255,140,40,.5)'); sfx('phase'); const el = eArt(e); if(el){ el.classList.remove('dead'); burstAt(el, ['#ffd23f','#ff8a3c','#ef5258'], 30); } renderHUD(); }, 200); } });
   if(cb.kind==='boss' && cb.enemies[0].hp<=0) cb.enemies.forEach(e=>{ if(e.minion) e.hp = 0; });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
-  fresh.forEach(e=>{ e.dead = true; run.kills++; markKill(e.name); unlock('first'); questAdd('kills', 1);
+  fresh.forEach(e=>{ e.dead = true; run.kills++; if(has('laurel')){ run.maxHp += 2; run.hp += 2; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
     const el = eArt(e); if(el){ el.classList.add('dead'); floatText(el, 'Defeated!', '#ffcf7a', true); burstAt(el, ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30); }
     sfx('kill'); buzz(40); });
@@ -2218,6 +2286,36 @@ function useUlt(){
       if(L2.hp>0){ const b = run.hp; heal(L2.hp); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); }
       if(L2.gold>0){ run.gold += L2.gold; floatText($('#goldWrap'), `+${L2.gold}`, '#ffe58a'); }
     }
+  } else if(run.cls==='monk'){
+    const per = 3 + 2*Math.min(run.floor,8), fight = cb; cb.streak += 2;
+    for(let k=0;k<6;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; damageEnemy(per, true); renderHUD(); if(cb.enemy.hp<=0 || k===5){ if(!checkEnd()) saveRun(); } }, 80*k);
+  } else if(run.cls==='druid'){
+    let n = 0; cb.board.forEach((t,i)=>{ if(JUNK(t)){ cb.board[i]='heal'; delete cb.bombs[i]; cb.fx.push({i,type:'heal',t0:now,drop:true}); n++; } });
+    const h = 8 + 2*run.floor, b = run.hp; heal(h); floatText(hpEl(), `+${run.hp-b}`, '#86e6a8'); if(n) floatText($('#board'), `${n} bloom`, '#86e6a8');
+  } else if(run.cls==='samurai'){
+    const d = 10 + Math.round(1.5*cb.board.filter(Boolean).length) + 2*run.floor; flash('rgba(255,255,255,.6)'); damageEnemy(d, true, true);
+  } else if(run.cls==='pirate'){
+    const spend = Math.min(30, run.gold); run.gold -= spend; const d = Math.max(14, spend*2) + 2*run.floor;
+    floatText($('#goldWrap'), `-${spend}`, '#ffe58a'); shake(); sfx('blast'); damageEnemy(d, true);
+  } else if(run.cls==='witch'){
+    aliveEnemies().forEach(e=>{ const add = Math.max(6, e.poison); e.poison += add; if(e.intent && e.intent.k!=='flee') e.intent.left += 1; floatText(eArt(e), `+${add} poison`, '#dcb6ff'); }); sfx('poison');
+  } else if(run.cls==='tinkerer'){
+    cb.turret = (cb.turret||0) + 5; floatText($('#board'), 'Turret deployed!', '#ffd23f', true); sfx('anvil');
+  } else if(run.cls==='vampire'){
+    const e = cb.enemy, before = e.hp; damageEnemy(20 + 5*Math.min(run.floor,8), true, true); const got = before - e.hp; const b = run.hp; heal(got); floatText(hpEl(), `+${run.hp-b}`, '#ff8a9a', true); flash('rgba(200,20,40,.4)');
+  } else if(run.cls==='gladiator'){
+    cb.shield += 10; floatText($('#shieldStat'), '+10', '#a8ceff'); damageEnemy(20 + 6*cb.streak + 2*run.floor, true); cb.streak += 2; shake();
+  } else if(run.cls==='shaman'){
+    const cells = shuffle(liveCells()).slice(0,6);
+    if(!cells.length){ run.charge = ULT().need; toast('No blocks to strike yet. Your charge is kept.', 'totem'); }
+    else { flash('rgba(160,220,255,.6)'); const set = new Set(cells); fireCells(set, {lines:1, rows:0, cols:0, rowIdx:[], colIdx:[], mult:2, label:'THUNDER!', noCharge:true, blasted:false}); }
+  } else if(run.cls==='cryomancer'){
+    const ice = cb.board.filter(t=>t==='ice').length, s = 8 + 3*ice + 2*run.floor;
+    aliveEnemies().forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left += 2; }); cb.shield += s; floatText($('#shieldStat'), `+${s}`, '#a8ceff'); flash('rgba(160,220,255,.5)'); sfx('ice');
+  } else if(run.cls==='beastmaster'){
+    if(!run.pet) run.pet = pick(Object.keys(PETS));
+    const P = PETS[run.pet], fight = cb;
+    for(let k=0;k<3;k++) setTimeout(()=>{ if(cb!==fight || cb.over) return; sfx('pet', run.pet); bump($('#petChip'),'petgo'); P.act(); renderHUD(); if(!checkEnd()) saveRun(); }, 220*k);
   } else if(run.cls==='paladin'){
     const d = cb.shield + 15 + 5*(run.floor-1); flash('rgba(255,240,170,.55)'); damageEnemy(d, true);
   } else if(run.cls==='ranger'){

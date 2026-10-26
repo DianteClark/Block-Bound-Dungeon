@@ -120,6 +120,20 @@ html.lock #app{position:fixed;top:0;left:0;right:0;margin:0 auto;height:var(--ap
 
 /* hero select */
 .hero{align-items:flex-start}
+.roster{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.rpick{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;background:var(--panel);border:2px solid var(--line);border-radius:12px;color:var(--text);font:10.5px/1.1 var(--body);font-weight:700;letter-spacing:-.01em;cursor:pointer;min-width:0}
+.hdetail .mastery{width:100%}
+.hdetail .mastery .qbar{width:100%}
+.rpick span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rpick.on{border-color:var(--torch2);background:var(--panel2);box-shadow:0 0 0 2px rgba(255,207,122,.35)}
+.rpick.locked img{filter:grayscale(1) brightness(.45)}
+.rpick.locked span{color:var(--muted)}
+.rpick .rwin{position:absolute;top:4px;right:5px;width:8px;height:8px;border-radius:50%;background:#ffd23f;border:1.5px solid #1d1424}
+.hdetail{display:flex;flex-direction:column;gap:6px}
+.hdetail .hd-top{display:flex;gap:10px;align-items:center}
+.hdetail .hname{font-family:var(--display);font-size:22px;font-weight:400;display:block}
+.hdetail .btn{margin-top:4px}
+@media (max-width:370px){ .roster{grid-template-columns:repeat(4,1fr)} }
 .hero .ic{width:78px;height:78px}
 .hero .stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:5px;font-size:13px;color:#ddd3e8}
 .hero .ult{margin-top:5px;font-size:12px;color:#ffcf7a}
