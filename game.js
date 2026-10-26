@@ -593,7 +593,7 @@ const QUEST_REWARD = 25, QUEST_BONUS = 30;
 
 /* ================= hero mastery ================= */
 const MASTERY = [0, 60, 160, 320, 560];
-const MASTERY_PERKS = ['', '+5 max HP', 'Start with an extra random potion', 'Start with a random common relic', 'Your special starts fully charged in the first fight'];
+const MASTERY_PERKS = ['', '+5 max HP and your first hero relic', 'Start with an extra random potion', 'Start with a random relic and unlock your second hero relic', 'Your special starts fully charged in the first fight'];
 function masteryXp(cls){ return +(store.get('mastery', {})[cls] || 0); }
 function masteryLevel(cls){ const x = masteryXp(cls); let l = 1; MASTERY.forEach((t,i)=>{ if(x>=t) l = i+1; }); return l; }
 
@@ -646,7 +646,8 @@ const ACH = {
 function unlock(id){
   const a = store.get('ach', {}); if(a[id]) return;
   a[id] = Date.now(); store.set('ach', a);
-  setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}`, 'trophy', 3200); }, 500);
+  const rw = achReward(id);
+  setTimeout(()=>{ sfx('trophy'); toast(`<b>Trophy unlocked</b><br>${ACH[id].name}: ${ACH[id].desc}${rw?`<br><span style="color:#c8fbff">Unlocked in the Bazaar: ${rw}</span>`:''}`, 'trophy', rw?4200:3200); }, 500);
 }
 
 /* ================= mutators ================= */
@@ -677,8 +678,10 @@ const THEMES = {
   toxic:{name:'Toxic Sludge', board:'#0a1004', edge:'#9aff3c', a:'#141f0a', b:'#1a280e', cost:80},
   sakura:{name:'Sakura Shrine', board:'#140a10', edge:'#ff9ac8', a:'#24131c', b:'#2c1822', cost:100},
   candy:{name:'Candy Keep', board:'#140b16', edge:'#ffd6f0', a:'#2a1830', b:'#33203a', cost:100},
+  heartroom:{name:'Heart Chamber', board:'#18040a', edge:'#ff3b5c', a:'#2a0a12', b:'#330c16', ach:'heart'},
+  master:{name:'Grandmaster', board:'#0e0a04', edge:'#ffd23f', a:'#1e170a', b:'#251c0c', ach:'master'},
 };
-const themeOk = id => { const T = THEMES[id]; if(!T) return false; if(T.cost) return !!cosm().owned['t_'+id]; return !T.unlock || T.unlock.ok(stats()); };
+const themeOk = id => { const T = THEMES[id]; if(!T) return false; if(T.ach) return !!store.get('ach',{})[T.ach]; if(T.cost) return !!cosm().owned['t_'+id]; return !T.unlock || T.unlock.ok(stats()); };
 /* ================= Bazaar cosmetics (bought with Soul Shards) ================= */
 const COSM = {
   skin:{title:'Block Skins', items:{
@@ -689,6 +692,8 @@ const COSM = {
     gem:{name:'Cut Gems', cost:120, desc:'Faceted jewels that catch the light.'},
     neon:{name:'Neon Glow', cost:150, desc:'Dark tiles with glowing edges.'},
     gilded:{name:'Gilded', cost:200, desc:'Classic blocks trimmed in gold.'},
+    frosted:{name:'Frosted', ach:'flawless', desc:'Blocks rimed with frost.'},
+    heartbeat:{name:'Heartbeat', ach:'heart', desc:'Blood-red glow from the dungeon\'s heart.'},
   }},
   burst:{title:'Clear Bursts', items:{
     shards:{name:'Shards', cost:0, desc:'Chunks of block fly everywhere.'},
@@ -699,6 +704,9 @@ const COSM = {
     embers:{name:'Embers', cost:90, desc:'Blocks burn away into rising embers.'},
     petals:{name:'Petals', cost:90, desc:'A drift of flower petals.'},
     coins:{name:'Jackpot', cost:120, desc:'Blocks burst into spinning gold coins.'},
+    zaps:{name:'Thunderclap', ach:'bighit', desc:'Blocks crackle apart in lightning.'},
+    skulls:{name:'Bone Pile', ach:'bossdex', desc:'Tiny skulls tumble everywhere.'},
+    hearts:{name:'Lovestruck', ach:'evolve2', desc:'A shower of little hearts.'},
   }},
   trail:{title:'Projectile Trails', items:{
     comet:{name:'Comet', cost:0, desc:'A bright streak.'},
@@ -707,10 +715,13 @@ const COSM = {
     orb:{name:'Wisp Orbs', cost:80, desc:'Big soft glowing orbs.'},
     shadow:{name:'Shadow', cost:90, desc:'Smoky shadow bolts.'},
     bolt:{name:'Lightning', cost:100, desc:'Crackling bolts of lightning.'},
+    prism:{name:'Prism', ach:'setbonus', desc:'Trails that shift through every color.'},
+    blaze:{name:'Dragonfire', ach:'dragon', desc:'Blazing fire trails.'},
   }},
 };
 function cosm(){ const c = Object.assign({skin:'classic', burst:'shards', trail:'comet', owned:{}}, store.get('cos', {}) || {}); if(!c.owned) c.owned = {}; return c; }
-const cosOwned = (cat, id) => !COSM[cat].items[id].cost || !!cosm().owned[cat+'_'+id];
+const cosOwned = (cat, id) => { const I = COSM[cat].items[id]; if(!I) return false; if(I.ach) return !!store.get('ach',{})[I.ach]; return !I.cost || !!cosm().owned[cat+'_'+id]; };
+const achReward = id => { for(const cat in COSM) for(const k in COSM[cat].items) if(COSM[cat].items[k].ach===id) return `${COSM[cat].items[k].name} (${COSM[cat].title.replace(/s$/,'').toLowerCase()})`; for(const k in THEMES) if(THEMES[k].ach===id) return `${THEMES[k].name} (board)`; return null; };
 let curSkin = 'classic';
 function syncCosmetics(){ const c = cosm(); curSkin = COSM.skin.items[c.skin] && cosOwned('skin', c.skin) ? c.skin : 'classic'; for(const k in BLK) delete BLK[k]; }
 const theme = () => { const t = store.get('theme','stone'); return THEMES[t] && themeOk(t) ? THEMES[t] : THEMES.stone; };
@@ -833,6 +844,52 @@ function gainRelic(id){
   if(run.relics.length>=15) unlock('relics15');
   renderRunbar(); toast(`<b>${R.name}</b><br>${R.desc}`, R.spr); sfx('relic');
 }
+/* ================= hero relics: unlocked by Mastery, only offered to their hero ================= */
+const everyN = n => cb && cb.moves>0 && cb.moves % n === 0;
+const HERO_RELICS = {
+  k_banner:{hero:'knight', mlv:2, name:'Knight\'s Banner', base:'oath', desc:'Shield blocks also deal 1 damage each.', eff(c,o,R){ R.dmg += Math.round(c.shield*o.mult); }},
+  k_aegis:{hero:'knight', mlv:4, name:'Aegis', base:'oath', desc:'Start every fight with 12 shield. Bulwark also strikes for half your shield.', onFight(){ cb.shield += 12; }, onUlt(){ if(cb.shield>1) damageEnemy(Math.floor(cb.shield/2), true); }},
+  r_edge:{hero:'rogue', mlv:2, name:'Envenomed Edge', base:'daggers', desc:'Clears poison the enemy for 1 per 2 sword blocks.', eff(c,o,R){ R.poison += Math.ceil(c.sword/2); }},
+  r_cache:{hero:'rogue', mlv:4, name:'Thieves\' Cache', base:'daggers', desc:'Gain 6 gold for every foe you defeat.', onKill(){ run.gold += 6; }},
+  m_focus:{hero:'mage', mlv:2, name:'Focus Crystal', base:'orb', desc:'Clearing 2 or more lines at once deals +6 damage.', eff(c,o,R){ if(o.lines>=2) R.dmg += 6; }},
+  m_font:{hero:'mage', mlv:4, name:'Mana Font', base:'orb', desc:'Start every fight with 3 special charge.', onFight(){ run.charge = Math.min(ULT().need, run.charge+3); }},
+  b_paint:{hero:'berserker', mlv:2, name:'War Paint', base:'bloodaxe', desc:'Below half HP, your clears deal 25% more damage.', eff(c,o,R){ if(run.hp < run.maxHp/2) R.dmg = Math.round(R.dmg*1.25); }},
+  b_skull:{hero:'berserker', mlv:4, name:'Skull Trophy', base:'bloodaxe', desc:'Heal 6 for every foe you defeat.', onKill(){ heal(6); }},
+  n_wall:{hero:'necromancer', mlv:2, name:'Bone Wall', base:'gravetome', desc:'Rubble and ice in your clears give 2 shield each.', eff(c,o,R){ R.sh += (c.stone+c.ice)*2; }},
+  n_phyl:{hero:'necromancer', mlv:4, name:'Phylactery', base:'gravetome', desc:'Every 3 moves, every enemy gains 2 poison.', onMove(){ if(everyN(3)) aliveEnemies().forEach(e=>{ e.poison += 2; }); }},
+  a_reagent:{hero:'alchemist', mlv:2, name:'Reagent Pouch', base:'philflask', desc:'Rainbow blocks deal +2 damage each.', eff(c,o,R){ R.dmg += c.rainbow*2; }},
+  a_cata:{hero:'alchemist', mlv:4, name:'Catalyst', base:'philflask', desc:'Start every fight with 2 Rainbow blocks on your grid.', onFight(){ addBlocks('rainbow', 2, true); }},
+  p_halo:{hero:'paladin', mlv:2, name:'Halo', base:'holy', desc:'Heart blocks also give 1 shield each.', eff(c,o,R){ R.sh += c.heal; }},
+  p_judge:{hero:'paladin', mlv:4, name:'Judgment', base:'holy', desc:'Using Smite also heals you 12.', onUlt(){ heal(12); }},
+  rg_quiver:{hero:'ranger', mlv:2, name:'Deep Quiver', base:'mark', desc:'Each pure line deals +5 damage.', eff(c,o,R){ R.dmg += 5*(o.pure||0); }},
+  rg_eye:{hero:'ranger', mlv:4, name:'Eagle Eye', base:'mark', desc:'Every fight starts with 2 extra weak spots.', onFight(){ if(cb.kind!=='goblin') spawnWeak(2); }},
+  bd_drum:{hero:'bard', mlv:2, name:'Marching Drum', base:'lute', desc:'Clears deal bonus damage equal to your combo streak.', eff(c,o,R){ R.dmg += cb ? cb.streak : 0; }},
+  bd_harp:{hero:'bard', mlv:4, name:'Golden Harp', base:'lute', desc:'Clears at a streak of 4 or more add 1 special charge.', onClear(){ if(cb.streak>=3) run.charge = Math.min(ULT().need, run.charge+1); }},
+  mk_tea:{hero:'monk', mlv:2, name:'Calming Tea', base:'prayerbeads', desc:'Heal 1 whenever you place a piece without clearing.', onMove(){ if(!cb.lastCleared) heal(1); }},
+  mk_palm:{hero:'monk', mlv:4, name:'Open Palm', base:'prayerbeads', desc:'Clearing exactly one line gives 4 shield.', eff(c,o,R){ if(o.lines===1) R.sh += 4; }},
+  d_thorn:{hero:'druid', mlv:2, name:'Thornvine', base:'seedpod', desc:'Heart blocks also deal 1 damage each.', eff(c,o,R){ R.dmg += c.heal; }},
+  d_bloom:{hero:'druid', mlv:4, name:'Everbloom', base:'seedpod', desc:'Every 5 moves, a heart block sprouts on your grid.', onMove(){ if(everyN(5)) addBlocks('heal', 1); }},
+  s_bushido:{hero:'samurai', mlv:2, name:'Bushido Scroll', base:'katana', desc:'Clearing exactly one line deals another +6 damage.', eff(c,o,R){ if(o.lines===1) R.dmg += 6; }},
+  s_blossom:{hero:'samurai', mlv:4, name:'Cherry Blossom', base:'katana', desc:'Defeating a foe adds 2 special charge.', onKill(){ run.charge = Math.min(ULT().need, run.charge+2); }},
+  pi_parrot:{hero:'pirate', mlv:2, name:'Parrot', base:'doubloon', desc:'Every 5 moves, your parrot finds 4 gold.', onMove(){ if(everyN(5)){ run.gold += 4; floatText($('#goldWrap'), '+4', '#ffe58a'); } }},
+  pi_cannon:{hero:'pirate', mlv:4, name:'Cannonballs', base:'doubloon', desc:'Clears deal +1 damage for every 40 gold you carry (up to +10).', eff(c,o,R){ if(R.dmg>0) R.dmg += Math.min(10, Math.floor(run.gold/40)); }},
+  w_brew:{hero:'witch', mlv:2, name:'Bubbling Brew', base:'hexcharm', desc:'Every 4 moves, every enemy gains 3 poison.', onMove(){ if(everyN(4)) aliveEnemies().forEach(e=>{ e.poison += 3; }); }},
+  w_toad:{hero:'witch', mlv:4, name:'Toad Familiar', base:'hexcharm', desc:'Defeating a foe has a 30% chance to brew a potion.', onKill(){ if(Math.random()<0.3) givePotion(); }},
+  t_spring:{hero:'tinkerer', mlv:2, name:'Spring Coil', base:'gearbox', desc:'+1 hand reroll every fight.', onFight(){ cb.rerolls += 1; }},
+  t_dynamo:{hero:'tinkerer', mlv:4, name:'Dynamo', base:'gearbox', desc:'Blast blocks in your clears give 3 shield each.', eff(c,o,R){ R.sh += c.blast*3; }},
+  v_fangs:{hero:'vampire', mlv:2, name:'Night Fangs', base:'bloodchalice', desc:'Clearing 2 or more lines at once heals 4.', eff(c,o,R){ if(o.lines>=2) R.hp += 4; }},
+  v_mist:{hero:'vampire', mlv:4, name:'Mist Form', base:'bloodchalice', desc:'The first big hit in every fight passes through you.', onFight(){ cb.mirror = true; }},
+  g_net:{hero:'gladiator', mlv:2, name:'Retiarius Net', base:'laurel', desc:'Every enemy\'s first move comes 1 turn later.', onFight(){ cb.enemies.forEach(e=>{ if(e.intent && e.intent.k!=='flee') e.intent.left++; }); }},
+  g_crowd:{hero:'gladiator', mlv:4, name:'Roaring Crowd', base:'laurel', desc:'Clears deal +2 damage for each point of combo streak.', eff(c,o,R){ R.dmg += 2*(cb?cb.streak:0); }},
+  sh_drum:{hero:'shaman', mlv:2, name:'Spirit Drum', base:'totem', desc:'Clearing 2 or more lines at once adds 1 special charge.', onClear(fx,o){ if(o.lines>=2) run.charge = Math.min(ULT().need, run.charge+1); }},
+  sh_storm:{hero:'shaman', mlv:4, name:'Storm Totem', base:'totem', desc:'Every 6 moves, lightning strikes the enemy.', onMove(){ if(everyN(6) && aliveEnemies().length){ damageEnemy(8 + 2*Math.min(run.floor,8), true); flash('rgba(160,220,255,.4)'); } }},
+  c_rime:{hero:'cryomancer', mlv:2, name:'Rime Gauntlet', base:'frostshard', desc:'Every fight starts with 3 ice blocks on your grid.', onFight(){ addBlocks('ice', 3, true); }},
+  c_glacier:{hero:'cryomancer', mlv:4, name:'Glacier Heart', base:'frostshard', desc:'Ice in your clears also gives 3 shield each.', eff(c,o,R){ R.sh += c.ice*3; }},
+  bm_collar:{hero:'beastmaster', mlv:2, name:'Spiked Collar', base:'whistle', desc:'Your pet earns 1 extra XP from every fight.', onKill(){ if(cb && cb.enemies.every(e=>e.hp<=0)) gainPetXP(1); }},
+  bm_horn:{hero:'beastmaster', mlv:4, name:'Hunting Horn', base:'whistle', desc:'Your pet acts once at the start of every fight.', onFight(){ setTimeout(()=>{ if(cb && !cb.over && run.pet){ petFire(); renderHUD(); } }, 700); }},
+};
+Object.entries(HERO_RELICS).forEach(([id,H])=>{ RELICS[id] = {...H, spr:id, r:5}; });
+function relicHook(name, ...args){ (run && run.relics || []).forEach(id=>{ const R = RELICS[id]; if(R && R[name]) try{ R[name](...args); }catch(e){ console.error(e); } }); }
 function relicOffers(n, minR=1){
   const free = Object.keys(RELICS).filter(id=>!has(id) && !RELICS[id].starter && !RELICS[id].boss && (!RELICS[id].hero || (RELICS[id].hero===run.cls && heroRelicOpen(id))));
   const pool = free.filter(id=>RELICS[id].r>=minR);
@@ -974,7 +1031,7 @@ function potionTap(i){
 }
 function view(html){ const v=$('#view'); v.innerHTML = `<div class="screen">${html}</div>`; return v; }
 function choiceBtn({id,spr,name,desc,price,disabled,r,size}){
-  let rar = r ? `<span class="rar rar${r}">${['','Common','Uncommon','Rare','Boss'][r]}</span>` : '';
+  let rar = r ? `<span class="rar rar${r}">${['','Common','Uncommon','Rare','Boss','Hero'][r]}</span>` : '';
   const rid = typeof id==='string' ? id.replace(/^r:/,'') : id, sk = RELICS[rid] && run ? setOf(rid) : null;
   if(sk) rar += ` <span class="settag" style="color:${SETS[sk].col};border-color:${SETS[sk].col}">${SETS[sk].name} set ${Math.min(3,setCount(sk) + (run.relics.includes(rid)?0:1))}/3</span>`;
   return `<button class="choice" data-id="${id}" ${disabled?'disabled':''}><span class="ic">${img(spr, size||44)}</span><span><b>${name}</b>${rar}<small>${desc}</small></span>${price!=null?`<span class="price">${img('coin',18)}${price}</span>`:''}</button>`;
@@ -1204,7 +1261,7 @@ function bindQuests(){
 }
 function checkThemeUnlocks(){
   const seenT = store.get('themesSeen', {stone:1}); let fresh = null;
-  Object.keys(THEMES).forEach(id=>{ if(!seenT[id] && !THEMES[id].cost && themeOk(id)){ seenT[id] = 1; fresh = id; } });
+  Object.keys(THEMES).forEach(id=>{ if(!seenT[id] && !THEMES[id].cost && !THEMES[id].ach && themeOk(id)){ seenT[id] = 1; fresh = id; } });
   if(fresh){ store.set('themesSeen', seenT); unlock('decorator'); setTimeout(()=>toast(`<b>New board theme!</b><br>${THEMES[fresh].name} is now in the Bazaar under Boards.`, 'palette', 3200), 1400); }
 }
 function wardrobeScreen(tab){
@@ -1214,7 +1271,7 @@ function wardrobeScreen(tab){
   let body = '';
   if(tab==='theme'){
     body = `<div class="themes">${Object.entries(THEMES).map(([id,T])=>{ const ok = themeOk(id);
-      const sub = ok ? (id===cur?'Equipped':'Tap to equip') : T.cost ? `${T.cost} Soul Shards` : T.unlock.text;
+      const sub = ok ? (id===cur?'Equipped':'Tap to equip') : T.ach ? `Trophy: ${ACH[T.ach].name}` : T.cost ? `${T.cost} Soul Shards` : T.unlock.text;
       return `<button class="theme ${ok?'':'lockd'} ${id===cur&&ok?'on':''} ${T.cost&&!ok?'buy':''}" data-t="${id}">
         <span class="mini" style="--bd:${T.board};--ed:${T.edge};--a:${T.a};--b:${T.b}">${'<i></i>'.repeat(16)}</span>
         <b>${T.name}</b><small>${sub}</small></button>`; }).join('')}</div>`;
@@ -1223,7 +1280,7 @@ function wardrobeScreen(tab){
     body = `<div class="themes">${Object.entries(cat.items).map(([id,I])=>{ const own = cosOwned(tab,id), on = C[tab]===id;
       return `<button class="theme cos ${own?'':'buy'} ${on?'on':''}" data-c="${id}">
         ${tab==='skin'?`<canvas class="skinprev" data-s="${id}" width="132" height="66"></canvas>`:`<span class="cosic">${img(tab==='burst'?'blastblock':'flame', 40)}</span>`}
-        <b>${I.name}</b><small>${on?'Equipped':own?'Tap to equip':`${I.cost} Soul Shards`}</small><small class="muted cdesc">${I.desc}</small></button>`; }).join('')}</div>`;
+        <b>${I.name}</b><small>${on?'Equipped':own?'Tap to equip':I.ach?`Trophy: ${ACH[I.ach].name}`:`${I.cost} Soul Shards`}</small><small class="muted cdesc">${I.desc}</small></button>`; }).join('')}</div>`;
   }
   view(`<div class="center"><h2 class="title">Bazaar</h2><p class="muted">Spend Soul Shards on looks. You have <span class="inline" style="white-space:nowrap"><b style="color:#c8fbff">${soulShards()}</b>${img('shard',18)}</span></p></div>
     <div class="tabs baztabs">${tabs.map(([k,n,s])=>`<button class="tab ${k===tab?'on':''}" data-tab="${k}">${img(s,20)}${n}</button>`).join('')}</div>
@@ -1240,11 +1297,12 @@ function wardrobeScreen(tab){
   $('#view').querySelectorAll('.theme[data-t]').forEach(b=>b.onclick=()=>{ const id = b.dataset.t, T = THEMES[id];
     if(!themeOk(id)){
       if(T.cost){ if(b.dataset.armed!=='1'){ b.dataset.armed = '1'; b.querySelector('small').textContent = `Tap again: ${T.cost} Soul Shards`; sfx('warn'); return; } return spend(T.cost, 't_'+id, T.name, ()=>{ store.set('theme', id); wardrobeScreen('theme'); }); }
-      sfx('invalid'); toast(`<b>${T.name}</b><br>Unlock: ${T.unlock.text}.`, 'palette'); return; }
+      sfx('invalid'); toast(`<b>${T.name}</b><br>Unlock: ${T.ach ? `the trophy ${ACH[T.ach].name} (${ACH[T.ach].desc})` : T.unlock.text}.`, 'palette'); return; }
     store.set('theme', id); sfx('relic'); wardrobeScreen('theme'); });
   $('#view').querySelectorAll('.theme[data-c]').forEach(b=>b.onclick=()=>{ const id = b.dataset.c, I = COSM[tab].items[id];
     const equip = ()=>{ const c = cosm(); c[tab] = id; store.set('cos', c); syncCosmetics(); sfx('relic'); demoCos(tab, id, b); setTimeout(()=>wardrobeScreen(tab), tab==='skin'?0:650); };
     if(cosOwned(tab, id)) return equip();
+    if(I.ach){ sfx('invalid'); demoCos(tab, id, b); toast(`<b>${I.name}</b><br>Earn the trophy <b>${ACH[I.ach].name}</b>: ${ACH[I.ach].desc}`, 'trophy', 3200); return; }
     if(b.dataset.armed!=='1'){ b.dataset.armed = '1'; b.querySelector('small').textContent = `Tap again: ${I.cost} Soul Shards`; sfx('warn'); demoCos(tab, id, b); return; }
     spend(I.cost, tab+'_'+id, I.name, equip);
   });
@@ -1312,6 +1370,7 @@ function heroScreen(){
       <span class="stats"><span class="inline">${img('heart',20)}${C.hp}</span><span class="inline">${img('coin',20)}${C.gold}</span><span class="inline">${img(R.spr,20)}${R.name}</span><span class="inline">${C.potions.map(p=>img(POTIONS[p].spr,20)).join('')}</span></span>
       <small class="muted" style="font-size:12px">${R.desc}</small>
       <span class="ult">Special: <b style="font-size:13px;display:inline">${C.ult.name}</b> - ${C.ult.desc}</span>
+      <span class="herorel">${Object.entries(HERO_RELICS).filter(([k,H])=>H.hero===id).map(([k,H])=>{ const ok = heroRelicOpen(k); return `<span class="hr ${ok?'':'off'}" data-r="${k}">${img(k,26)}<span><b>${H.name}</b><small>${ok?H.desc:`Unlocks at Mastery ${H.mlv}`}</small></span></span>`; }).join('')}</span>
       ${open?`<span class="mastery"><span class="mlv">Mastery ${lv}</span><span class="qbar"><i style="width:${nx?Math.min(100,100*(x-MASTERY[lv-1])/(nx-MASTERY[lv-1])):100}%"></i></span><small>${nx?`Next: ${MASTERY_PERKS[lv]}`:'Max mastery'}</small></span>`
         :`<span class="ult" style="color:#c9b6ff">Unlock: ${C.unlock.text}, or spend ${C.unlock.cost} Soul Shards (you have ${soulShards()}).</span>`}
       <button class="btn" id="goHero">${open?`Start as ${C.name}`:soulShards()>=C.unlock.cost?`Unlock for ${C.unlock.cost} Soul Shards`:`Locked`}</button></div>`;
@@ -1392,7 +1451,7 @@ function trophyScreen(){
   show('trophies');
   const a = store.get('ach', {});
   view(`<div class="center"><h2 class="title">Trophies</h2><p class="muted">${Object.keys(a).length} / ${Object.keys(ACH).length} unlocked</p></div>
-    ${Object.entries(ACH).map(([id,t])=>`<div class="troph ${a[id]?'':'lock'}">${img(t.spr,44)}<div><b>${t.name}</b><small>${t.desc}</small></div></div>`).join('')}
+    ${Object.entries(ACH).map(([id,t])=>{ const rw = achReward(id); return `<div class="troph ${a[id]?'':'lock'}">${img(t.spr,44)}<div><b>${t.name}</b><small>${t.desc}${rw?`<br><span style="color:#c8fbff">Bazaar reward: ${rw}</span>`:''}</small></div></div>`; }).join('')}
     <button class="btn ghost" id="backBtn">Back</button>`);
   $('#backBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
 }
@@ -1800,6 +1859,52 @@ function rollReward(RW, kind){
   Object.assign(RW, {g, extra, offers});
   renderRunbar();
 }
+/* ---------- shareable run recap card ---------- */
+async function makeRecap(info){
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  try{ await document.fonts.load("60px 'Lilita One'"); }catch(e){}
+  const D = "'Lilita One', 'Arial Rounded MT Bold', system-ui, sans-serif", B = "system-ui, -apple-system, sans-serif";
+  const gr = x.createLinearGradient(0,0,0,H); gr.addColorStop(0,'#2a1f36'); gr.addColorStop(1,'#120c18'); x.fillStyle = gr; x.fillRect(0,0,W,H);
+  const glow = x.createRadialGradient(W/2, 360, 40, W/2, 360, 520); glow.addColorStop(0, info.secret?'rgba(255,60,90,.35)':info.won?'rgba(255,190,90,.3)':'rgba(140,110,200,.25)'); glow.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle = glow; x.fillRect(0,0,W,H);
+  const rr = (X,Y,w,h,r)=>{ x.beginPath(); x.moveTo(X+r,Y); x.arcTo(X+w,Y,X+w,Y+h,r); x.arcTo(X+w,Y+h,X,Y+h,r); x.arcTo(X,Y+h,X,Y,r); x.arcTo(X,Y,X+w,Y,r); x.closePath(); };
+  x.lineWidth = 10; x.strokeStyle = '#4a3f58'; rr(20,20,W-40,H-40,48); x.stroke();
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  const txt = (s, X, Y, size, col, font, stroke) => { x.font = `${size}px ${font||D}`; if(stroke){ x.lineWidth = stroke; x.strokeStyle = '#120c16'; x.lineJoin = 'round'; x.strokeText(s, X, Y); } x.fillStyle = col; x.fillText(s, X, Y); };
+  txt('BLOCK BOUND DUNGEON', W/2, 110, 64, '#ff9d3c', D, 12);
+  const C = CLASSES[run.cls], result = info.secret ? 'TRUE ENDING' : info.won ? 'VICTORY' : info.wasEndless ? `ENDLESS DEPTH ${run.floor-FLOORS}` : `FELL ON FLOOR ${Math.min(run.floor,FLOORS)}`;
+  txt(result, W/2, 190, 72, info.secret ? '#ff6f8f' : info.won||info.wasEndless ? '#ffd23f' : '#c9b6ff', D, 12);
+  const pic = async (name, X, Y, s) => { try{ const im = await artImage(name); x.drawImage(im, X, Y, s, s*124/120); }catch(e){} };
+  await pic(C.spr, W/2-150, 220, 300);
+  txt(`${C.name}  ·  Level ${run.level||1}`, W/2, 590, 54, '#fff', D, 10);
+  const sub = [run.heat?`Heat ${run.heat}`:'', run.weekly?'Weekly Challenge':run.daily?'Daily Challenge':'', (run.muts||[]).map(k=>MUTS[k].name).join(', ')].filter(Boolean).join('  ·  ');
+  if(sub) txt(sub, W/2, 640, 30, '#c9b6ff', B);
+  const stats = [[run.kills,'foes slain'],[run.dmg,'damage'],[run.bestHit,'biggest hit'],[run.bestLines,'best clear'],[run.bosses||0,'bosses'],[run.relics.length,'relics']];
+  stats.forEach(([v,l],i)=>{ const col = i%3, row = Math.floor(i/3), X = 200 + col*340, Y = 700 + row*150;
+    x.fillStyle = 'rgba(255,255,255,.06)'; rr(X-150, Y, 300, 130, 24); x.fill();
+    txt(String(v), X, Y+72, 60, '#ffcf7a', D, 0); txt(l, X, Y+112, 28, '#bdb2cc', B); });
+  const bl = (run.bossLog||[]).slice(-6);
+  if(bl.length){ txt('Guardians defeated', W/2, 1040, 32, '#ffcf7a', D);
+    const sz = 84, gap = 14, start = W/2 - (bl.length*(sz+gap)-gap)/2;
+    for(let i=0;i<bl.length;i++) await pic(bl[i][1], start + i*(sz+gap), 1056, sz); }
+  const rl = run.relics.slice(0, 12), rs = 56, rg = 10, rstart = W/2 - (rl.length*(rs+rg)-rg)/2;
+  for(let i=0;i<rl.length;i++) await pic(RELICS[rl[i]].spr, rstart + i*(rs+rg), 1170, rs);
+  if(run.pet && PETS[run.pet]) await pic(petForm().spr, W-200, 230, 140);
+  txt(new Date().toLocaleDateString(), W/2, H-60, 28, '#8a7f99', B);
+  return c;
+}
+async function showRecap(info){
+  const m = $('#modal'); m.hidden = false;
+  m.innerHTML = `<div class="card center" role="dialog" aria-label="Run card"><h3 class="title" style="font-size:22px;margin:0">Your run card</h3><p class="muted" id="recapMsg">Drawing...</p><div id="recapImg"></div>
+    <button class="btn" id="recapShare" disabled>Share</button><button class="btn ghost" id="recapClose">Close</button></div>`;
+  $('#recapClose').onclick = closeSettings; m.onclick = ev=>{ if(ev.target===m) closeSettings(); };
+  let cv2; try{ cv2 = await makeRecap(info); }catch(e){ console.error(e); $('#recapMsg').textContent = 'Could not draw the card.'; return; }
+  const url = cv2.toDataURL('image/png'); $('#recapMsg').textContent = 'Share it, or press and hold the image to save it.';
+  $('#recapImg').innerHTML = `<img src="${url}" alt="Run summary card" style="width:100%;max-width:300px;border-radius:14px;border:2px solid var(--line)">`;
+  const sb = $('#recapShare'); sb.disabled = false;
+  sb.onclick = ()=>{ cv2.toBlob(async blob=>{ const file = new File([blob], 'block-bound-run.png', {type:'image/png'});
+    try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Block Bound Dungeon'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+    const a = document.createElement('a'); a.href = url; a.download = 'block-bound-run.png'; document.body.appendChild(a); a.click(); a.remove(); }, 'image/png'); };
+}
 function endScreen(won, secret){
   cb = null; store.set('save', null);
   const wasEndless = run.floor>FLOORS+1 || run.won;
@@ -1857,8 +1962,11 @@ function endScreen(won, secret){
       <div>${run.bestLines}<small>best clear</small></div>
     </div></div>
     <div class="card"><p class="center muted" style="font-size:13px;margin-bottom:6px">${CLASSES[run.cls].name}${run.heat?` · Heat ${run.heat}`:''}${run.daily?' · Daily':''}${(run.muts||[]).length?` · ${run.muts.map(k=>MUTS[k].name).join(', ')}`:''} · ${run.relics.length} relics</p><div class="relicrow">${run.relics.map(id=>img(RELICS[id].spr,30)).join('')}</div></div>
+    <button class="btn ghost" id="shareBtn">${img('scroll',24)} Share run card</button>
     <button class="btn" id="againBtn">New Run</button>
     <button class="btn ghost" id="titleBtn">Title</button>`);
+  const recapInfo = {won, secret, wasEndless, earned};
+  $('#shareBtn').onclick = ()=>{ sfx('click'); showRecap(recapInfo); };
   $('#againBtn').onclick = ()=>{ sfx('click'); heroScreen(); }; $('#titleBtn').onclick = ()=>{ sfx('click'); titleScreen(); };
   const eb = $('#endlessBtn');
   if(eb) eb.onclick = ()=>{ sfx('door'); run.won = true; run.floor = FLOORS+1; run.map = genMap(); run.path = []; run.room = null; heal(Math.round(run.maxHp*0.5)); banner('ENDLESS', floorName(), 2200); goMap(); };
@@ -1967,6 +2075,7 @@ function startCombat(kind, forced){
   };
   attachEnemy(cb);
   if(run.carry){ cb.shield += run.carry; run.carry = 0; }
+  relicHook('onFight');
   if(has('ironmaiden')) cb.shield += 25;
   if(has('blacklotus')){ run.charge = ULT().need; cb.rerolls = 0; }
   if(has('pandora')) cb.enemies.forEach(e=>{ e.rage += 3; });
@@ -2148,6 +2257,7 @@ function hazardTick(){
   cb.chains = cb.chains.filter(ch=>{ ch.t--; return ch.t>0 && cb.board[ch.i]; });
   if(cb.webs) Object.keys(cb.webs).forEach(k=>{ const i = +k; if(cb.board[i]!=='web'){ delete cb.webs[k]; return; } if(--cb.webs[k]<=0){ delete cb.webs[k]; cb.board[i] = null; cb.fx.push({i,type:'web',t0:now}); } });
   if(cb.silence>0) cb.silence--;
+  relicHook('onMove');
   if(cb.turret>0 && aliveEnemies().length){ cb.turret--; const tg = aliveEnemies()[0]; damageEnemy(5 + 2*Math.min(run.floor,8), true, false, tg); floatText($('#ultBtn'), 'Turret!', '#ffd23f'); sfx('hit'); }
   if(has('totem') && cb.moves && cb.moves%4===0){ const cand = liveCells().filter(i=>cb.board[i]!=='rainbow'); if(cand.length){ const i = pick(cand); cb.board[i] = 'rainbow'; cb.fx.push({i,type:'rainbow',t0:now,drop:true}); floatText($('#board'), 'Spirit!', '#f0d6ff'); } }
   const want = (cb.kind==='elite'||cb.kind==='boss') ? 2 : 1;
@@ -2338,7 +2448,9 @@ function computeEffects(board, set, o){
   const e = cb.enemy;
   if(has('scythe') && e.hp < e.maxHp*0.3) dmg = Math.round(dmg*1.5);
   if(e.passive && e.passive.id==='ethereal' && lines===1) dmg = Math.floor(dmg/2);
-  return {dmg, sh, hp, poison, gold, perfect, cnt, weakHits, pierce: cnt.sword>0 && plusOn('sword')};
+  const RR = {dmg, sh, hp, poison, gold};
+  run.relics.forEach(id=>{ const f = RELICS[id] && RELICS[id].eff; if(f) f(cnt, o, RR); });
+  return {dmg:RR.dmg, sh:RR.sh, hp:RR.hp, poison:RR.poison, gold:RR.gold, perfect, cnt, weakHits, pierce: cnt.sword>0 && plusOn('sword')};
 }
 function resolveClears(){
   const plan = planClear(cb.board);
@@ -2404,6 +2516,7 @@ function fireCells(set, o){
   if(cb.firstHit && has('ironfist') && fx.dmg>0){ fx.dmg += 15; }
   if(fx.dmg>0) cb.firstHit = false;
   if(lines>=2 && has('emberheart')){ cb.enemy.poison += 3; }
+  setTimeout(()=>{ if(cb && !cb.over) relicHook('onClear', fx, o); }, 0);
   cb.enemies.forEach(e=>{ if(e.intent && e.intent.k==='doom' && e.intent.line && !e.intent.broken){ const L2 = e.intent.line; if((L2.r!=null && (o.rowIdx||[]).includes(L2.r)) || (L2.c!=null && (o.colIdx||[]).includes(L2.c))){ e.intent.broken = true; floatText($('#board'), 'Doom line cleared!', '#ffd23f', true); sfx('relic'); } } });
   if(fx.dmg>0){ routeDamage(fx.dmg, wRow, wCol, multi, {pure:o.pure, perfect:fx.perfect, pierce:fx.pierce}); if(has('leech') && fx.dmg>=8){ const lh = Math.floor(fx.dmg/8); heal(lh); floatText(hpEl(), `+${lh}`, '#86e6a8'); } if(has('bloodchalice') && fx.dmg>=6){ const lh = Math.floor(fx.dmg/6); heal(lh); setTimeout(()=>floatText(hpEl(), `+${lh}`, '#ff8a9a'), 150); } }
   if(fx.poison>0){ cb.enemy.poison += fx.poison; floatText(eArt(), `+${fx.poison} poison`, '#dcb6ff'); sfx('poison'); }
@@ -2542,7 +2655,7 @@ function checkEnd(){
     e.didSplitDeath = true; const m = makeEnemy({name:`${e.name.replace(/^The /,'')} Shard`, spr:e.spr, minion:true, moves:e.moves.map(x=>({...x, v: x.k==='shuffle'||x.k==='flee' ? x.v : Math.round(x.v*0.6)}))}, Math.round(e.maxHp*0.35));
     nextIntent(m); m.intent.left++; cb.enemies[1] = m; setTimeout(()=>{ renderHUD(); const el = eArt(m); if(el){ floatText(el, 'Split!', '#86e6a8', true); burstAt(el, ['#86e6a8','#fff'], 18); } }, 300); } });
   const fresh = cb.enemies.filter(e=>e.hp<=0 && !e.dead);
-  fresh.forEach(e=>{ e.dead = true; run.kills++; if(has('laurel')){ run.maxHp += 2; run.hp += 2; } markKill(e.name); unlock('first'); questAdd('kills', 1);
+  fresh.forEach(e=>{ e.dead = true; run.kills++; relicHook('onKill', e); if(has('laurel')){ run.maxHp += 2; run.hp += 2; } markKill(e.name); unlock('first'); questAdd('kills', 1);
     if(e.moves.some(m=>m.k==='steal')) unlock('thief');
     if(e.minion) unlock('minion');
     const el = eArt(e); if(el){ el.classList.add('dead'); floatText(el, 'Defeated!', '#ffcf7a', true); burstAt(el, ['#ffcf7a','#fff','#ff8a3c','#c77dff'], 30); }
@@ -2551,11 +2664,11 @@ function checkEnd(){
   if(cb.enemies.every(e=>e.dead)){
     cb.over = true; if(cb.kind==='elite') questAdd('elites', 1); if(cb.kind==='boss') questAdd('bosses', 1);
     if(cb.kind==='goblin') unlock('goblin');
-    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; { const sn = seen(); if(ALL_ENEMIES.filter(x=>x.boss && sn.e[x.name] && sn.e[x.name].kills>0).length>=10) unlock('bossdex'); } if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
+    if(cb.kind==='boss'){ run.bosses = (run.bosses||0)+1; run.lastBoss = cb.enemies[0].name; run.bossLog = (run.bossLog||[]).concat([[cb.enemies[0].name, cb.enemies[0].spr]]); { const sn = seen(); if(ALL_ENEMIES.filter(x=>x.boss && sn.e[x.name] && sn.e[x.name].kills>0).length>=10) unlock('bossdex'); } if(!cb.tookDmg) unlock('flawless'); if(cb.enemies[0].spr==='dragon') unlock('dragon'); }
     if(cb.enemies.length>1 && cb.kind==='combat') unlock('duo');
     renderHUD();
     const kind = cb.kind;
-    if(cb.enemies[0].secret){ run.secretDone = true; run.room = null; run.floor = FLOORS+1; unlock('heart'); bumpStats(s=>s.hearts=(s.hearts||0)+1); store.set('save', null); setTimeout(()=>{ if(cb===fight) endScreen(true, true); }, T(1600)); return true; }
+    if(cb.enemies[0].secret){ run.bossLog = (run.bossLog||[]).concat([[cb.enemies[0].name, cb.enemies[0].spr]]); run.secretDone = true; run.room = null; run.floor = FLOORS+1; unlock('heart'); bumpStats(s=>s.hearts=(s.hearts||0)+1); store.set('save', null); setTimeout(()=>{ if(cb===fight) endScreen(true, true); }, T(1600)); return true; }
     const xp = {combat:10, elite:20, boss:32, goblin:8}[kind] || 10;
     gainXP(xp + (cb.enemies.length>1 ? 6 : 0));
     gainPetXP({combat:1, elite:2, boss:3, goblin:1}[kind] || 1);
@@ -2666,6 +2779,7 @@ function useUlt(){
     const set = lineCells([br],[bc]); const blasted = expandBlast(cb.board, set);
     fireCells(set, {lines:2, rows:1, cols:1, mult:2.5, label:'METEOR!', noCharge:true, blasted});
   }
+  relicHook('onUlt');
   if(!checkEnd()){ checkStuck(); renderHUD(); saveRun(); }
 }
 
@@ -2824,9 +2938,11 @@ function blockCanvas(type, px, skinArg){
     const m = iw*0.13; const gr = x.createLinearGradient(0, iy+m, 0, iy+ih-m); gr.addColorStop(0, t.l); gr.addColorStop(0.5, t.c); gr.addColorStop(1, t.d);
     rr(ix+m, iy+m, iw-2*m, ih-2*m-ih*0.06, R*0.4); x.fillStyle = gr; x.fill(); x.lineWidth = Math.max(1, px*0.03); x.strokeStyle = 'rgba(18,12,22,.7)'; x.stroke();
     x.fillStyle = '#8a8296'; [[0.07,0.07],[0.93,0.07],[0.07,0.86],[0.93,0.86]].forEach(([a,b])=>{ x.beginPath(); x.arc(ix+iw*a, iy+ih*b, px*0.03, 0, Math.PI*2); x.fill(); });
-  } else if(skin==='neon'){
-    rr(ix, iy, iw, ih, R*0.8); x.fillStyle = '#150f1e'; x.fill();
-    x.save(); x.shadowColor = t.c; x.shadowBlur = px*0.22; x.lineWidth = Math.max(1.5, px*0.07); x.strokeStyle = t.c; rr(ix+px*0.06, iy+px*0.06, iw-px*0.12, ih-px*0.12, R*0.6); x.stroke(); x.restore();
+  } else if(skin==='neon' || skin==='heartbeat'){
+    const hb = skin==='heartbeat', gc = hb ? '#ff3b5c' : t.c;
+    rr(ix, iy, iw, ih, R*0.8); x.fillStyle = hb ? '#2a0a14' : '#150f1e'; x.fill();
+    if(hb){ const gr = x.createRadialGradient(px/2, px/2, 0, px/2, px/2, iw*0.6); gr.addColorStop(0, t.c); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = 0.55; x.fillStyle = gr; rr(ix, iy, iw, ih, R*0.8); x.fill(); x.globalAlpha = 1; }
+    x.save(); x.shadowColor = gc; x.shadowBlur = px*0.22; x.lineWidth = Math.max(1.5, px*0.07); x.strokeStyle = gc; rr(ix+px*0.06, iy+px*0.06, iw-px*0.12, ih-px*0.12, R*0.6); x.stroke(); x.restore();
     x.lineWidth = Math.max(1, px*0.025); x.strokeStyle = t.l; rr(ix+px*0.06, iy+px*0.06, iw-px*0.12, ih-px*0.12, R*0.6); x.stroke();
   } else if(skin==='jelly'){
     rr(ix, iy, iw, ih, R*0.8); x.fillStyle = t.d; x.fill();
@@ -2840,6 +2956,7 @@ function blockCanvas(type, px, skinArg){
     gr.addColorStop(0, t.l); gr.addColorStop(0.35, t.c); gr.addColorStop(1, t.c);
     rr(ix, iy, iw, ih - px*0.11, R*0.8); x.fillStyle = gr; x.fill();
     x.globalAlpha = 0.55; rr(ix+iw*0.12, iy+ih*0.07, iw*0.42, ih*0.12, ih*0.06); x.fillStyle = '#fff'; x.fill(); x.globalAlpha = 1;
+    if(skin==='frosted'){ x.fillStyle = 'rgba(232,248,255,.85)'; x.beginPath(); x.moveTo(ix, iy+ih*0.22); for(let k=0;k<=6;k++){ x.lineTo(ix + iw*k/6, iy + (k%2 ? ih*0.08 : ih*0.2)); } x.lineTo(ix+iw, iy); x.lineTo(ix, iy); x.closePath(); x.save(); rr(ix, iy, iw, ih, R*0.8); x.clip(); x.fill(); x.restore(); x.lineWidth = Math.max(1, px*0.035); x.strokeStyle = '#c8f0ff'; rr(ix+px*0.02, iy+px*0.02, iw-px*0.04, ih-px*0.04, R*0.75); x.stroke(); }
     if(skin==='gilded'){ x.lineWidth = Math.max(1.5, px*0.06); x.strokeStyle = '#f7c936'; rr(ix+px*0.02, iy+px*0.02, iw-px*0.04, ih-px*0.04, R*0.75); x.stroke(); x.lineWidth = Math.max(1, px*0.02); x.strokeStyle = '#fff4c2'; rr(ix+px*0.05, iy+px*0.05, iw-px*0.1, ih-px*0.1, R*0.7); x.stroke(); }
   }
   if(px>=12){
@@ -2938,6 +3055,9 @@ function burstParts(list, style, cx, cy, col, n, cs){
     else if(style==='embers'){ q.vy = -1.5 - Math.random()*2.5; q.vx *= 0.5; q.g = -0.02; q.col = pick(['#ff8a3c','#ffd23f','#ef5258']); q.size *= 0.55; }
     else if(style==='petals'){ q.col = pick(['#ff9ac8','#ffd6f0','#ff6fae']); q.g = 0.05; q.vy = -1 - Math.random()*2; q.decay *= 0.7; }
     else if(style==='coins'){ q.col = '#f7c936'; q.g = 0.3; q.vy -= 2; q.size *= 1.2; }
+    else if(style==='zaps'){ q.col = pick(['#bfe6ff','#fff','#7fd0ff']); q.g = 0.05; q.decay *= 1.5; q.size *= 1.4; }
+    else if(style==='skulls'){ q.col = '#f3ead6'; q.g = 0.3; q.size *= 1.3; }
+    else if(style==='hearts'){ q.col = pick(['#ff6fae','#ef5258','#ff9ac8']); q.g = 0.06; q.vy = -1.5 - Math.random()*2; q.decay *= 0.8; q.size *= 1.2; }
     list.push(q);
   }
   if(list.length>500) list.splice(0, list.length-500);
@@ -2951,6 +3071,9 @@ function drawPart(c2, q){
     case 'bubbles': c2.strokeStyle = q.col; c2.lineWidth = Math.max(1.5, s*0.18); c2.beginPath(); c2.arc(0,0,s*0.6,0,Math.PI*2); c2.stroke(); c2.fillStyle = 'rgba(255,255,255,.7)'; c2.beginPath(); c2.arc(-s*0.2,-s*0.2,s*0.14,0,Math.PI*2); c2.fill(); break;
     case 'stars': { c2.fillStyle = q.col; c2.strokeStyle = '#120c16'; c2.lineWidth = 1.5; c2.beginPath(); for(let i=0;i<10;i++){ const a = -Math.PI/2 + i*Math.PI/5, r = i%2 ? s*0.28 : s*0.7; c2[i?'lineTo':'moveTo'](Math.cos(a)*r, Math.sin(a)*r); } c2.closePath(); c2.fill(); c2.stroke(); break; }
     case 'petals': c2.fillStyle = q.col; c2.beginPath(); c2.ellipse(0,0,s*0.6,s*0.3,0,0,Math.PI*2); c2.fill(); break;
+    case 'zaps': c2.globalCompositeOperation = 'lighter'; c2.strokeStyle = q.col; c2.lineWidth = 2; c2.beginPath(); c2.moveTo(-s*0.6,-s*0.5); c2.lineTo(0,-s*0.1); c2.lineTo(-s*0.2,s*0.1); c2.lineTo(s*0.6,s*0.5); c2.stroke(); break;
+    case 'skulls': c2.fillStyle = q.col; c2.strokeStyle = '#120c16'; c2.lineWidth = 1.2; c2.beginPath(); c2.arc(0,-s*0.08,s*0.45,0,Math.PI*2); c2.fill(); c2.stroke(); c2.fillRect(-s*0.25,s*0.2,s*0.5,s*0.22); c2.fillStyle = '#120c16'; c2.beginPath(); c2.arc(-s*0.17,-s*0.1,s*0.11,0,Math.PI*2); c2.arc(s*0.17,-s*0.1,s*0.11,0,Math.PI*2); c2.fill(); break;
+    case 'hearts': c2.fillStyle = q.col; c2.beginPath(); c2.moveTo(0, s*0.35); c2.bezierCurveTo(-s*0.7, -s*0.1, -s*0.3, -s*0.6, 0, -s*0.2); c2.bezierCurveTo(s*0.3, -s*0.6, s*0.7, -s*0.1, 0, s*0.35); c2.fill(); break;
     case 'coins': c2.scale(Math.abs(Math.cos(q.rot*2))*0.9+0.1, 1); c2.fillStyle = '#c99a0f'; c2.beginPath(); c2.arc(0,0,s*0.6,0,Math.PI*2); c2.fill(); c2.fillStyle = '#f7c936'; c2.beginPath(); c2.arc(0,0,s*0.45,0,Math.PI*2); c2.fill(); break;
     default: c2.fillStyle = '#120c16'; c2.fillRect(-s/2-1,-s/2-1,s+2,s+2); c2.fillStyle = q.col; c2.fillRect(-s/2,-s/2,s,s);
   }
@@ -3134,6 +3257,8 @@ function drawTrail(p, x, y){
   if(st==='ribbon'){ p.hist = (p.hist||[]).concat([[x,y]]).slice(-9); fx2.strokeStyle = p.col; fx2.lineWidth = p.s*1.1; fx2.globalAlpha = 0.45; fx2.beginPath(); p.hist.forEach(([hx,hy],i)=>fx2[i?'lineTo':'moveTo'](hx,hy)); fx2.stroke(); }
   else if(st==='bolt'){ const n = 4; fx2.strokeStyle = '#bfe6ff'; fx2.lineWidth = 2.5; fx2.globalAlpha = 0.9; fx2.beginPath(); fx2.moveTo(x, y); for(let i=1;i<=n;i++){ const k = i/n; fx2.lineTo(x + dx/dl*28*k + (Math.random()-.5)*10, y + dy/dl*28*k + (Math.random()-.5)*10); } fx2.stroke(); }
   else if(st==='shadow'){ fx2.globalCompositeOperation = 'source-over'; for(let i=0;i<3;i++){ fx2.globalAlpha = 0.25; fx2.fillStyle = '#2a1440'; fx2.beginPath(); fx2.arc(x + dx/dl*i*7, y + dy/dl*i*7, p.s*(1.1-i*0.2), 0, Math.PI*2); fx2.fill(); } }
+  else if(st==='prism'){ p.hue = ((p.hue||Math.random()*360) + 14) % 360; p.col = `hsl(${p.hue},90%,65%)`; const tl = Math.min(dl, 26); fx2.strokeStyle = p.col; fx2.globalAlpha = 0.6; fx2.lineWidth = p.s*0.9; fx2.beginPath(); fx2.moveTo(x + dx/dl*tl, y + dy/dl*tl); fx2.lineTo(x, y); fx2.stroke(); }
+  else if(st==='blaze'){ const tl = Math.min(dl, 26); fx2.strokeStyle = '#ff8a3c'; fx2.globalAlpha = 0.6; fx2.lineWidth = p.s; fx2.beginPath(); fx2.moveTo(x + dx/dl*tl, y + dy/dl*tl); fx2.lineTo(x, y); fx2.stroke(); if(Math.random()<0.7) FXP.push({kind:'embers', x, y, vx:(Math.random()-.5)*1.2, vy:-0.5-Math.random(), g:-0.02, life:0.9, decay:0.035, size:2.2, rot:0, vr:0, col:pick(['#ff8a3c','#ffd23f','#ef5258'])}); }
   else if(st==='orb'){ fx2.globalAlpha = 0.3; fx2.fillStyle = p.col; fx2.beginPath(); fx2.arc(x, y, p.s*1.8, 0, Math.PI*2); fx2.fill(); }
   else { const tl = Math.min(dl, 22); fx2.strokeStyle = p.col; fx2.globalAlpha = 0.5; fx2.lineWidth = p.s*0.7; fx2.beginPath(); fx2.moveTo(x + dx/dl*tl, y + dy/dl*tl); fx2.lineTo(x, y); fx2.stroke();
     if(st==='stardust' && Math.random()<0.6) FXP.push({kind:'sparks', x, y, vx:(Math.random()-.5), vy:(Math.random()-.5), g:0.02, life:0.8, decay:0.04, size:1.6, rot:0, vr:0, col:'#fff4c2'}); }

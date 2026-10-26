@@ -1,5 +1,5 @@
 /* Network-first service worker: always tries for the latest version, falls back to cache offline. */
-const CACHE = 'bbd-v24';
+const CACHE = 'bbd-v25';
 const CORE = ['./', 'index.html', 'game.js', 'art.js', 'audio.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

@@ -542,6 +542,46 @@ const ART = {
 const SVG_CACHE = {};
 /* color variants of existing art: colors are rewritten mathematically (hue rotation or a tint matrix) */
 const VARIANTS = {
+  k_banner:{base:'oath', hue:110, over:[['acc_runes',1,0,0]]},
+  k_aegis:{base:'oath', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  r_edge:{base:'daggers', hue:110, over:[['acc_runes',1,0,0]]},
+  r_cache:{base:'daggers', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  m_focus:{base:'orb', hue:110, over:[['acc_runes',1,0,0]]},
+  m_font:{base:'orb', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  b_paint:{base:'bloodaxe', hue:110, over:[['acc_runes',1,0,0]]},
+  b_skull:{base:'bloodaxe', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  n_wall:{base:'gravetome', hue:110, over:[['acc_runes',1,0,0]]},
+  n_phyl:{base:'gravetome', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  a_reagent:{base:'philflask', hue:110, over:[['acc_runes',1,0,0]]},
+  a_cata:{base:'philflask', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  p_halo:{base:'holy', hue:110, over:[['acc_runes',1,0,0]]},
+  p_judge:{base:'holy', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  rg_quiver:{base:'mark', hue:110, over:[['acc_runes',1,0,0]]},
+  rg_eye:{base:'mark', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  bd_drum:{base:'lute', hue:110, over:[['acc_runes',1,0,0]]},
+  bd_harp:{base:'lute', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  mk_tea:{base:'prayerbeads', hue:110, over:[['acc_runes',1,0,0]]},
+  mk_palm:{base:'prayerbeads', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  d_thorn:{base:'seedpod', hue:110, over:[['acc_runes',1,0,0]]},
+  d_bloom:{base:'seedpod', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  s_bushido:{base:'katana', hue:110, over:[['acc_runes',1,0,0]]},
+  s_blossom:{base:'katana', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  pi_parrot:{base:'doubloon', hue:110, over:[['acc_runes',1,0,0]]},
+  pi_cannon:{base:'doubloon', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  w_brew:{base:'hexcharm', hue:110, over:[['acc_runes',1,0,0]]},
+  w_toad:{base:'hexcharm', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  t_spring:{base:'gearbox', hue:110, over:[['acc_runes',1,0,0]]},
+  t_dynamo:{base:'gearbox', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  v_fangs:{base:'bloodchalice', hue:110, over:[['acc_runes',1,0,0]]},
+  v_mist:{base:'bloodchalice', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  g_net:{base:'laurel', hue:110, over:[['acc_runes',1,0,0]]},
+  g_crowd:{base:'laurel', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  sh_drum:{base:'totem', hue:110, over:[['acc_runes',1,0,0]]},
+  sh_storm:{base:'totem', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  c_rime:{base:'frostshard', hue:110, over:[['acc_runes',1,0,0]]},
+  c_glacier:{base:'frostshard', hue:220, over:[['acc_crown',0.34,33,-6]]},
+  bm_collar:{base:'whistle', hue:110, over:[['acc_runes',1,0,0]]},
+  bm_horn:{base:'whistle', hue:220, over:[['acc_crown',0.34,33,-6]]},
   b_crown:{base:'crown', m:[0.6,0.1,0.3,0.05, 0.1,0.3,0.2,0, 0.5,0.1,0.6,0.05], over:[['acc_horns',0.7,15,-6]]},
   b_engine:{base:'gear', m:[1.2,0,0,0.12, 0,0.3,0,0, 0,0,0.3,0]},
   b_heart:{base:'heart', m:[0.6,0.2,0.2,0.05, 0.2,0.5,0.2,0.05, 0.3,0.2,0.6,0.08], under:['acc_crystals']},
@@ -645,16 +685,22 @@ function recolor(svg, V){
 const OUT = 6.5;
 const SIL = (cls, col, w) => `.${cls} *{fill:${col}!important;stroke:${col}!important;stroke-width:${w}px!important;opacity:1!important;stroke-linejoin:round!important;stroke-linecap:round!important}`;
 const STICKER_CSS = `<style>${SIL('sk','#000',OUT*2+1)}${SIL('se','#d9d1e4',OUT*2+2.6)}${SIL('sw','#ffffff',OUT*2)}</style>`;
+function innerArt(name){
+  const V = VARIANTS[name];
+  if(!V){ const fn = ART[name]; if(!fn) throw new Error('missing art '+name); return fn(); }
+  const baseFn = ART[V.base] ? ART[V.base] : (VARIANTS[V.base] ? ()=>innerArt(V.base) : null);
+  if(!baseFn) throw new Error('missing art '+V.base);
+  let inner = V.bs ? scaled(V.bs[0], V.bs[1], V.bs[2], baseFn) : baseFn();
+  if(V.hue!=null || V.m) inner = recolor(inner, V);
+  const part = q => typeof q==='string' ? ART[q]() : scaled(q[1], q[2], q[3], ART[q[0]]);
+  if(V.under) inner = V.under.map(part).join('') + inner;
+  if(V.over) inner += V.over.map(part).join('');
+  return inner;
+}
 function artSVG(name, sticker=true){
   const k = name+'|'+sticker; if(SVG_CACHE[k]) return SVG_CACHE[k];
-  const V = VARIANTS[name];
-  const fn = ART[V ? V.base : name]; if(!fn) throw new Error('missing art '+name);
   SW = 4;
-  let inner = V && V.bs ? scaled(V.bs[0], V.bs[1], V.bs[2], fn) : fn();
-  if(V && (V.hue!=null || V.m)) inner = recolor(inner, V);
-  const part = q => typeof q==='string' ? ART[q]() : scaled(q[1], q[2], q[3], ART[q[0]]);
-  if(V && V.under) inner = V.under.map(part).join('') + inner;
-  if(V && V.over) inner += V.over.map(part).join('');
+  const inner = innerArt(name);
   const body = sticker
     ? `${STICKER_CSS}<g class="sk" transform="translate(0 5.5)" opacity=".42">${inner}</g><g class="se">${inner}</g><g class="sw">${inner}</g>${inner}`
     : inner;
