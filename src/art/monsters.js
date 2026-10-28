@@ -121,7 +121,6 @@ function warlock() {
     + shape(ellD(50, 42, 17, 18), 'shadow', { depth: 3, rim: 0 })
     + glowEye(43, 42, 4, '#8cff6a') + glowEye(57, 42, 4, '#8cff6a')
     + shape(circleD(84, 70, 10), ['#8cff6a', '#3fa23a', '#e6ffd9'], { depth: 3, rim: 2 })
-    + flat(circleD(84, 70, 16), '#8cff6a').replace('/>', ' opacity=".2"/>')
     + shape(rectD(80, 78, 8, 20, 3), 'wood', { depth: 2, rim: 1 });
 }
 
@@ -132,7 +131,6 @@ function warden() {
     + shape('M24 52C22 28 34 10 50 8C66 10 78 28 76 52C70 60 30 60 24 52Z', ['#3f8a87', '#245654', '#86d0c8'])
     + skull(50, 44, 0.78, '#7effc8')
     + shape(rectD(10, 72, 12, 16, 4), 'gold', { depth: 2, rim: 1 })
-    + flat(circleD(16, 80, 9), '#ffd23f').replace('/>', ' opacity=".25"/>')
     + shape(circleD(16, 80, 4), 'gold', { depth: 1, rim: 1, line: 2.5 });
 }
 
@@ -149,7 +147,6 @@ function imp() {
     + eye(42, 44, 5.5, [0.2, 0.2], '#fff3a0') + eye(58, 44, 5.5, [-0.2, 0.2], '#fff3a0')
     + brow(35, 36, 46, 40) + brow(54, 40, 65, 36)
     + ink('M40 54C46 60 54 60 60 54', 3) + fang(43, 55, 4, 5) + fang(53, 55, 4, 5)
-    + flat(circleD(82, 32, 14), '#ff9d3c').replace('/>', ' opacity=".25"/>')
     + shape('M82 20C86 26 92 30 92 36C92 42 88 46 82 46C76 46 72 42 72 36C72 30 78 28 82 20Z', 'ember', { depth: 2, rim: 1.5 });
 }
 
@@ -250,7 +247,6 @@ function lich() {
   return shape('M12 98C14 70 28 56 50 56C72 56 86 70 88 98Z', robe)
     + shape('M38 58L50 72L62 58Z', 'gold', { depth: 2, rim: 1, line: 3 })
     + shape(rectD(80, 34, 7, 64, 3), 'wood', { depth: 2, rim: 1 })
-    + flat(circleD(84, 30, 15), '#8cff6a').replace('/>', ' opacity=".22"/>')
     + shape(circleD(84, 30, 9), ['#8cff6a', '#3fa23a', '#e6ffd9'], { depth: 3, rim: 2 })
     + skull(46, 42, 0.86, '#8cff6a')
     + crown(30, 4, 32, 'gold');

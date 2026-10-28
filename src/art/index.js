@@ -14,17 +14,16 @@ export function svg(name, { sticker = true } = {}) {
   resetIds();
   const body = fn();
   if (!sticker) return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 100 100">${body}</svg>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 116 116">`
-    + `<defs><filter id="st" x="-10%" y="-10%" width="120%" height="125%" color-interpolation-filters="sRGB">`
-    + `<feComponentTransfer in="SourceAlpha" result="a"><feFuncA type="discrete" tableValues="0 0 0 1"/></feComponentTransfer>`
-    + `<feMorphology in="a" operator="dilate" radius="4" result="o"/>`
-    + `<feFlood flood-color="#fff"/><feComposite in2="o" operator="in" result="w"/>`
-    + `<feOffset in="o" dy="3.5" result="so"/><feGaussianBlur in="so" stdDeviation="1.6" result="sb"/>`
-    + `<feFlood flood-color="${INK}" flood-opacity=".45"/><feComposite in2="sb" operator="in" result="s"/>`
-    + `<feMerge><feMergeNode in="s"/><feMergeNode in="w"/><feMergeNode in="SourceGraphic"/></feMerge>`
-    + `</filter></defs><g filter="url(#st)">${body}</g></svg>`;
+  // The die-cut border and drop shadow are copies of the drawing with every fill and stroke
+  // turned white (or ink) and every stroke thickened. Pure vectors: no filters, so they stay
+  // sharp at any size on every device.
+  const css = `<style>.w *,.d *{stroke-width:${BORDER}px;stroke-linejoin:round;stroke-linecap:round;opacity:1}`
+    + `.w *{fill:#fff;stroke:#fff}.d *{fill:${INK};stroke:${INK}}.w .fx,.d .fx{display:none}</style>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="116" height="116" viewBox="-8 -8 116 116">${css}`
+    + `<g class="d" opacity=".4" transform="translate(0 3.5)">${body}</g><g class="w">${body}</g>${body}</svg>`;
 }
 
+const BORDER = 13;
 const cache = new Map();
 export function artURL(name, opts) {
   const key = name + (opts && opts.sticker === false ? ':flat' : '');

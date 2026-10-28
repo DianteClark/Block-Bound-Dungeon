@@ -32,7 +32,9 @@ function tile(type, px) {
   if (!c) {
     c = document.createElement('canvas');
     c.width = c.height = px;
-    c.getContext('2d').drawImage(tileImg[type], 0, 0, px, px);
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(tileImg[type], 0, 0, px, px);
     tileCache.set(key, c);
   }
   return c;
@@ -174,6 +176,7 @@ function frame(now) {
   const { ctx, dpr, L } = V, run = V.run, c = run.combat;
   if (!c) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, L.W, L.H);
   const cs = L.cell;
 

@@ -42,9 +42,8 @@ const RELIC = {
   r_oath: () => heater('blue', 'gold'),
   r_daggers: () => dagger(-10, 0, -32) + dagger(10, 0, 32),
   r_orb: () => shape('M30 92C30 80 38 74 50 74C62 74 70 80 70 92Z', 'gold', sm)
-    + flat(circleD(50, 44, 40), '#c77dff').replace('/>', ' opacity=".2"/>')
     + shape(circleD(50, 44, 32), 'violet', { depth: 6, rim: 3 })
-    + flat(starD(50, 44, 12, 4, 4), '#fff').replace('/>', ' opacity=".85"/>')
+    + flat(starD(50, 44, 12, 4, 4), '#fff')
     + gloss(36, 30, 6, 11, 35, 0.75),
   r_whetstone: () => shape('M12 64L76 30L90 46L26 82Z', 'stone', { depth: 5, rim: 2 })
     + ink('M30 66L72 44', 2.5)

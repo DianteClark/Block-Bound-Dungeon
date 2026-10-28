@@ -88,7 +88,7 @@ export const flat = (d, fill, line = 0) =>
 
 /** A soft gloss streak for the top-left of round things. */
 export const gloss = (x, y, rx, ry, rot = -35, op = 0.6) =>
-  `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" opacity="${op}" transform="rotate(${rot} ${x} ${y})"/>`;
+  `<ellipse class="fx" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" opacity="${op}" transform="rotate(${rot} ${x} ${y})"/>`;
 
 /** An ink stroke (lines, mouths, cracks). */
 export const ink = (d, w = 3.5) =>
@@ -107,12 +107,12 @@ export function eye(x, y, s = 7, look = [0.15, 0.2], col = '#fff') {
 }
 /** Glowing eye (undead, demons). */
 export function glowEye(x, y, s, col) {
-  return `<circle cx="${x}" cy="${y}" r="${s * 2}" fill="${col}" opacity=".22"/>`
+  return `<circle class="fx" cx="${x}" cy="${y}" r="${s * 2}" fill="${col}" opacity=".22"/>`
     + `<circle cx="${x}" cy="${y}" r="${s}" fill="${col}" stroke="${INK}" stroke-width="${LINE * 0.6}"/>`
     + `<circle cx="${x - s * 0.3}" cy="${y - s * 0.3}" r="${s * 0.35}" fill="#fff"/>`;
 }
 export const brow = (x1, y1, x2, y2, w = 5) => ink(`M${x1} ${y1}L${x2} ${y2}`, w);
-export const cheek = (x, y, r = 5) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#ff7f9a" opacity=".45"/>`;
+export const cheek = (x, y, r = 5) => `<circle class="fx" cx="${x}" cy="${y}" r="${r}" fill="#ff7f9a" opacity=".45"/>`;
 
 /* ---------- composition ---------- */
 export const mirrorX = s => `<g transform="translate(100 0) scale(-1 1)">${s}</g>`;

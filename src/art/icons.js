@@ -26,7 +26,7 @@ const TILES = {
   b_heart: () => tile('green', glyph(G.heart)),
   b_coin: () => tile('gold', glyph(G.coin) + flat(circleD(50, 50, 13), 'none', 3)),
   b_rainbow: () => tile(['#b06cff', '#6c35b8', '#ffd6ff'],
-    flat(circleD(50, 52, 30), '#ff7fb4').replace('/>', ' opacity=".55"/>') + glyph(G.star)),
+    glyph(G.star)),
   b_rubble: () => shape(rectD(4, 4, 92, 92, 20), 'stone', { depth: 9, rim: 4, line: 4 })
     + ink('M22 30L40 44L36 60L52 70M60 22L56 40L72 50L70 72', 3.5) + ink('M30 78L40 74', 3),
 };
@@ -136,8 +136,7 @@ const EVENT = {
 const OPTION = {
   o_blood: () => rotAt(shape('M50 6L58 18V56H42V18Z', 'steel', sm) + shape(rectD(32, 54, 36, 9, 4), 'dark', sm) + shape(rectD(45, 62, 10, 18, 3), 'leather', tiny), -30, 40, 40)
     + shape('M70 54C76 64 84 70 84 80C84 88 78 94 70 94C62 94 56 88 56 80C56 70 64 64 70 54Z', 'red', sm),
-  o_pray: () => flat(circleD(50, 26, 22), '#ffd23f').replace('/>', ' opacity=".25"/>')
-    + shape(rectD(34, 38, 32, 54, 8), 'bone', { depth: 5, rim: 2.5 })
+  o_pray: () => shape(rectD(34, 38, 32, 54, 8), 'bone', { depth: 5, rim: 2.5 })
     + rope('M50 38V30', INK, 2) + shape('M50 6C56 16 60 20 60 26C60 32 56 34 50 34C44 34 40 32 40 26C40 20 44 16 50 6Z', 'gold', tiny),
   o_reach: () => shape('M30 94V56L22 34C20 28 28 24 32 30L38 46V18C38 12 46 12 46 18V44V12C46 6 54 6 54 12V44V16C54 10 62 10 62 16V46V26C62 20 70 20 70 26V64C70 82 62 94 50 94Z', 'skin', { depth: 5, rim: 2.5 }),
   o_leave: () => shape(rectD(20, 6, 52, 88, 8), 'stone', sm)
