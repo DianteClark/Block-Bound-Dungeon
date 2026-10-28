@@ -1,7 +1,7 @@
 /* Offline-first service worker. The app opens instantly from the cache. The browser checks this
  * file on every launch; each release bumps CACHE, which installs a complete fresh copy of every
  * file at once and takes over, so old and new files are never mixed. */
-const CACHE = 'bbd-v36';
+const CACHE = 'bbd-v37';
 const CORE = [
   './', 'index.html', 'styles/main.css', 'manifest.webmanifest', 'src/art/heroes.js', 'src/art/icons.js',
   'src/art/index.js', 'src/art/items.js', 'src/art/kit.js', 'src/art/monsters.js', 'src/audio/audio.js',

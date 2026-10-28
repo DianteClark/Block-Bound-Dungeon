@@ -25,6 +25,7 @@
   --tint: #3b2a57;
   --tint2: #12202b;
   --sat: env(safe-area-inset-top, 0px);
+  --top-gap: 14px; /* keeps the top bar out of the blur iOS draws under the status bar */
   --sab: env(safe-area-inset-bottom, 0px);
   --display: 'Lilita One', 'Arial Rounded MT Bold', system-ui, sans-serif;
   --body: 'Fredoka', ui-rounded, system-ui, -apple-system, sans-serif;
@@ -66,7 +67,7 @@ b { font-weight: 700; }
 
 /* ---------- app frame ---------- */
 #app { position: fixed; inset: 0; display: flex; flex-direction: column; z-index: 1;
-  padding: calc(var(--sat) + var(--push, 0px)) 0 0; max-width: 560px; margin: 0 auto; }
+  padding: calc(var(--sat) + var(--top-gap) + var(--push, 0px)) 0 0; max-width: 560px; margin: 0 auto; }
 #screen { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   padding: 14px 16px calc(24px + var(--sab)); display: flex; flex-direction: column; gap: 12px; }
@@ -203,8 +204,13 @@ b { font-weight: 700; }
 .badge { display: inline-flex; align-items: center; gap: 3px; height: 26px; padding: 0 8px 0 3px; border-radius: 13px; background: #120d19; border: 2px solid var(--edge); font-weight: 700; font-size: 14px; }
 .intent { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 14px; background: linear-gradient(#3a2230, #261622);
   border: 2px solid #6b3346; box-shadow: var(--lift); }
-.intent.soon { border-color: var(--red); animation: warn .9s ease-in-out infinite; }
-@keyframes warn { 50% { box-shadow: 0 4px 0 #0b0812, 0 0 16px rgba(240,85,91,.55); } }
+.intent { position: relative; }
+.intent.soon { border-color: var(--red); }
+/* glows fade a pre-drawn shadow layer (opacity runs on the GPU; animating box-shadow repaints every frame) */
+.intent.soon::after, .special.ready::after { content: ''; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none; opacity: 0; animation: glow .9s ease-in-out infinite alternate; }
+.intent.soon::after { box-shadow: 0 0 16px rgba(240,85,91,.6); }
+.special.ready::after { box-shadow: 0 0 18px rgba(255,201,60,.65); animation-duration: 1.2s; }
+@keyframes glow { to { opacity: 1; } }
 .intent .what { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
 .intent .what b { font-size: 18px; }
 .intent .what small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -223,8 +229,7 @@ b { font-weight: 700; }
 .special { position: relative; display: flex; align-items: center; gap: 6px; height: 46px; padding: 0 12px 0 4px; border-radius: 16px; background: #1c1428; border: 2px solid var(--edge); font-weight: 700; }
 .special .ring { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
 .special .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
-.special.ready { border-color: var(--gold); background: linear-gradient(#5b4419, #2a1d0c); animation: ready 1.2s ease-in-out infinite; }
-@keyframes ready { 50% { box-shadow: 0 0 18px rgba(255,201,60,.6); } }
+.special.ready { border-color: var(--gold); background: linear-gradient(#5b4419, #2a1d0c); }
 .boardwrap { position: relative; flex: 1; min-height: 0; }
 #board { position: absolute; left: 0; top: 0; touch-action: none; }
 .preview { position: absolute; left: 50%; transform: translateX(-50%); z-index: 3; pointer-events: none; display: flex; gap: 8px; align-items: center;

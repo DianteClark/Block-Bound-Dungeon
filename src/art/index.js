@@ -19,8 +19,12 @@ export function svg(name, { sticker = true } = {}) {
   // sharp at any size on every device.
   const css = `<style>.w *,.d *{stroke-width:${BORDER}px;stroke-linejoin:round;stroke-linecap:round;opacity:1}`
     + `.w *{fill:#fff;stroke:#fff}.d *{fill:${INK};stroke:${INK}}.w .fx,.d .fx{display:none}</style>`;
+  // The border and shadow only need each shape's outline, so the shading layers (clip paths and
+  // the groups they clip) are dropped from those two copies: a third of the work to draw.
+  const sil = body.replace(/<clipPath id="\w+"><path[^>]*\/><\/clipPath>/g, '')
+    .replace(/<g clip-path="url\(#\w+\)">(?:(?!<\/g><\/g>).)*<\/g><\/g>/g, '');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="116" height="116" viewBox="-8 -8 116 116">${css}`
-    + `<g class="d" opacity=".4" transform="translate(0 3.5)">${body}</g><g class="w">${body}</g>${body}</svg>`;
+    + `<g class="d" opacity=".4" transform="translate(0 3.5)">${sil}</g><g class="w">${sil}</g>${body}</svg>`;
 }
 
 const BORDER = 13;
