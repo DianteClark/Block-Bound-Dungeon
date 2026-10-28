@@ -115,6 +115,16 @@ test('every piece of content has art', () => {
   assert.deepEqual(dup, [], 'each item has its own art');
 });
 
+test('every module is preloaded and cached offline', async () => {
+  const fs = await import('node:fs');
+  const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(f => f.isDirectory() ? walk(`${d}/${f.name}`) : [`${d}/${f.name}`]);
+  const html = fs.readFileSync('index.html', 'utf8'), sw = fs.readFileSync('sw.js', 'utf8');
+  for (const f of walk('src')) {
+    assert.ok(html.includes(`href="${f}"`), `${f} missing from modulepreload`);
+    assert.ok(sw.includes(`'${f}'`), `${f} missing from the service worker`);
+  }
+});
+
 test('no unused art', async () => {
   const fs = await import('node:fs');
   const src = ['src/ui/combat.js', 'src/ui/screens.js', 'src/ui/sheets.js', 'src/ui/dom.js', ...fs.readdirSync('src/data').map(f => 'src/data/' + f)]

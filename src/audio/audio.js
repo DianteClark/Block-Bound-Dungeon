@@ -18,6 +18,8 @@ function init() {
   if (ctx) return true;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return false;
+  // 'ambient': mix with whatever the player is listening to and stay quiet on silent mode.
+  if (navigator.audioSession) { try { navigator.audioSession.type = 'ambient'; } catch (e) { /* older Safari */ } }
   ctx = new AC();
   master = ctx.createGain(); master.gain.value = 0.9;
   const comp = ctx.createDynamicsCompressor();
@@ -211,7 +213,8 @@ export const Sound = {
 
 /* iOS suspends audio when the app is backgrounded; wake it when we come back. */
 function wake() {
-  if (!ctx || document.hidden) return;
+  if (!ctx) return;
+  if (document.hidden) { if (ctx.state === 'running') ctx.suspend().catch(() => {}); return; }
   if (ctx.state !== 'running') ctx.resume().then(() => { Music.next = ctx.currentTime + 0.05; }).catch(() => {});
 }
 document.addEventListener('visibilitychange', wake);

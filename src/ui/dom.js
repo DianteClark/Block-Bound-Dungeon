@@ -6,6 +6,11 @@ export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 export const wait = ms => new Promise(r => setTimeout(r, ms));
 
+/** Set innerHTML only when it changed, so images aren't re-decoded and layout isn't redone. */
+export function setHTML(el, html) {
+  if (el && el._html !== html) { el.innerHTML = html; el._html = html; }
+}
+
 /** Replace the current screen. Returns the screen root. */
 export function mount(html, cls = '') {
   const s = $('#screen');

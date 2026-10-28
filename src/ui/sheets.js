@@ -1,6 +1,6 @@
 /* The run bar and every bottom sheet: relics, potions, bag, enemy info, settings, how to play. */
 import { img } from '../art/index.js';
-import { $, esc, on, openSheet, closeSheet, toast } from './dom.js';
+import { $, esc, on, openSheet, closeSheet, toast, setHTML } from './dom.js';
 import { app, go, save, applySettings, sfx, recordRun } from './app.js';
 import { store } from '../core/store.js';
 import { HEROES } from '../data/heroes.js';
@@ -13,9 +13,9 @@ import { blockValue, specialNeed } from '../engine/stats.js';
 import { usePotion } from '../engine/combat.js';
 
 export const RARITY = ['Starter', 'Common', 'Uncommon', 'Rare'];
-let potionHook = null;
+let potionHook = null; // { play(events), busy() } while a fight is on screen
 /** Combat registers how to play out a potion's events. */
-export const setPotionHook = fn => { potionHook = fn; };
+export const setPotionHook = hook => { potionHook = hook; };
 
 /* ---------- run bar ---------- */
 export function renderRunbar() {
@@ -25,7 +25,7 @@ export function renderRunbar() {
   document.body.dataset.floor = run.floor;
   const pct = Math.max(0, run.hp / run.maxHp);
   const relics = run.relics.slice(-2).reverse();
-  bar.innerHTML = `
+  const html = `
     <button class="rb-hero" data-act="bag" aria-label="Your bag and stats">${img(HEROES[run.hero].art, 50)}
       <span class="rb-lv pill" style="height:20px;padding:0 6px;font-size:12px">F${run.floor}</span></button>
     <div class="rb-stats">
@@ -40,6 +40,7 @@ export function renderRunbar() {
       </div>
     </div>
     <button class="iconbtn" data-act="settings" aria-label="Settings">${img('ui_gear', 34)}</button>`;
+  setHTML(bar, html);
   document.body.classList.toggle('danger', app.screen === 'combat' && run.hp <= run.maxHp * 0.3);
 }
 
@@ -88,12 +89,13 @@ export function potionSheet(slot) {
   bindClose();
   const use = $('#sheet [data-use]');
   if (use) use.onclick = () => {
+    if (inFight && potionHook && potionHook.busy()) { sfx('invalid'); return; }
     closeSheet();
     const ev = usePotion(run, slot);
     if (!ev) return;
     sfx('potion');
     save();
-    if (inFight && potionHook) potionHook(ev);
+    if (inFight && potionHook) potionHook.play(ev);
     else { renderRunbar(); toast(`<b>${esc(P.name)}</b> ${esc(P.desc)}`, P.art); }
   };
 }
@@ -137,7 +139,7 @@ export function settingsSheet() {
   const panel = openSheet(`<h2 class="display">Settings</h2>
     <div class="setting"><span>Music</span><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-vol="music" aria-label="Music volume"></div>
     <div class="setting"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" value="${s.sfx}" data-vol="sfx" aria-label="Sound effects volume"></div>
-    ${tog('vibrate', 'Vibration')}${tog('shake', 'Screen shake')}${tog('motion', 'Reduce motion')}${tog('fast', 'Fast animations')}
+    ${'vibrate' in navigator ? tog('vibrate', 'Vibration') : ''}${tog('shake', 'Screen shake')}${tog('motion', 'Reduce motion')}${tog('fast', 'Fast animations')}
     <button class="btn ghost block small" data-act="howto">How to play</button>
     ${inRun ? '<button class="btn red block small" data-act="abandon">Abandon run</button>' : ''}
     <button class="btn ghost block small" data-act="reset">Erase all data</button>

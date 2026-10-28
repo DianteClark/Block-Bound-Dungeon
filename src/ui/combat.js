@@ -1,6 +1,6 @@
 /* The fight screen: enemy stage, canvas board and tray, input, and event playback. */
 import { img, loadImage } from '../art/index.js';
-import { $, esc, on, mount, toast, floatText, banner, flash, bump, wait } from './dom.js';
+import { $, esc, on, mount, toast, floatText, banner, flash, bump, wait, setHTML } from './dom.js';
 import { app, register, go, save, sfx, buzz, T } from './app.js';
 import { renderRunbar, setBars, enemySheet, setPotionHook } from './sheets.js';
 import { endRun, music } from './screens.js';
@@ -25,25 +25,26 @@ const tileImg = {};
 export async function preloadTiles() {
   await Promise.all(Object.keys(BLOCKS).map(async t => { tileImg[t] = await loadImage(BLOCKS[t].art, { sticker: false }); }));
 }
+/* One raster per block type at 1.2x the board cell (room for the pop animation). Rebuilt only
+ * when the cell size changes, so memory stays flat however long a run lasts. */
 const tileCache = new Map();
-function tile(type, px) {
-  px = Math.max(4, Math.round(px));
-  const key = type + px;
-  let c = tileCache.get(key);
+let tilePx = 0;
+function tile(type) {
+  let c = tileCache.get(type);
   if (!c) {
     c = document.createElement('canvas');
-    c.width = c.height = px;
+    c.width = c.height = tilePx;
     const g = c.getContext('2d');
     g.imageSmoothingQuality = 'high';
-    g.drawImage(tileImg[type], 0, 0, px, px);
-    tileCache.set(key, c);
+    g.drawImage(tileImg[type], 0, 0, tilePx, tilePx);
+    tileCache.set(type, c);
   }
   return c;
 }
 
 /* ---------- view state ---------- */
 const V = {
-  run: null, cv: null, ctx: null, dpr: 1, L: null, board: null,
+  run: null, cv: null, ctx: null, dpr: 1, L: null, bg: null, board: null,
   push: 0, press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0,
 };
 
@@ -84,7 +85,7 @@ function open() {
   V.drag = V.press = null; V.busy = false; V.parts = []; V.pops.clear(); V.fading.clear(); V.drops.clear();
   layout();
   hud();
-  setPotionHook(ev => play(ev));
+  setPotionHook({ play: ev => play(ev), busy: () => V.busy });
   bindInput();
   on(root, '#foe, #intent', () => { sfx('tap'); enemySheet(run); });
   on(root, '#shield', () => toast('<b>Shield</b> blocks enemy damage. Half of any leftover shield fades each time the enemy acts.', 'ui_shield', 3200));
@@ -111,8 +112,8 @@ function hud(s) {
   bar.querySelector('.fill').style.transform = `scaleX(${pct})`;
   bar.querySelector('.trail').style.transform = `scaleX(${pct})`;
   bar.querySelector('span').textContent = `${Math.max(0, s.ehp)} / ${e.maxHp}`;
-  $('#badges').innerHTML = (s.earmor ? `<span class="badge num">${img('i_armor', 22)}${s.earmor}</span>` : '')
-    + (s.rage ? `<span class="badge num" style="color:#ff9aa6">${img('i_rage', 22)}+${s.rage}</span>` : '');
+  setHTML($('#badges'), (s.earmor ? `<span class="badge num">${img('i_armor', 22)}${s.earmor}</span>` : '')
+    + (s.rage ? `<span class="badge num" style="color:#ff9aa6">${img('i_rage', 22)}+${s.rage}</span>` : ''));
   intentHUD(s.rage, s.shield);
   const sh = $('#shield');
   sh.querySelector('span').textContent = s.shield;
@@ -151,11 +152,11 @@ function intentHUD(rage, shield) {
   const takeHTML = take == null ? '' : take > 0 ? `<span class="take num">You take ${take}</span>` : '<span class="take ok">Fully blocked</span>';
   const box = $('#intent');
   box.classList.toggle('soon', it.left <= 1 && ATTACKS.has(it.k));
-  box.innerHTML = `${img('i_' + it.k, 38)}<div class="what"><b class="num">${val || name}</b><small>${val ? name + ', ' : ''}${it.left <= 1 ? 'next move' : `in ${it.left} moves`}</small>${takeHTML}</div>
-    <div class="pips">${Array.from({ length: Math.min(6, Math.max(it.left, it.t)) }, (_, k) => `<i class="${k < it.left ? 'on' : ''}"></i>`).join('')}</div>`;
+  setHTML(box, `${img('i_' + it.k, 38)}<div class="what"><b class="num">${val || name}</b><small>${val ? name + ', ' : ''}${it.left <= 1 ? 'next move' : `in ${it.left} moves`}</small>${takeHTML}</div>
+    <div class="pips">${Array.from({ length: Math.min(6, Math.max(it.left, it.t)) }, (_, k) => `<i class="${k < it.left ? 'on' : ''}"></i>`).join('')}</div>`);
   box.setAttribute('aria-label', `${MOVES[it.k].name}: ${MOVES[it.k].desc(it, d)} In ${it.left} moves.`);
   const nx = peekNext(run), [nv, nn] = intentText(nx, rage);
-  $('#next').innerHTML = `Then: ${img('i_' + nx.k, 18)} ${nn}${nv ? ' ' + nv : ''}`;
+  setHTML($('#next'), `Then: ${img('i_' + nx.k, 18)} ${nn}${nv ? ' ' + nv : ''}`);
 }
 
 /* ---------- layout ---------- */
@@ -178,6 +179,9 @@ function layout() {
   const S = cell * N, bx = Math.round((W - S) / 2), by = 6;
   const ty = by + S + 14, slotW = S / SLOTS, slotH = Math.min(cell * 3, H - ty - 4);
   V.L = { W, H, cell, S, bx, by, ty, slotW, slotH };
+  const px = Math.round(cell * dpr * 1.2);
+  if (px !== tilePx) { tilePx = px; tileCache.clear(); }
+  V.bg = boardBackground(V.L, dpr);
   V.cv.width = W * dpr; V.cv.height = H * dpr;
   V.cv.style.width = W + 'px'; V.cv.style.height = H + 'px';
   $('#preview').style.top = Math.max(0, by - 2) + 'px';
@@ -194,6 +198,24 @@ function rr(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 
+/** The empty board (well and cell slots) never changes during a fight: draw it once. */
+function boardBackground(L, dpr) {
+  const c = document.createElement('canvas'), pad = 9;
+  c.width = Math.ceil((L.S + pad * 2) * dpr); c.height = c.width;
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr); g.translate(pad - L.bx, pad - L.by);
+  rr(g, L.bx - 7, L.by - 7, L.S + 14, L.S + 14, 16);
+  g.fillStyle = '#0f0b15'; g.fill();
+  g.lineWidth = 3; g.strokeStyle = '#21172b'; g.stroke();
+  for (let i = 0; i < N * N; i++) {
+    const x = L.bx + (i % N) * L.cell, y = L.by + Math.floor(i / N) * L.cell;
+    rr(g, x + 2, y + 2, L.cell - 4, L.cell - 4, L.cell * 0.18);
+    g.fillStyle = (i % N + Math.floor(i / N)) % 2 ? '#211a2c' : '#1d1727'; g.fill();
+  }
+  c.pad = pad;
+  return c;
+}
+
 /** Ask for one redraw. The board only keeps animating while something is actually moving. */
 function invalidate() { if (!V.raf) V.raf = requestAnimationFrame(frame); }
 document.fonts && document.fonts.ready.then(invalidate);
@@ -208,10 +230,9 @@ function frame(now) {
   ctx.clearRect(0, 0, L.W, L.H);
   const cs = L.cell;
 
-  // board well
-  rr(ctx, L.bx - 7, L.by - 7, L.S + 14, L.S + 14, 16);
-  ctx.fillStyle = '#0f0b15'; ctx.fill();
-  ctx.lineWidth = 3; ctx.strokeStyle = '#21172b'; ctx.stroke();
+  // board well and empty slots (pre-rendered)
+  const bg = V.bg, side = bg.width / dpr;
+  ctx.drawImage(bg, L.bx - bg.pad, L.by - bg.pad, side, side);
 
   // preview data
   const d = V.drag, prev = d && d.valid ? d.plan : null;
@@ -221,8 +242,6 @@ function frame(now) {
   for (let i = 0; i < N * N; i++) {
     const x = L.bx + (i % N) * cs, y = L.by + Math.floor(i / N) * cs;
     const t = V.board[i];
-    rr(ctx, x + 2, y + 2, cs - 4, cs - 4, cs * 0.18);
-    ctx.fillStyle = (i % N + Math.floor(i / N)) % 2 ? '#211a2c' : '#1d1727'; ctx.fill();
     const fade = V.fading.get(i);
     if (fade) {
       const k = Math.min(1, (now - fade.t0) / fade.dur);
@@ -277,7 +296,7 @@ function frame(now) {
     if (!p || (d && d.i === s)) continue;
     const tc = trayCell(p);
     const px = R.x + (R.w - p.w * tc) / 2, py = R.y + (R.h - p.h * tc) / 2;
-    const ok = fitsAnyRotation(c.board, p);
+    const ok = fitsCached(c, p);
     ctx.globalAlpha = ok ? 1 : 0.35;
     const press = V.press && V.press.i === s ? 0.94 : 1;
     for (const [r, col] of p.cells) drawTile(p.type, px + col * tc, py + r * tc, tc, press);
@@ -287,9 +306,9 @@ function frame(now) {
   // the piece under the finger
   if (d) {
     const p = d.piece;
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 8;
+    ctx.fillStyle = 'rgba(8,5,12,.4)';
+    for (const [r, col] of p.cells) { rr(ctx, d.px + col * cs + 3, d.py + r * cs + 9, cs - 4, cs - 4, cs * 0.2); ctx.fill(); }
     for (const [r, col] of p.cells) drawTile(p.type, d.px + col * cs, d.py + r * cs, cs, 1.04);
-    ctx.restore();
   }
 
   // particles
@@ -305,9 +324,20 @@ function frame(now) {
   if (V.pops.size || V.fading.size || V.drops.size || V.parts.length || V.drag) invalidate();
 }
 
+/** fitsAnyRotation, remembered until the board or the piece changes. */
+const fitMemo = new Map();
+let fitBoard = '';
+function fitsCached(c, p) {
+  const b = c.board.map(t => (t ? 1 : 0)).join('');
+  if (b !== fitBoard) { fitBoard = b; fitMemo.clear(); }
+  const key = p.cells.join(';');
+  if (!fitMemo.has(key)) fitMemo.set(key, fitsAnyRotation(c.board, p));
+  return fitMemo.get(key);
+}
+
 function drawTile(type, x, y, size, scale = 1) {
   const s = size * scale, o = (size - s) / 2;
-  V.ctx.drawImage(tile(type, s * V.dpr), x + o, y + o, s, s);
+  V.ctx.drawImage(tile(type), x + o, y + o, s, s);
 }
 
 function burst(i, type, n = 6) {
