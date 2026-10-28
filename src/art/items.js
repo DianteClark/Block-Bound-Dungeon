@@ -1,7 +1,5 @@
 /* Relics and potions. */
-import {
-  shape, flat, gloss, ink, rope, eye, circleD, ellD, rectD, starD, polyD, mirrorX, rotAt, scaleAt, PAL, INK,
-} from './kit.js';
+import { shape, flat, gloss, ink, rope, circleD, ellD, rectD, starD, rotAt, PAL } from './kit.js';
 
 const sm = { depth: 2.5, rim: 1.5 };
 const tiny = { depth: 1.5, rim: 1, line: 3 };

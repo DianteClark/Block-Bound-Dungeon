@@ -1,8 +1,5 @@
 /* Monsters, elites and bosses. Same kit, same light, same eyes. */
-import {
-  shape, flat, gloss, ink, rope, eye, glowEye, brow, cheek, circleD, ellD, rectD, starD, polyD,
-  mirrorX, both, scaleAt, PAL, INK,
-} from './kit.js';
+import { shape, flat, gloss, ink, rope, eye, glowEye, brow, cheek, circleD, ellD, rectD, starD, mirrorX, scaleAt, PAL, INK } from './kit.js';
 
 const fang = (x, y, w = 5, h = 7) => shape(`M${x} ${y}L${x + w} ${y}L${x + w / 2} ${y + h}Z`, 'bone', { depth: 1, rim: 0, line: 2.5 });
 const horn = (d, ramp = 'bone') => shape(d, ramp, { depth: 3, rim: 1.5 });

@@ -1,13 +1,13 @@
 {
   "name": "Block Bound Dungeon",
   "short_name": "Block Dungeon",
-  "description": "A block-blasting roguelike dungeon crawl.",
+  "description": "A block-puzzle roguelike: clear lines to fight your way down five dungeon floors.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#110c16",
-  "theme_color": "#110c16",
+  "background_color": "#140f1c",
+  "theme_color": "#140f1c",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },

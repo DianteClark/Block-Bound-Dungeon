@@ -1,89 +1,56 @@
 # Block Bound Dungeon
 
-A block-blasting roguelike dungeon crawler for the browser. No build step, no dependencies, no image or audio files: the vector sticker art, sound effects and music are all generated in code.
+A block-puzzle roguelike. Drag pieces onto an 8x8 grid, clear full rows and columns, and every block in a cleared line fires at the monster in front of you. Fight down five dungeon floors to the Demon Lord.
 
-**Play:** https://dianteclark.github.io/Block-Bound-Dungeon/
+Play it at **https://dianteclark.github.io/Block-Bound-Dungeon/**. On iPhone, tap Share, then Add to Home Screen, to play it as a full-screen app that works offline.
 
-**Install it like an app:** open the link on your phone, then use Share → *Add to Home Screen* (iPhone) or the browser menu → *Install app* (Android). It gets its own icon, runs full screen and works offline after the first visit.
+This is the rebuilt core of the game: three heroes and five floors, tuned with a balance lab before anything else gets added back. The previous, larger version is kept on the `classic` branch.
 
 ## How it plays
 
-- **Grid combat.** Drag pieces onto an 8x8 grid and **tap a piece to rotate it**. Fill a full row or column to clear it.
-- **Blocks are actions.** Every block in a cleared line fires its effect:
-  - **Sword** (red): damages the enemy
-  - **Shield** (blue): blocks incoming damage
-  - **Heart** (green): heals you
-  - **Coin** (gold): earns gold
-  - **Rainbow** and **Venom** blocks unlock through relics
-- **Combos.** Clearing several lines at once multiplies everything (x1.5, x2, x3...). Clearing on back-to-back moves adds a streak bonus.
-- **Pure lines.** A line made entirely of one block type adds +0.5 to the multiplier. Rotation makes these much easier to build.
-- **Perfect clears.** Empty the whole grid for a big bonus hit.
-- **Hero specials.** Clearing lines charges your hero's special move, from the Knight's *Bulwark* and the Mage's *Meteor* to the Tinkerer's *Turret*, the Samurai's *Iaido* and the Beastmaster's *Stampede*.
-- **Two-foe fights.** From floor 2, some fights pit you against two monsters at once: cleared **rows** hit the left foe and cleared **columns** hit the right one.
-- **Grid hazards.** Enemies plant **bombs** (clear them before the countdown runs out), **chain** your blocks so they can't complete lines, and **weak spots** glow on the grid for bonus damage when you clear through them.
-- **Turns.** Every piece you place is one turn. Enemies telegraph their next move with a countdown: attacks, multi-hits, life drain, armor, healing, rage, rubble, ice, petrify (turns your blocks to stone), sap (drains your special), shuffle (rerolls your hand), steal (takes your gold), bombs and chains. Bosses enter a tougher **Phase 2** at half HP.
-- **Damage preview.** While you drag a piece over the grid, a pill shows exactly what the clear will do: multiplier, damage, shield, healing, gold and poison.
-- **Enemy intents** show what the enemy does next, how many moves away it is, and the move after that.
-- **Stash.** Drag a piece into the Stash beside your tray to save it for later; stashing doesn't cost a turn (once per move).
-- **Cave-ins.** If no piece fits in any rotation, the ceiling collapses: you take damage and the two fullest rows are cleared.
+- **Pieces and lines.** You hold three pieces. Drag one onto the grid, or tap it to rotate. Fill a whole row or column to clear it.
+- **Blocks fire.** Swords deal damage, shields block, hearts heal and coins pay gold. Clearing several lines at once multiplies everything, and clearing on back-to-back moves builds a combo. Lines made of a single block type are worth extra.
+- **Enemies act on a countdown.** Every piece you place is one move. The intent box shows the enemy's next move and how many moves until it lands, plus the move after that.
+- **Shield** soaks enemy damage. Half of any leftover shield fades each time the enemy acts.
+- **Stash** one piece for later by dragging it into the Stash slot (free, once per move).
+- **Cave-ins.** If nothing in your hand fits, the ceiling collapses: you take damage and the two fullest rows are cleared.
+- **Specials.** Cleared lines charge your hero's special. Tap it when it glows.
+
+## Heroes
+
+| Hero | HP | Starter relic | Special |
+|---|---|---|---|
+| Knight | 68 | Oath Shield: start each fight with 6 shield | Bulwark: big shield and clears all rubble |
+| Rogue | 64 | Twin Daggers: combos build twice as fast, coins +1 | Shadowstep: fresh hand, enemy delayed, next clear doubled |
+| Mage | 58 | Seer's Orb: multi-line clears get +1 to the multiplier; Rainbow blocks in the bag | Meteor: fires the fullest row and column at x2.5 |
 
 ## The run
 
-- **20 heroes.** Knight, Rogue and Mage from the start; unlock the Berserker, Necromancer, Alchemist, Paladin, Ranger, Bard, Monk, Druid, Samurai, Pirate, Witch, Tinkerer, Vampire, Gladiator, Shaman, Cryomancer and Beastmaster through play or with Soul Shards. Each has a starter relic, a block bag and a special of their own.
-- **Block bag.** Your pieces are drawn from a bag of blocks you curate during the run: hire blocks at the merchant, refine them at the forge or campfire, and pick up new block types from relics.
-- **Relic slots and tiers.** Equip 6 relics at the start (your hero's starter relic is free), gaining slots after the floor 2 and 4 bosses and more in the Endless Depths (up to 16). Extra relics go to a satchel you can swap from at campfires. Every relic grows from Tier I to III as you win fights with it, or can be tempered at the Forge.
-- **165 relics**, including 23 boss relics with real trade-offs and 40 hero relics.
-- **Block types.** Sword, Shield, Heart and Coin are joined by Rainbow, Venom, Blast and 8 discoverable types (Lightning, Mirror, Gem, Frost, Thorn, Echo, Anchor, Crystal). Every hero also has a signature block unlocked at Mastery 3.
-- **Empowered blocks.** Upgrade a block type to its + version at the Forge, the Enchanter's Altar or as a rare reward: Sword+ pierces armor, Shield+ carries shield into the next fight, Heart+ overheals into shield, and more.
-- **Boss relics.** After every boss, choose one cursed treasure: big power with a real downside (Glass Blade, Black Lotus, Pandora's Box, Titan's Heart...).
-- **Hero relics.** Every hero has two relics of their own, unlocked at Mastery 2 and 4, that only appear in that hero's runs.
-- **Levels and perks.** Win fights to earn XP. Each level up lets you pick 1 of 3 perks (24 in all) for the rest of the run. Tap your hero icon to see them.
-- **Hero Mastery.** Every hero levels up as you play them, unlocking perks up to Mastery 5.
-- **Pets.** Nine companions, each with a role: Hunter, Janitor, Guardian, Mystic, Scavenger, Trapper, Demolisher, Seer and Bulwark. Each has a passive bonus and an ability that charges every move: tap it when it's ready. Pets earn XP, **evolve twice** with new art and learn a trick at each stage. In the Endless Depths you can bring a second pet.
-- **Potions and throwables.** 16 potions and 5 throwables (Grenade, Throwing Net, Hammer, Poison Darts, Caltrops); tap a potion twice to use it. Brew two potions into a Greater one at any campfire.
-- **5 floors with a branching map.** Choose your route down through fights, elites, campfires, merchants, treasure, mystery events, Beast Dens and Forges to the boss at the bottom of each floor.
-- **30 unique bosses.** Each floor's guardian is picked from six, and every one has its own art and signature mechanic: the Bone King raises minions, the Slime Queen splits, the Pharaoh pours sand that falls down your grid, the Obsidian Golem turns immune to rows or columns, the Firebird is reborn, the Glacier Queen pushes ice up from below, the Demon Lord flips your grid, the Doom Watcher marks a line you must clear in time, and many more. The map shows which boss awaits.
-- **Guarded bosses and Legendary bosses.** Many bosses open the fight behind guards and can't be hurt until the guards fall, and call fresh guards at each new phase. On floor 5 at Heat 4 or higher, and in the Endless Depths, bosses are Legendary: three phases, a big heal at the third, and a new move learned from another boss.
-- **Evolutions.** Rarely, a monster or boss evolves mid-battle into an Ascended form: tougher, but it drops better rewards.
-- **Depth curses.** Every Endless floor adds a stacking curse (Iron Hide, Undying, Brutal, Bombers, Miasma and more), and elites gain extra traits the deeper you go.
-- **Elite modifiers.** Elites roll a random trait: Shielded, Vampiric, Splitting, Hasty, Giant, Explosive or Crumbling.
-- **A secret final boss.** Beat floor 5 at Heat 3+, holding a complete relic set, or without drinking a single potion, and a sealed gate opens to the Dungeon Heart. Defeat it for the true ending.
-- **Daily Challenge.** One shared dungeon per day with a fixed hero, map and mutators. Score points, beat your best, and earn bonus Soul Shards on your first finish.
-- **Weekly Challenge.** A tougher shared dungeon every week with special rules such as Straight Lines, No Hearts or Pack Hunters.
-- **Mutators.** Optional run twists such as Glass Cannon, Hasty Foes or Teetotaler; harder mutators earn more Soul Shards.
-- **Relic Sets.** Relics belong to six families (Gold, Blood, Arcane, Iron, Blast and Wild). Hold three from one family to unlock its set bonus.
-- **Bazaar.** Spend Soul Shards on cosmetics: block skins, clear bursts, projectile trails and board themes. Some items can only be earned by unlocking trophies.
-- **Run card.** Share a picture of your run from the end screen: hero, stats, bosses defeated and relics.
-- **Endless Depths.** After beating the Demon Lord, keep descending through ever-harder floors.
-- **Treasure Goblins** sometimes appear in place of a fight. Catch them before they run off with their loot.
-- **Heat levels.** Winning unlocks Heat 1 to 5, each adding a new challenge.
-- **Enemy passives:** Armored, Regenerates, Ethereal, Thorns and Enrages.
-- **Skill Tree.** Every run earns Soul Shards. Spend them on 10 permanent upgrades such as Vitality, Quick Hands, Focus and Treasure Sense.
-- **21 mystery events** (including a Fortune Teller who can change your floor boss), merchants with mystery boxes and pets for sale, and campfires where you can rest, train, upgrade or meditate to charge your special.
-- **Codex** of every monster, boss, relic, perk and pet you've discovered, and **50 trophies** to unlock.
-- **First-fight tips** walk new players through the basics (replay them from Settings).
-- **Daily Quests.** Three new quests every day, each worth Soul Shards, plus a bonus for finishing all three.
-- **Journal** of your recent runs and lifetime records.
-- **Auto-save.** Your run is saved constantly, even mid-fight, so you can close the app any time and continue exactly where you left off.
-- **Settings** (gear icon): music, sound effect and ambience volume; screen shake, flashes, reduce motion, high-contrast blocks and damage numbers; game speed, left-handed layout, vibration and tips; **backup and restore codes** to move your progress between devices; abandon run and reset all data.
-- **Sound.** Every action has its own synthesized sound, music shifts between menu, map, shop, campfire, combat, boss and Endless moods with crossfades, and a dungeon ambience layer adds wind, dripping water and campfire crackle.
-- **Game feel.** Every floor has its own music, bosses squash and flinch under big hits, killing blows play out in slow motion, and combo streaks get a growing announcer.
-- **Effects.** Cleared blocks launch projectiles at their targets, cleared lines flash with light beams, placed blocks pop in, and your hero marks your spot on the map. Tap an enemy to see its full move pattern.
+- **5 floors**, each a branching map of fights, elites, mystery events, merchants, treasure and campfires, ending in a boss: the Rat King, the Grave Warden, the Ancient Dragon, the Frost Queen and the Demon Lord. Every boss has its own signature move and enrages at half health.
+- **20 monsters and elites**, each with a readable move cycle (tap an enemy to see it).
+- **19 relics** plus three starter relics, **5 potions**, **6 mystery events**.
+- **Upgrades.** Fights, campfires and the smith upgrade a block type so each of those blocks fires for more (up to +3).
+- **Merchant** sells relics and potions, and can remove a block from your bag.
+- **Auto-save.** The run saves after every move; close the app any time and continue where you left off.
+- **Settings:** music and sound volume, vibration, screen shake, reduce motion, fast animations.
 
-## Files
+## Code
 
-| File | What's in it |
-| --- | --- |
-| `index.html` | Layout, styles, dungeon atmosphere |
-| `art.js` | Every illustration as hand-built SVG, the sticker filter and the block glyphs |
-| `audio.js` | Synthesized sound effects and procedural music (menu, map, combat, boss) |
-| `game.js` | Game data and all game logic |
-| `manifest.webmanifest`, `sw.js`, `icons/` | Home Screen app install, offline support and app icons |
+Plain ES modules, no build step. The game logic never touches the page, so it runs the same in the browser and in Node.
 
-### Adding art
+```
+index.html, styles/main.css   page shell and design system
+src/data/     heroes, enemies, relics, potions, events, block types, shapes, tuning numbers (rules.js)
+src/engine/   combat rules and run flow (pure logic; every action returns a list of events)
+src/art/      all art, drawn as SVG in code from one sticker kit (kit.js)
+src/audio/    synthesized sound effects and procedural music
+src/ui/       screens, the combat canvas and input, sheets
+tools/        balance lab, test bot, engine tests, art preview sheet
+```
 
-Each illustration in `art.js` is a small function that returns SVG on a 100x100 canvas, built from helpers like `p()` (outlined path), `c()` (outlined circle), `eye()`, `glow()` and `hl()` (highlight). `img(name, size)` turns any of them into a die-cut sticker with a white border and drop shadow.
+```
+npm test        # engine checks (reproducibility, save/resume, previews, art coverage)
+npm run lab     # balance lab: simulated runs per hero, win rates, killers, relic impact
+```
 
-### Tuning knobs
-
-`MULT` (combo multipliers), `ENEMIES` (per-floor HP and move patterns), the HP and damage scaling in `startCombat` and `intentDamage`, `CLASSES` (HP, gold, relic, potions, special move cost), and the weights in `rollType` and `shapeWeight`.
+To work on it locally, serve the folder (for example `python3 -m http.server`) and open `http://localhost:8000`. Open `tools/artsheet.html` to preview every sprite.

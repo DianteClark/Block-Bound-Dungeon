@@ -48,4 +48,3 @@ export function loadImage(name, opts) {
   });
 }
 
-export const hasArt = name => !!ART[name];

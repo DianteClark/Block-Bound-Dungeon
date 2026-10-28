@@ -47,7 +47,6 @@ export function rectD(x, y, w, h, r = 0) {
   r = Math.min(r, w / 2, h / 2);
   return `M${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h - r}Q${x + w} ${y + h} ${x + w - r} ${y + h}H${x + r}Q${x} ${y + h} ${x} ${y + h - r}V${y + r}Q${x} ${y} ${x + r} ${y}Z`;
 }
-export function polyD(pts) { return 'M' + pts.map(p => p.join(' ')).join('L') + 'Z'; }
 export function starD(cx, cy, R, r2, n = 5, rot = -90) {
   let d = '';
   for (let i = 0; i < n * 2; i++) {
@@ -116,10 +115,7 @@ export const brow = (x1, y1, x2, y2, w = 5) => ink(`M${x1} ${y1}L${x2} ${y2}`, w
 export const cheek = (x, y, r = 5) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#ff7f9a" opacity=".45"/>`;
 
 /* ---------- composition ---------- */
-export const group = (s, t) => `<g transform="${t}">${s}</g>`;
 export const mirrorX = s => `<g transform="translate(100 0) scale(-1 1)">${s}</g>`;
 export const both = s => s + mirrorX(s);
 export const scaleAt = (s, k, x, y) => `<g transform="translate(${x} ${y}) scale(${k})">${s}</g>`;
 export const rotAt = (s, deg, x = 50, y = 50) => `<g transform="rotate(${deg} ${x} ${y})">${s}</g>`;
-/** Ground shadow under standing figures. */
-export const ground = (cx = 50, cy = 94, rx = 30) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${rx * 0.16}" fill="${INK}" opacity=".18"/>`;

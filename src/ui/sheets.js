@@ -24,7 +24,7 @@ export function renderRunbar() {
   bar.hidden = false;
   document.body.dataset.floor = run.floor;
   const pct = Math.max(0, run.hp / run.maxHp);
-  const relics = run.relics.slice(-4).reverse();
+  const relics = run.relics.slice(-2).reverse();
   bar.innerHTML = `
     <button class="rb-hero" data-act="bag" aria-label="Your bag and stats">${img(HEROES[run.hero].art, 50)}
       <span class="rb-lv pill" style="height:20px;padding:0 6px;font-size:12px">F${run.floor}</span></button>
@@ -32,10 +32,10 @@ export function renderRunbar() {
       <div class="bar hp" id="hpbar"><i class="trail" style="transform:scaleX(${pct})"></i><i class="fill" style="transform:scaleX(${pct})"></i><span class="num" id="hptext">${Math.max(0, run.hp)} / ${run.maxHp}</span></div>
       <div class="rb-row">
         <span class="pill num" id="goldpill">${img('ui_coin', 24)}<span>${run.gold}</span></span>
-        <button class="rb-relics" data-act="relics" aria-label="Relics">${relics.map(id => img(RELICS[id].art, 24)).join('')}${run.relics.length > 4 ? `<span class="more">+${run.relics.length - 4}</span>` : ''}</button>
+        <button class="rb-relics" data-act="relics" aria-label="Relics">${relics.map(id => img(RELICS[id].art, 22)).join('')}${run.relics.length > 2 ? `<span class="more">+${run.relics.length - 2}</span>` : ''}</button>
         <span style="flex:1"></span>
         <div class="pots">${Array.from({ length: POTION_SLOTS }, (_, i) => run.potions[i]
-          ? `<button class="pot" data-pot="${i}" aria-label="${esc(POTIONS[run.potions[i]].name)}">${img(POTIONS[run.potions[i]].art, 28)}</button>`
+          ? `<button class="pot" data-pot="${i}" aria-label="${esc(POTIONS[run.potions[i]].name)}">${img(POTIONS[run.potions[i]].art, 26)}</button>`
           : `<span class="pot empty"></span>`).join('')}</div>
       </div>
     </div>

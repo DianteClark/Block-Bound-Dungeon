@@ -2,16 +2,10 @@
  * calls the UI makes, so whatever it measures is the real game. */
 import { GRID as N } from '../src/data/rules.js';
 import { rotate } from '../src/data/shapes.js';
-import { UPGRADABLE } from '../src/data/blocks.js';
 import { RELICS } from '../src/data/relics.js';
 import { fits } from '../src/engine/board.js';
-import {
-  place, planClear, useSpecial, specialReady, usePotion, intentDamage, rotatePiece, STASH, pieceAt, stashPiece,
-} from '../src/engine/combat.js';
-import {
-  newRun, availableNodes, enterNode, leaveRoom, winFight, claimReward, skipReward, openTreasure,
-  rest, train, buy, chooseEventOption, eventOptionOk, upgradeBlock, canTakePotion, upgradable,
-} from '../src/engine/run.js';
+import { place, planClear, useSpecial, specialReady, usePotion, intentDamage, rotatePiece, STASH, pieceAt, stashPiece } from '../src/engine/combat.js';
+import { newRun, availableNodes, enterNode, leaveRoom, winFight, claimReward, skipReward, openTreasure, rest, train, buy, chooseEventOption, eventOptionOk, upgradeBlock, canTakePotion, upgradable } from '../src/engine/run.js';
 import { EVENTS } from '../src/data/events.js';
 
 /* ---------- board evaluation ---------- */

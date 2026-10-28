@@ -3,8 +3,6 @@
 import { GRID as N } from '../data/rules.js';
 import { rotate } from '../data/shapes.js';
 
-export const idx = (r, c) => r * N + c;
-
 export function fits(board, piece, r, c) {
   for (const [dr, dc] of piece.cells) {
     const rr = r + dr, cc = c + dc;

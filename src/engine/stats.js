@@ -2,6 +2,7 @@
 import { RELICS } from '../data/relics.js';
 import { BLOCKS } from '../data/blocks.js';
 import { HEROES } from '../data/heroes.js';
+import { STREAK_STEP } from '../data/rules.js';
 
 /** Sum of a relic modifier across everything the hero carries. */
 export function mod(run, key) {
@@ -25,5 +26,5 @@ export function specialNeed(run) {
 }
 
 export function streakStep(run) {
-  return 0.25 + mod(run, 'streakStep');
+  return STREAK_STEP + mod(run, 'streakStep');
 }

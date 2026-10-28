@@ -1,8 +1,6 @@
 /* Block tiles, intents, map rooms, specials, events and interface icons. */
-import {
-  shape, flat, gloss, ink, rope, eye, glowEye, circleD, ellD, rectD, starD, polyD, mirrorX, both, rotAt, scaleAt, PAL, INK,
-} from './kit.js';
-import { dagger, heater, coin, flask } from './items.js';
+import { shape, flat, gloss, ink, rope, eye, glowEye, circleD, ellD, rectD, starD, rotAt, scaleAt, PAL, INK } from './kit.js';
+import { dagger, heater, coin } from './items.js';
 
 const sm = { depth: 2.5, rim: 1.5 };
 const tiny = { depth: 1.5, rim: 1, line: 3 };
@@ -175,17 +173,10 @@ const UI = {
   ui_bag: () => shape('M24 36C24 28 32 26 38 30L50 22L62 30C68 26 76 28 76 36L86 82C86 90 80 94 72 94H28C20 94 14 90 14 82Z', ['#b88a56', '#7d5a33', '#e3c193'], { depth: 5, rim: 2.5 })
     + rope('M36 30C40 36 60 36 64 30', PAL.leather[1], 4)
     + shape(rectD(30, 52, 18, 18, 4), 'red', tiny) + shape(rectD(52, 52, 18, 18, 4), 'blue', tiny) + shape(rectD(41, 70, 18, 18, 4), 'green', tiny),
-  ui_skull: () => shape('M18 46C18 24 32 12 50 12C68 12 82 24 82 46C82 60 74 66 68 68V86H32V68C26 66 18 60 18 46Z', 'bone', { depth: 5, rim: 2.5 })
-    + shape(ellD(37, 46, 9, 10), 'shadow', tiny) + shape(ellD(63, 46, 9, 10), 'shadow', tiny)
-    + shape('M50 56L45 66H55Z', 'shadow', { depth: 0, rim: 0, line: 2.5 }) + ink('M42 76V86M50 76V86M58 76V86', 2.5),
   ui_trophy: () => shape('M26 10H74V36C74 54 62 64 50 64C38 64 26 54 26 36Z', 'gold', { depth: 5, rim: 2.5 })
     + rope('M26 20C10 20 10 44 28 46', PAL.gold[1], 5) + rope('M74 20C90 20 90 44 72 46', PAL.gold[1], 5)
     + shape(rectD(44, 62, 12, 16, 3), 'gold', sm) + shape(rectD(28, 78, 44, 14, 5), 'wood', sm)
     + shape(starD(50, 34, 11, 5), 'white', tiny),
-  ui_map: () => shape('M8 22L34 12L66 22L92 12V78L66 88L34 78L8 88Z', ['#f1e6cd', '#c3b08a', '#fff'], { depth: 5, rim: 2.5 })
-    + ink('M34 12V78M66 22V88', 3) + ink('M18 66C30 54 40 66 52 50C60 40 70 44 78 34', 3.5)
-    + ink('M72 26L84 38M84 26L72 38', 5),
-  ui_play: () => shape('M30 14L84 50L30 86Z', 'green', { depth: 5, rim: 2.5 }),
   ui_up: () => shape('M50 8L88 50H64V92H36V50H12Z', 'green', { depth: 5, rim: 2.5 }),
   ui_trash: () => shape(rectD(22, 30, 56, 62, 8), 'stone', { depth: 5, rim: 2.5 }) + shape(rectD(14, 18, 72, 12, 5), 'stone', sm)
     + shape(rectD(38, 8, 24, 12, 4), 'stone', tiny) + ink('M38 44V80M50 44V80M62 44V80', 3.5),

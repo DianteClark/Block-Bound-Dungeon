@@ -91,7 +91,7 @@ b { font-weight: 700; }
 .btn.small { min-height: 40px; font-size: 17px; padding: 0 16px; border-radius: 13px; box-shadow: 0 4px 0 var(--ink), inset 0 2px 0 rgba(255,255,255,.5); }
 .btn.block { width: 100%; }
 .btn:disabled, .btn.off { filter: grayscale(.85) brightness(.7); pointer-events: none; }
-.iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; }
+.iconbtn { width: 40px; height: 44px; display: grid; place-items: center; border-radius: 14px; }
 .iconbtn:active { transform: scale(.92); }
 
 /* ---------- cards ---------- */
@@ -113,7 +113,7 @@ b { font-weight: 700; }
 .choice.rare { border-color: #8a6a22; box-shadow: var(--lift), 0 0 18px rgba(255,201,60,.18); }
 
 /* ---------- run bar ---------- */
-#runbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px 6px; position: relative; z-index: 5; }
+#runbar { display: flex; align-items: center; gap: 6px; padding: 8px 8px 6px; position: relative; z-index: 5; }
 .rb-hero { position: relative; flex: none; }
 .rb-lv { position: absolute; right: -4px; bottom: -2px; }
 .rb-stats { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
@@ -127,9 +127,9 @@ b { font-weight: 700; }
 .pill { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 9px 0 4px; border-radius: 14px;
   background: #120d19; border: 2px solid var(--edge); font-weight: 700; font-size: 15px; flex: none; }
 .pots { display: flex; gap: 4px; }
-.pot { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: #120d19; border: 2px solid var(--edge); }
+.pot { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #120d19; border: 2px solid var(--edge); }
 .pot.empty { opacity: .5; }
-.rb-relics { display: flex; align-items: center; gap: 2px; height: 32px; padding: 0 6px; border-radius: 10px; background: #120d19; border: 2px solid var(--edge); }
+.rb-relics { display: flex; align-items: center; gap: 1px; height: 30px; min-width: 0; overflow: hidden; padding: 0 6px; border-radius: 10px; background: #120d19; border: 2px solid var(--edge); }
 .rb-relics .more { font-size: 13px; font-weight: 700; color: var(--muted); padding-left: 2px; }
 
 /* ---------- title ---------- */

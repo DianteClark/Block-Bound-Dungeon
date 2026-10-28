@@ -88,8 +88,6 @@ export function availableNodes(run) {
   return r + 1 < MAP_ROWS ? run.map[r][i].next.slice() : [];
 }
 
-export const currentRow = run => run.path.length;
-
 /** Step onto node i of the next row and open its room. */
 export function enterNode(run, i) {
   if (run.room || !availableNodes(run).includes(i)) return false;

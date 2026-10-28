@@ -9,15 +9,12 @@ import { newSeed } from '../core/rng.js';
 import { HEROES, HERO_ORDER } from '../data/heroes.js';
 import { RELICS } from '../data/relics.js';
 import { POTIONS } from '../data/potions.js';
-import { BLOCKS, UPGRADABLE } from '../data/blocks.js';
+import { BLOCKS } from '../data/blocks.js';
 import { EVENTS } from '../data/events.js';
 import { ENEMIES, FLOOR_INFO } from '../data/enemies.js';
 import { MAP_ROWS, FLOORS, MAX_BLOCK_LEVEL } from '../data/rules.js';
 import { blockValue } from '../engine/stats.js';
-import {
-  newRun, availableNodes, enterNode, leaveRoom, claimReward, skipReward, openTreasure, rest, train, buy,
-  removeBlock, removePrice, bagSize, chooseEventOption, eventOptionOk, upgradeBlock, upgradable, canTakePotion,
-} from '../engine/run.js';
+import { newRun, availableNodes, enterNode, leaveRoom, claimReward, skipReward, openTreasure, rest, train, buy, removeBlock, removePrice, bagSize, chooseEventOption, eventOptionOk, upgradeBlock, upgradable, canTakePotion } from '../engine/run.js';
 import { BAG_MIN, REST_HEAL } from '../data/rules.js';
 
 const ROOM_ART = { combat: 'room_combat', elite: 'room_elite', boss: 'room_boss', rest: 'room_rest', shop: 'room_shop', treasure: 'room_treasure', event: 'room_event' };
