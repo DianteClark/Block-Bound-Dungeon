@@ -1,5 +1,5 @@
 /* Network-first service worker: always tries for the latest version, falls back to cache offline. */
-const CACHE = 'bbd-v34';
+const CACHE = 'bbd-v35';
 const CORE = [
   './', 'index.html', 'styles/main.css', 'manifest.webmanifest',
   'src/main.js', 'src/core/rng.js', 'src/core/store.js',
