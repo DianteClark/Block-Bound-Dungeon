@@ -5,8 +5,9 @@ import { GRID as N, HAND, LINE_MULT, PURE_BONUS, CAVE_IN_DMG, ENEMY_HP, ENEMY_DM
 import { BLOCKS } from '../data/blocks.js';
 import { SHAPES, rotate } from '../data/shapes.js';
 import { ENEMIES, ATTACKS, enemiesFor } from '../data/enemies.js';
+import { RELICS } from '../data/relics.js';
 import { makeRng } from '../core/rng.js';
-import { mod, blockValue, specialNeed, streakStep } from './stats.js';
+import { mod, relicsWith, blockValue, specialNeed, streakStep } from './stats.js';
 import {
   fits, fitsAnyRotation, fullLines, lineCells, rowCells, colCells, fullestRow, fullestCol,
 } from './board.js';
@@ -179,16 +180,26 @@ function applyEffects(run, ev, fx, source) {
   if (fx.gold > 0) { run.gold += fx.gold; run.stats.gold += fx.gold; emit(run, ev, { t: 'gold', amount: fx.gold }); }
 }
 
+/** Tell the UI which relics just made a difference. Passive starters are left out. */
+function relicFx(run, ev, key, starters = false) {
+  for (const id of relicsWith(run, key)) if (starters || RELICS[id].rarity > 0) emit(run, ev, { t: 'relic', id });
+}
+
 function fireClear(run, ev, plan) {
   const c = run.combat;
   const cells = [...plan.cells].map(i => [i, c.board[i]]);
+  if (c.firstClear) relicFx(run, ev, 'firstClear');
+  if (plan.lines >= 2) relicFx(run, ev, 'multiLine', true);
+  if (plan.pure) relicFx(run, ev, 'pure');
+  if (c.streak) relicFx(run, ev, 'streakStep');
+  if (cells.some(([, t]) => t === 'rubble')) relicFx(run, ev, 'rubbleDmg');
   emit(run, ev, {
     t: 'clear', cells, rows: plan.rows, cols: plan.cols, lines: plan.lines, pure: plan.pure,
     mult: plan.mult, streak: c.streak, dmg: plan.dmg, shield: plan.shield, heal: plan.heal, gold: plan.gold,
   });
   for (const i of plan.cells) c.board[i] = null;
   applyEffects(run, ev, plan, 'clear');
-  if (plan.lines >= 2 && mod(run, 'fang')) heal(run, ev, mod(run, 'fang'));
+  if (plan.lines >= 2 && mod(run, 'fang')) { relicFx(run, ev, 'fang'); heal(run, ev, mod(run, 'fang')); }
   run.charge = Math.min(specialNeed(run), run.charge + plan.lines);
   c.streak++;
   c.firstClear = false;
@@ -233,10 +244,11 @@ function hitPlayer(run, ev, amount, attack = true) {
   const lost = Math.min(run.hp, amount - blocked);
   run.hp -= lost;
   emit(run, ev, { t: 'hitPlayer', amount: amount - blocked, blocked });
-  if (attack && mod(run, 'thorns') && c.enemy.hp > 0) damageEnemy(run, ev, mod(run, 'thorns'), 'thorns');
+  if (attack && mod(run, 'thorns') && c.enemy.hp > 0) { relicFx(run, ev, 'thorns'); damageEnemy(run, ev, mod(run, 'thorns'), 'thorns'); }
   if (run.hp <= 0) {
     if (mod(run, 'revive') && !run.revived) {
       run.revived = true;
+      relicFx(run, ev, 'revive');
       run.hp = Math.ceil(run.maxHp / 2);
       emit(run, ev, { t: 'revive', hp: run.hp });
     } else if (!c.over) endCombat(run, ev, 'lose');
@@ -369,6 +381,7 @@ function checkStuck(run, ev) {
     const cells = rows.flatMap(rowCells).filter(i => c.board[i]).map(i => [i, c.board[i]]);
     for (const [i] of cells) c.board[i] = null;
     const sapper = mod(run, 'sapper');
+    if (sapper) relicFx(run, ev, 'sapper');
     emit(run, ev, { t: 'cavein', rows, cells, dmg: sapper ? 0 : CAVE_IN_DMG(run.floor) });
     if (sapper) damageEnemy(run, ev, 10, 'cavein');
     else hitPlayer(run, ev, CAVE_IN_DMG(run.floor), false);

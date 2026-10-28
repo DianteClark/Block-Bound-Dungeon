@@ -21,6 +21,9 @@ export function blockValue(run, type) {
   return B.base + (run.lvl[type] || 0) + mod(run, type);
 }
 
+/** Relics carrying a given modifier (used to show which relic just did something). */
+export const relicsWith = (run, key) => run.relics.filter(id => RELICS[id] && RELICS[id].mod[key]);
+
 export function specialNeed(run) {
   return Math.max(3, HEROES[run.hero].special.need - mod(run, 'specialCost'));
 }

@@ -1,4 +1,9 @@
 /* Block Bound Dungeon: design tokens, layout and components. */
+/* Fonts ship with the game (SIL Open Font License, see fonts/) so it looks right offline. */
+@font-face { font-family: 'Lilita One'; font-weight: 400; font-display: swap; src: url(../fonts/lilita-one-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Fredoka'; font-weight: 500; font-display: swap; src: url(../fonts/fredoka-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Fredoka'; font-weight: 600; font-display: swap; src: url(../fonts/fredoka-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Fredoka'; font-weight: 700; font-display: swap; src: url(../fonts/fredoka-latin-700-normal.woff2) format('woff2'); }
 :root {
   --ink: #21172b;
   --bg: #140f1c;
@@ -204,6 +209,8 @@ b { font-weight: 700; }
 .intent .what { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
 .intent .what b { font-size: 18px; }
 .intent .what small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.intent .take { font-size: 13px; font-weight: 700; color: #ff9aa6; }
+.intent .take.ok { color: #8fc3ff; }
 .pips { display: flex; gap: 3px; }
 .pips i { width: 10px; height: 10px; border-radius: 50%; background: #120d19; border: 2px solid #6b3346; }
 .pips i.on { background: var(--red); border-color: var(--ink); }
@@ -272,6 +279,9 @@ b { font-weight: 700; }
 .banner h2 { font-size: 46px; color: var(--gold); }
 .banner p { font-weight: 700; color: var(--text); text-shadow: 0 2px 0 var(--ink); }
 @keyframes banner { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } 20% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+.relicpop { position: absolute; display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 4px; border-radius: 16px; background: var(--panel2);
+  border: 2px solid #8a6a22; box-shadow: var(--lift); font-weight: 700; font-size: 14px; color: var(--gold); white-space: nowrap; animation: rpop 1.5s ease-out forwards; }
+@keyframes rpop { 0% { opacity: 0; transform: translateY(-8px) scale(.9); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-4px); } }
 .flash { position: absolute; inset: 0; animation: flash .35s ease-out forwards; }
 @keyframes flash { from { opacity: .5; } to { opacity: 0; } }
 .shake { animation: shake .35s cubic-bezier(.36,.07,.19,.97); }

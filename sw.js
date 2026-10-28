@@ -1,5 +1,5 @@
 /* Network-first service worker: always tries for the latest version, falls back to cache offline. */
-const CACHE = 'bbd-v33';
+const CACHE = 'bbd-v34';
 const CORE = [
   './', 'index.html', 'styles/main.css', 'manifest.webmanifest',
   'src/main.js', 'src/core/rng.js', 'src/core/store.js',
@@ -9,6 +9,8 @@ const CORE = [
   'src/art/kit.js', 'src/art/index.js', 'src/art/heroes.js', 'src/art/monsters.js', 'src/art/items.js', 'src/art/icons.js',
   'src/audio/audio.js',
   'src/ui/app.js', 'src/ui/dom.js', 'src/ui/sheets.js', 'src/ui/screens.js', 'src/ui/combat.js',
+  'fonts/lilita-one-latin-400-normal.woff2', 'fonts/fredoka-latin-500-normal.woff2',
+  'fonts/fredoka-latin-600-normal.woff2', 'fonts/fredoka-latin-700-normal.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 

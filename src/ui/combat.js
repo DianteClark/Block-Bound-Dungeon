@@ -7,9 +7,10 @@ import { endRun, music } from './screens.js';
 import { store } from '../core/store.js';
 import { GRID as N } from '../data/rules.js';
 import { BLOCKS } from '../data/blocks.js';
+import { RELICS } from '../data/relics.js';
 import { HEROES } from '../data/heroes.js';
 import { ENEMIES, MOVES, ATTACKS } from '../data/enemies.js';
-import { fits, fitsAnyRotation } from '../engine/board.js';
+import { fits, fitsAnyRotation, filledIn, colCells, fullestCol } from '../engine/board.js';
 import {
   place, previewPlace, rotatePiece, stashPiece, useSpecial, specialReady, intentDamage, peekNext, pieceAt, STASH,
 } from '../engine/combat.js';
@@ -43,7 +44,7 @@ function tile(type, px) {
 /* ---------- view state ---------- */
 const V = {
   run: null, cv: null, ctx: null, dpr: 1, L: null, board: null,
-  push: 0, press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0, shown: null,
+  push: 0, press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0,
 };
 
 register('combat', open);
@@ -93,10 +94,10 @@ function open() {
     sfx('tap');
     toast(`<b>${esc(H.special.name)}</b> ${esc(H.special.desc)} Charge: ${run.charge} / ${specialNeed(run)} lines.`, H.special.art, 3400);
   });
-  cancelAnimationFrame(V.raf);
-  V.raf = requestAnimationFrame(frame);
+  invalidate();
   if (c.moves === 0 && c.kind === 'boss') { sfx('boss'); banner(E.name, 'Boss fight', 1800); }
   else if (c.moves === 0 && c.kind === 'elite') banner(E.name, 'Elite', 1400);
+  if (c.moves === 0) run.relics.filter(id => RELICS[id].mod.startShield || RELICS[id].mod.startCharge).forEach((id, k) => setTimeout(() => relicPop(id), 500 + k * 280));
   if (!store.flag('tutorial') && c.moves === 0) setTimeout(() => toast('<b>Drag a piece onto the grid.</b> Tap a piece to rotate it.', 'b_sword', 4200), 600);
 }
 
@@ -112,7 +113,7 @@ function hud(s) {
   bar.querySelector('span').textContent = `${Math.max(0, s.ehp)} / ${e.maxHp}`;
   $('#badges').innerHTML = (s.earmor ? `<span class="badge num">${img('i_armor', 22)}${s.earmor}</span>` : '')
     + (s.rage ? `<span class="badge num" style="color:#ff9aa6">${img('i_rage', 22)}+${s.rage}</span>` : '');
-  intentHUD(s.rage);
+  intentHUD(s.rage, s.shield);
   const sh = $('#shield');
   sh.querySelector('span').textContent = s.shield;
   sh.classList.toggle('zero', !s.shield);
@@ -133,14 +134,24 @@ function intentText(it, rage) {
   return ['', MOVES[it.k].name];
 }
 
-function intentHUD(rage) {
+/** What an attack would actually cost after shield, so the key number is instant to read. */
+function incoming(it, rage, shield) {
+  const run = V.run, c = run.combat;
+  let total = (intentDamage(run, it) - c.enemy.rage + rage) * (it.n || 1);
+  if (it.k === 'breath') total += it.v * filledIn(c.board, colCells(fullestCol(c.board)));
+  return Math.max(0, total - shield);
+}
+
+function intentHUD(rage, shield) {
   const run = V.run, c = run.combat, it = c.enemy.intent;
   if (!it) return;
   const [val, name] = intentText(it, rage);
   const d = ATTACKS.has(it.k) ? intentDamage(run, it) : 0;
+  const take = ATTACKS.has(it.k) ? incoming(it, rage, shield) : null;
+  const takeHTML = take == null ? '' : take > 0 ? `<span class="take num">You take ${take}</span>` : '<span class="take ok">Fully blocked</span>';
   const box = $('#intent');
   box.classList.toggle('soon', it.left <= 1 && ATTACKS.has(it.k));
-  box.innerHTML = `${img('i_' + it.k, 38)}<div class="what"><b class="num">${val || name}</b><small>${val ? name + ', ' : ''}${it.left <= 1 ? 'next move' : `in ${it.left} moves`}</small></div>
+  box.innerHTML = `${img('i_' + it.k, 38)}<div class="what"><b class="num">${val || name}</b><small>${val ? name + ', ' : ''}${it.left <= 1 ? 'next move' : `in ${it.left} moves`}</small>${takeHTML}</div>
     <div class="pips">${Array.from({ length: Math.min(6, Math.max(it.left, it.t)) }, (_, k) => `<i class="${k < it.left ? 'on' : ''}"></i>`).join('')}</div>`;
   box.setAttribute('aria-label', `${MOVES[it.k].name}: ${MOVES[it.k].desc(it, d)} In ${it.left} moves.`);
   const nx = peekNext(run), [nv, nn] = intentText(nx, rage);
@@ -157,7 +168,12 @@ function layout() {
   const dpr = V.dpr = Math.min(3, window.devicePixelRatio || 1);
   const cell = Math.floor(Math.min((W - 28) / N, (total - 18) / (N + 3.1)));
   const push = Math.max(0, Math.round((total - (cell * (N + 3) + 30)) * 0.7));
-  if (Math.abs(push - V.push) > 1) { V.push = push; document.documentElement.style.setProperty('--push', push + 'px'); return; }
+  if (Math.abs(push - V.push) > 1) {
+    // Applied next frame: resizing from inside the size observer would trip the browser's loop guard.
+    V.push = push;
+    requestAnimationFrame(() => document.documentElement.style.setProperty('--push', V.push + 'px'));
+    return;
+  }
   const H = total - V.push;
   const S = cell * N, bx = Math.round((W - S) / 2), by = 6;
   const ty = by + S + 14, slotW = S / SLOTS, slotH = Math.min(cell * 3, H - ty - 4);
@@ -165,6 +181,7 @@ function layout() {
   V.cv.width = W * dpr; V.cv.height = H * dpr;
   V.cv.style.width = W + 'px'; V.cv.style.height = H + 'px';
   $('#preview').style.top = Math.max(0, by - 2) + 'px';
+  invalidate();
 }
 const sizeWatch = new ResizeObserver(() => { if (app.screen === 'combat') layout(); });
 
@@ -177,8 +194,12 @@ function rr(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 
+/** Ask for one redraw. The board only keeps animating while something is actually moving. */
+function invalidate() { if (!V.raf) V.raf = requestAnimationFrame(frame); }
+document.fonts && document.fonts.ready.then(invalidate);
+
 function frame(now) {
-  V.raf = requestAnimationFrame(frame);
+  V.raf = 0;
   if (app.screen !== 'combat' || !V.L) return;
   const { ctx, dpr, L } = V, run = V.run, c = run.combat;
   if (!c) return;
@@ -281,6 +302,7 @@ function frame(now) {
     rr(ctx, x - q.s / 2, y - q.s / 2, q.s, q.s, q.s * 0.3); ctx.fill();
   }
   ctx.globalAlpha = 1;
+  if (V.pops.size || V.fading.size || V.drops.size || V.parts.length || V.drag) invalidate();
 }
 
 function drawTile(type, x, y, size, scale = 1) {
@@ -313,6 +335,23 @@ function flyTo(cells, el, color) {
   });
 }
 
+/** Pop a relic's icon and name under the relic bar when it does something. */
+let popsLive = 0;
+function relicPop(id) {
+  const R = RELICS[id], anchor = $('.rb-relics');
+  if (!R || !anchor) return;
+  const r = anchor.getBoundingClientRect();
+  const d = document.createElement('div');
+  d.className = 'relicpop';
+  d.style.left = Math.max(8, r.left - 20) + 'px';
+  d.style.top = r.bottom + 6 + popsLive * 40 + 'px';
+  d.innerHTML = `${img(R.art, 28)}<span>${esc(R.name)}</span>`;
+  $('#fx').appendChild(d);
+  popsLive++;
+  bump(anchor, 'pop');
+  setTimeout(() => { d.remove(); popsLive--; }, 1500);
+}
+
 function shakeScreen() { if (app.settings.shake && !app.settings.motion) bump($('#app'), 'shake'); }
 
 /* ---------- input ---------- */
@@ -330,6 +369,7 @@ function bindInput() {
     if (s < 0 || !pieceAt(V.run.combat, s)) return;
     V.press = { i: s, x0: x, y0: y };
     cv.setPointerCapture(e.pointerId);
+    invalidate();
   };
   cv.onpointermove = e => {
     const { x, y } = pt(e), P = V.press;
@@ -337,12 +377,13 @@ function bindInput() {
       V.drag = { i: P.i, piece: pieceAt(V.run.combat, P.i) };
       sfx('pick'); buzz(6);
     }
-    if (V.drag) { moveDrag(x, y, e.pointerType === 'mouse'); e.preventDefault(); }
+    if (V.drag) { moveDrag(x, y, e.pointerType === 'mouse'); e.preventDefault(); invalidate(); }
   };
   cv.onpointerup = () => {
     const d = V.drag, P = V.press;
     V.drag = null; V.press = null;
     $('#preview').hidden = true;
+    invalidate();
     if (d) {
       if (d.overStash && d.i !== STASH) return doStash(d.i);
       if (d.valid) return doPlace(d.i, d.r, d.c);
@@ -351,7 +392,7 @@ function bindInput() {
     }
     if (P) { rotatePiece(V.run, P.i); sfx('rotate'); save(); }
   };
-  cv.onpointercancel = () => { V.drag = null; V.press = null; $('#preview').hidden = true; };
+  cv.onpointercancel = () => { V.drag = null; V.press = null; $('#preview').hidden = true; invalidate(); };
 }
 
 function moveDrag(x, y, mouse) {
@@ -400,6 +441,7 @@ async function play(events) {
   const run = V.run, foe = $('#foe');
   for (const e of events) {
     if (app.screen !== 'combat') break;
+    invalidate();
     const s = e.s;
     switch (e.t) {
       case 'place': {
@@ -496,6 +538,7 @@ async function play(events) {
         break;
       }
       case 'potion': break;
+      case 'relic': relicPop(e.id); sfx('ready'); break;
       case 'delay': floatText($('#intent'), `+${e.amount} moves`, '#d7bcff'); sfx('magic'); break;
       case 'win': {
         foe.classList.add('die'); sfx('win');
@@ -507,6 +550,7 @@ async function play(events) {
   }
   V.board = run.combat.board.slice();
   V.busy = false;
+  invalidate();
   const c = run.combat;
   if (app.screen !== 'combat') return;
   renderRunbar();
