@@ -14,6 +14,7 @@ export const register = (name, fn) => { screens[name] = fn; };
 export function go(name, ...args) {
   app.screen = name;
   document.body.classList.toggle('in-combat', name === 'combat');
+  if (name !== 'combat') document.documentElement.style.setProperty('--push', '0px');
   document.getElementById('sheet').hidden = true;
   screens[name](...args);
 }

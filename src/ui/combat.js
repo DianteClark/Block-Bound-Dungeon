@@ -43,7 +43,7 @@ function tile(type, px) {
 /* ---------- view state ---------- */
 const V = {
   run: null, cv: null, ctx: null, dpr: 1, L: null, board: null,
-  press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0, shown: null,
+  push: 0, press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0, shown: null,
 };
 
 register('combat', open);
@@ -75,6 +75,8 @@ function open() {
       <div class="boardwrap" id="bw"><canvas id="board"></canvas><div class="preview" id="preview" hidden></div></div>
     </div>`);
   V.cv = $('#board'); V.ctx = V.cv.getContext('2d');
+  V.push = 0;
+  document.documentElement.style.setProperty('--push', '0px');
   sizeWatch.disconnect();
   sizeWatch.observe($('#bw'));
   V.board = c.board.slice();
@@ -149,9 +151,14 @@ function intentHUD(rage) {
 function layout() {
   const bw = $('#bw');
   if (!bw) return;
-  const W = bw.clientWidth, H = bw.clientHeight;
+  // On tall phones the board is limited by width, leaving spare height. Most of it goes above
+  // the screen (pushing the bars and enemy down toward the thumb); the rest stays below the tray.
+  const W = bw.clientWidth, total = bw.clientHeight + V.push;
   const dpr = V.dpr = Math.min(3, window.devicePixelRatio || 1);
-  const cell = Math.floor(Math.min((W - 28) / N, (H - 18) / (N + 3.1)));
+  const cell = Math.floor(Math.min((W - 28) / N, (total - 18) / (N + 3.1)));
+  const push = Math.max(0, Math.round((total - (cell * (N + 3) + 30)) * 0.7));
+  if (Math.abs(push - V.push) > 1) { V.push = push; document.documentElement.style.setProperty('--push', push + 'px'); return; }
+  const H = total - V.push;
   const S = cell * N, bx = Math.round((W - S) / 2), by = 6;
   const ty = by + S + 14, slotW = S / SLOTS, slotH = Math.min(cell * 3, H - ty - 4);
   V.L = { W, H, cell, S, bx, by, ty, slotW, slotH };
@@ -353,10 +360,11 @@ function moveDrag(x, y, mouse) {
   d.px = x - (p.w * cs) / 2; d.py = y - p.h * cs - lift + (mouse ? (p.h * cs) / 2 : 0);
   const r = Math.round((d.py - L.by) / cs), c = Math.round((d.px - L.bx) / cs);
   const S = slotRect(STASH);
-  d.overStash = d.i !== STASH && !V.run.combat.stashUsed && x >= S.x && y >= S.y - 6;
   d.onBoard = y < L.ty;
   const was = d.valid ? `${d.r},${d.c}` : '';
-  d.valid = !d.overStash && fits(V.run.combat.board, p, r, c);
+  // A spot on the board always wins: the stash only takes a piece that can't land where it is.
+  d.valid = fits(V.run.combat.board, p, r, c);
+  d.overStash = !d.valid && d.i !== STASH && !V.run.combat.stashUsed && x >= S.x && x <= S.x + S.w && y >= S.y - 6;
   if (d.valid) {
     d.r = r; d.c = c;
     d.cells = p.cells.map(([dr, dc]) => (r + dr) * N + c + dc);
