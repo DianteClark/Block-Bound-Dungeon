@@ -22,8 +22,10 @@ const SLOTS = 4; // three hand pieces and the stash
 
 /* ---------- block tiles: SVG art rasterised once per size ---------- */
 const tileImg = {};
-export async function preloadTiles() {
-  await Promise.all(Object.keys(BLOCKS).map(async t => { tileImg[t] = await loadImage(BLOCKS[t].art, { sticker: false }); }));
+/** Loads in the background at boot; the board redraws once they arrive. */
+export function preloadTiles() {
+  return Promise.all(Object.keys(BLOCKS).map(async t => { tileImg[t] = await loadImage(BLOCKS[t].art, { sticker: false }); }))
+    .then(() => { tileCache.clear(); invalidate(); });
 }
 /* One raster per block type at 1.2x the board cell (room for the pop animation). Rebuilt only
  * when the cell size changes, so memory stays flat however long a run lasts. */
@@ -68,7 +70,7 @@ function open() {
         </div>
       </div>
       <div class="pbar">
-        <button class="shieldv num" id="shield" aria-label="Shield">${img('ui_shield', 28)}<span>0</span></button>
+        <button class="shieldv num" id="shield" aria-label="Shield"><span class="sv">${img('ui_shield', 28)}<b>0</b></span></button>
         <div class="combo" id="combo"></div>
         <button class="special" id="special" aria-label="${esc(H.special.name)}">
           <span class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="#120d19" stroke-width="5"/><circle id="ring" cx="20" cy="20" r="17" fill="none" stroke="#ffc93c" stroke-width="5" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="107"/></svg>${img(H.special.art, 30)}</span>
@@ -116,7 +118,7 @@ function hud(s) {
     + (s.rage ? `<span class="badge num" style="color:#ff9aa6">${img('i_rage', 22)}+${s.rage}</span>` : ''));
   intentHUD(s.rage, s.shield);
   const sh = $('#shield');
-  sh.querySelector('span').textContent = s.shield;
+  sh.querySelector('b').textContent = s.shield;
   sh.classList.toggle('zero', !s.shield);
   const need = specialNeed(run), ring = $('#ring');
   ring.style.strokeDashoffset = 107 * (1 - Math.min(1, s.charge / need));
@@ -336,6 +338,7 @@ function fitsCached(c, p) {
 }
 
 function drawTile(type, x, y, size, scale = 1) {
+  if (!tileImg[type]) return;
   const s = size * scale, o = (size - s) / 2;
   V.ctx.drawImage(tile(type), x + o, y + o, s, s);
 }

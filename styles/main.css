@@ -134,7 +134,11 @@ b { font-weight: 700; }
 .pots { display: flex; gap: 4px; }
 .pot { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #120d19; border: 2px solid var(--edge); }
 .pot.empty { opacity: .5; }
-.rb-relics { display: flex; align-items: center; gap: 1px; height: 30px; min-width: 0; overflow: hidden; padding: 0 6px; border-radius: 10px; background: #120d19; border: 2px solid var(--edge); }
+.rb-relics { display: flex; align-items: center; gap: 1px; height: 30px; min-width: 0; padding: 0 6px; border-radius: 10px; background: #120d19; border: 2px solid var(--edge); }
+/* Small controls keep their look but get a ~44pt touch area (Apple's minimum). */
+button.pot, .rb-relics, .toggle { position: relative; }
+button.pot::before, .rb-relics::before { content: ''; position: absolute; inset: -9px -2px; }
+.toggle::before { content: ''; position: absolute; inset: -8px -6px; }
 .rb-relics .more { font-size: 13px; font-weight: 700; color: var(--muted); padding-left: 2px; }
 
 /* ---------- title ---------- */
@@ -221,8 +225,9 @@ b { font-weight: 700; }
 .pips i.on { background: var(--red); border-color: var(--ink); }
 .next { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 4px; }
 
-.pbar { display: flex; align-items: center; gap: 8px; padding: 0 12px 4px; flex: none; min-height: 50px; }
-.pbar .shieldv { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px 0 4px; border-radius: 17px; background: #10203a; border: 2px solid #2d5aa0; font-weight: 700; font-size: 18px; transition: transform .15s; }
+.pbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 0 12px 4px; flex: none; min-height: 50px; }
+.pbar .shieldv { height: 46px; display: flex; align-items: center; transition: transform .15s; } /* 46pt touch area around the pill */
+.pbar .shieldv .sv { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px 0 4px; border-radius: 17px; background: #10203a; border: 2px solid #2d5aa0; font-weight: 700; font-size: 18px; }
 .pbar .shieldv.zero { opacity: .45; }
 .combo { flex: 1; text-align: center; font: 400 20px var(--display); color: var(--gold); paint-order: stroke fill; -webkit-text-stroke: 4px var(--ink); opacity: 0; transition: opacity .2s; }
 .combo.on { opacity: 1; }

@@ -15,7 +15,8 @@ window.addEventListener('error', e => {
 });
 
 applySettings();
-preloadTiles().catch(() => {}).finally(() => go('title'));
+go('title');
+preloadTiles().catch(() => {});
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
