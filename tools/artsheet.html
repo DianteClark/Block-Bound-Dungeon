@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Art sheet</title>
+<style>
+  body{margin:0;background:#1b1426;color:#cfc6dc;font:11px system-ui;padding:10px}
+  .grid{display:flex;flex-wrap:wrap;gap:8px}
+  .cell{width:var(--w,110px);text-align:center}
+  .cell img{display:block;margin:0 auto}
+  .light{background:#efe7f7}
+</style>
+<div class="grid" id="g"></div>
+<script type="module">
+  import { ART, img } from '../src/art/index.js';
+  const q = new URLSearchParams(location.search);
+  const size = +(q.get('s') || 96), filter = q.get('f') || '';
+  if (q.get('light')) document.body.classList.add('light');
+  document.documentElement.style.setProperty('--w', (size + 14) + 'px');
+  const names = Object.keys(ART).filter(n => !filter || filter.split(',').some(f => n.startsWith(f)));
+  document.getElementById('g').innerHTML = names.map(n => `<div class="cell">${img(n, size)}${n}</div>`).join('');
+  window.done = true;
+</script>

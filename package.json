@@ -1,0 +1,10 @@
+{
+  "name": "block-bound-dungeon",
+  "private": true,
+  "type": "module",
+  "description": "A block-puzzle roguelike dungeon crawl. Plain ES modules, no build step.",
+  "scripts": {
+    "lab": "node tools/lab.js",
+    "test": "node tools/test.js"
+  }
+}

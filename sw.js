@@ -1,7 +1,16 @@
 /* Network-first service worker: always tries for the latest version, falls back to cache offline. */
-const CACHE = 'bbd-v30';
-const CORE = ['./', 'index.html', 'game.js', 'art.js', 'audio.js', 'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'bbd-v31';
+const CORE = [
+  './', 'index.html', 'styles/main.css', 'manifest.webmanifest',
+  'src/main.js', 'src/core/rng.js', 'src/core/store.js',
+  'src/data/rules.js', 'src/data/blocks.js', 'src/data/shapes.js', 'src/data/heroes.js', 'src/data/enemies.js',
+  'src/data/relics.js', 'src/data/potions.js', 'src/data/events.js',
+  'src/engine/board.js', 'src/engine/stats.js', 'src/engine/combat.js', 'src/engine/run.js',
+  'src/art/kit.js', 'src/art/index.js', 'src/art/heroes.js', 'src/art/monsters.js', 'src/art/items.js', 'src/art/icons.js',
+  'src/audio/audio.js',
+  'src/ui/app.js', 'src/ui/dom.js', 'src/ui/sheets.js', 'src/ui/screens.js', 'src/ui/combat.js',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
