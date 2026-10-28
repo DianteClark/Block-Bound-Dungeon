@@ -196,6 +196,9 @@ button.pot::before, .rb-relics::before { content: ''; position: absolute; inset:
 @keyframes idle { 50% { transform: scale(1.03, .97) translateY(2px); } }
 .foe.hit .art { animation: hurt .35s ease-out; }
 @keyframes hurt { 20% { transform: translateX(-8px) rotate(-4deg); opacity: .55; } 55% { transform: translateX(6px) rotate(2deg); opacity: 1; } }
+.foe.hitbig .art { animation: hurtbig .45s ease-out; }
+@keyframes hurtbig { 15% { transform: translateX(-12px) rotate(-8deg) scale(.92); opacity: .4; } 45% { transform: translateX(9px) rotate(4deg) scale(1.04); opacity: 1; } 70% { transform: translateX(-4px); } }
+.foe.enraged::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; background: radial-gradient(circle, rgba(255,60,70,.45), transparent 68%); animation: glow 1s ease-in-out infinite alternate; }
 .foe.lunge .art { animation: lunge .4s ease-in-out; }
 @keyframes lunge { 40% { transform: translateY(14px) scale(1.12); } }
 .foe.die .art { animation: die .7s ease-in forwards; }
@@ -220,17 +223,43 @@ button.pot::before, .rb-relics::before { content: ''; position: absolute; inset:
 .intent .what small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .intent .take { font-size: 13px; font-weight: 700; color: #ff9aa6; }
 .intent .take.ok { color: #8fc3ff; }
+.intent .brk { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.intent .bb { flex: 1; height: 7px; border-radius: 4px; background: #120d19; border: 1.5px solid #6b5a2a; overflow: hidden; }
+.intent .bb i { display: block; height: 100%; background: linear-gradient(90deg, #ffc93c, #fff0b0); transform-origin: left; transition: transform .3s cubic-bezier(.3,.9,.3,1); }
+.intent .brk em { font-style: normal; font-size: 11px; font-weight: 700; color: #ffcf6a; white-space: nowrap; }
+.intent.shatter { animation: shatter .45s ease-out; }
+@keyframes shatter { 15% { transform: scale(1.06) rotate(-2deg); } 40% { transform: scale(.96) rotate(1.5deg); } }
 .pips { display: flex; gap: 3px; }
 .pips i { width: 10px; height: 10px; border-radius: 50%; background: #120d19; border: 2px solid #6b3346; }
 .pips i.on { background: var(--red); border-color: var(--ink); }
 .next { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 4px; }
 
 .pbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 0 12px 4px; flex: none; min-height: 50px; }
-.pbar .shieldv { height: 46px; display: flex; align-items: center; transition: transform .15s; } /* 46pt touch area around the pill */
-.pbar .shieldv .sv { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px 0 4px; border-radius: 17px; background: #10203a; border: 2px solid #2d5aa0; font-weight: 700; font-size: 18px; }
-.pbar .shieldv.zero { opacity: .45; }
-.combo { flex: 1; text-align: center; font: 400 20px var(--display); color: var(--gold); paint-order: stroke fill; -webkit-text-stroke: 4px var(--ink); opacity: 0; transition: opacity .2s; }
+/* hero on the stage: reacts to every hit, wears its shield as a bubble */
+.hero { position: relative; width: 66px; height: 66px; flex: none; display: grid; place-items: center; }
+.hero > .art { position: relative; z-index: 1; animation: herobob 3.2s ease-in-out infinite; }
+@keyframes herobob { 50% { transform: translateY(-2px); } }
+.hero .bubble { position: absolute; inset: 0; border-radius: 50%; opacity: 0; transform: scale(.7); transition: opacity .25s, transform .25s;
+  background: radial-gradient(circle at 40% 35%, rgba(180,214,255,.35), rgba(77,155,255,.18) 60%, rgba(77,155,255,.05)); border: 2.5px solid rgba(143,195,255,.75); }
+.hero .sv { position: absolute; right: -10px; bottom: -2px; z-index: 2; display: inline-flex; align-items: center; gap: 2px; height: 26px; padding: 0 8px 0 2px; border-radius: 13px;
+  background: #10203a; border: 2px solid #2d5aa0; font-weight: 700; font-size: 15px; transition: opacity .2s; }
+.hero .sv.zero { opacity: .5; }
+.hero.attack > .art { animation: hattack .3s ease-out; }
+@keyframes hattack { 40% { transform: translate(6px, -10px) rotate(6deg) scale(1.08); } }
+.hero.hurt > .art { animation: hhurt .35s ease-out; }
+@keyframes hhurt { 20% { transform: translateX(-6px) rotate(-6deg); opacity: .5; } 50% { transform: translateX(4px); opacity: 1; } }
+.hero.cast > .art { animation: hcast .45s ease-out; }
+@keyframes hcast { 40% { transform: translateY(-8px) scale(1.12); } }
+.combo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; opacity: 0; transition: opacity .2s; }
 .combo.on { opacity: 1; }
+.combo b { font: 400 20px var(--display); color: var(--gold); paint-order: stroke fill; -webkit-text-stroke: 4px var(--ink); }
+.combo small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.combo.last small { color: #ffcf6a; }
+.combo .cp { display: flex; gap: 4px; }
+.combo .cp i { width: 16px; height: 6px; border-radius: 3px; background: #2a2236; }
+.combo .cp i.on { background: var(--gold); }
+.combo.last .cp i.on { animation: blink .6s ease-in-out infinite alternate; }
+@keyframes blink { to { opacity: .35; } }
 .special { position: relative; display: flex; align-items: center; gap: 6px; height: 46px; padding: 0 12px 0 4px; border-radius: 16px; background: #1c1428; border: 2px solid var(--edge); font-weight: 700; }
 .special .ring { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
 .special .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
@@ -280,6 +309,11 @@ button.pot::before, .rb-relics::before { content: ''; position: absolute; inset:
 
 /* ---------- feedback ---------- */
 #fx { position: fixed; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+.tally { position: absolute; transform: translate(-50%, -100%); font: 400 30px var(--display); color: #ff6b72; paint-order: stroke fill; -webkit-text-stroke: 5px var(--ink); white-space: nowrap; transition: opacity .3s; }
+.tally.big { font-size: 42px; color: #ffcf6a; }
+.tally.out { opacity: 0; }
+.tally.tpop { animation: tpop .22s ease-out; }
+@keyframes tpop { 40% { transform: translate(-50%, -100%) scale(1.22); } }
 .float { position: absolute; transform: translate(-50%, -50%); font: 400 26px var(--display); paint-order: stroke fill; -webkit-text-stroke: 5px var(--ink);
   animation: float 1s cubic-bezier(.2,.8,.3,1) forwards; white-space: nowrap; }
 .float.big { font-size: 40px; }
@@ -293,8 +327,6 @@ button.pot::before, .rb-relics::before { content: ''; position: absolute; inset:
 @keyframes rpop { 0% { opacity: 0; transform: translateY(-8px) scale(.9); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-4px); } }
 .flash { position: absolute; inset: 0; animation: flash .35s ease-out forwards; }
 @keyframes flash { from { opacity: .5; } to { opacity: 0; } }
-.shake { animation: shake .35s cubic-bezier(.36,.07,.19,.97); }
-@keyframes shake { 20% { transform: translate(-6px, 2px); } 40% { transform: translate(5px, -3px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(3px, -1px); } }
 .pop { animation: popk .3s ease-out; }
 @keyframes popk { 40% { transform: scale(1.25); } }
 #toast { position: fixed; left: 50%; top: calc(var(--sat) + 72px); transform: translate(-50%, -20px); z-index: 40; opacity: 0; pointer-events: none;

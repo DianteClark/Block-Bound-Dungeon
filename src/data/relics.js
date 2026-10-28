@@ -3,7 +3,7 @@
 export const RELICS = {
   // starters
   oath:     { name: 'Oath Shield',     art: 'r_oath',     rarity: 0, desc: 'Start each fight with 6 shield.', mod: { startShield: 6 } },
-  daggers:  { name: 'Twin Daggers',    art: 'r_daggers',  rarity: 0, desc: 'Combos build twice as fast. Coin blocks give +1 gold.', mod: { streakStep: 0.25, coin: 1 } },
+  daggers:  { name: 'Twin Daggers',    art: 'r_daggers',  rarity: 0, desc: 'Combos build faster (+0.15 per step). Coin blocks give +1 gold.', mod: { streakStep: 0.15, coin: 1 } },
   orb:      { name: "Seer's Orb",      art: 'r_orb',      rarity: 0, desc: 'Clearing 2 or more lines at once adds +1 to the multiplier.', mod: { multiLine: 1 } },
   // common
   whetstone:{ name: 'Whetstone',       art: 'r_whetstone', rarity: 1, desc: 'Sword blocks deal +1 damage.', mod: { sword: 1 } },

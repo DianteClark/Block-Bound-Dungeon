@@ -189,6 +189,7 @@ register('reward', () => {
   const root = mount(`<div class="scroll stagger">
       <h2 class="display h-screen">${title}</h2>
       <div class="loot"><span class="pill num">${img('ui_coin', 24)}+${R.gold} gold</span>${R.healed ? `<span class="pill num">${img('ui_heart', 24)}+${R.healed} HP</span>` : ''}</div>
+      ${R.flawless || R.overkill ? `<p class="sub">${[R.flawless ? `Flawless, no damage taken: +${R.flawless} gold` : '', R.overkill ? `Overkill: +${R.overkill} gold` : ''].filter(Boolean).join('. ')}</p>` : ''}
       <div class="label" style="text-align:center">Choose one</div>
       ${R.choices.map(choiceHTML).join('')}
       <button class="btn ghost block small" data-skip>Skip</button>

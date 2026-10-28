@@ -128,6 +128,7 @@ export function enemySheet(run) {
   openSheet(`<div class="info-head">${img(E.art, 72)}<div class="txt"><b style="font-size:20px">${esc(E.name)}</b><span class="muted">${e.hp} / ${e.maxHp} HP${e.armor ? `, ${e.armor} armor` : ''}${e.rage ? `, +${e.rage} damage` : ''}</span></div></div>
     <div class="label">Moves, in order</div><div class="list">${moves}</div>
     ${E.enrage ? `<p class="muted" style="font-size:14px">At half health it becomes enraged and its attacks deal +${E.enrage}.</p>` : ''}
+    <p class="muted" style="font-size:14px">Big attacks and signature moves show a Break bar: deal that much damage before they land to cancel them.</p>
     <button class="btn ghost block" data-close>Close</button>`);
   bindClose();
 }
@@ -139,7 +140,7 @@ export function settingsSheet() {
   const panel = openSheet(`<h2 class="display">Settings</h2>
     <div class="setting"><span>Music</span><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-vol="music" aria-label="Music volume"></div>
     <div class="setting"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" value="${s.sfx}" data-vol="sfx" aria-label="Sound effects volume"></div>
-    ${'vibrate' in navigator ? tog('vibrate', 'Vibration') : ''}${tog('shake', 'Screen shake')}${tog('motion', 'Reduce motion')}${tog('fast', 'Fast animations')}
+    ${'vibrate' in navigator ? tog('vibrate', 'Vibration') : ''}${tog('motion', 'Reduce motion')}${tog('fast', 'Fast animations')}
     <button class="btn ghost block small" data-act="howto">How to play</button>
     ${inRun ? '<button class="btn red block small" data-act="abandon">Abandon run</button>' : ''}
     <button class="btn ghost block small" data-act="reset">Erase all data</button>
@@ -162,8 +163,10 @@ export function howToSheet() {
   openSheet(`<h2 class="display">How to play</h2><div class="howto">
     ${step('b_sword', '<b>Drag pieces onto the grid.</b> Tap a piece to rotate it.')}
     ${step('ui_logo', '<b>Fill a whole row or column</b> to clear it. Every block in it fires: swords deal damage, shields block, hearts heal and coins pay gold.')}
-    ${step('ui_charge', '<b>Clear several lines at once</b> to multiply everything, and clear on back-to-back moves to build a combo.')}
-    ${step('i_atk', '<b>Enemies act on a countdown.</b> Each piece you place is one move. The pips show how soon the next move lands.')}
+    ${step('ui_charge', '<b>Clear several lines at once</b> to multiply everything. Clear again within 2 moves to keep a combo going: each step adds to the multiplier.')}
+    ${step('i_atk', '<b>Enemies act on a countdown.</b> Each piece you place is one move. The pips show how soon the next move lands, and what it will cost you after shield.')}
+    ${step('o_hammer', '<b>Break big attacks.</b> When a move shows a Break bar, deal that much damage before it lands and it never happens.')}
+    ${step('i_rubble', '<b>Watch the marked cells.</b> Rubble and gnawing teeth show where they will hit. A block left on a rubble mark gets crushed.')}
     ${step('ui_shield', '<b>Shield soaks damage.</b> Half of any leftover shield fades each time the enemy acts.')}
     ${step('b_rubble', '<b>Stash a piece</b> by dragging it into the Stash slot. If nothing fits, the ceiling caves in and hurts you.')}
     ${step('s_meteor', '<b>Cleared lines charge your special.</b> Tap it when it glows.')}

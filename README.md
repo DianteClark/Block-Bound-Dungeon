@@ -10,8 +10,12 @@ This is the rebuilt core of the game: three heroes and five floors, tuned with a
 
 - **Pieces and lines.** You hold three pieces. Drag one onto the grid, or tap it to rotate. Fill a whole row or column to clear it.
 - **Blocks fire.** Swords deal damage, shields block, hearts heal and coins pay gold. Clearing several lines at once multiplies everything, and clearing on back-to-back moves builds a combo. Lines made of a single block type are worth extra.
-- **Enemies act on a countdown.** Every piece you place is one move. The intent box shows the enemy's next move and how many moves until it lands, plus the move after that.
+- **Enemies act on a countdown.** Every piece you place is one move. The intent box shows the enemy's next move, how many moves until it lands, what it will cost you after shield, and the move after that.
+- **Break big attacks.** Big attacks and boss signature moves show a Break bar. Deal that much damage before they land and they never happen.
+- **Combos.** Clear again within 2 moves to keep a combo going; each step adds to the multiplier. The combo meter shows how long you have.
+- **Telegraphs.** Rubble and gnawing teeth mark the cells they will hit; fire breath and frost light up their column or row.
 - **Shield** soaks enemy damage. Half of any leftover shield fades each time the enemy acts.
+- **Bonus gold** for winning without losing HP (Flawless) and for overkill damage on the final blow.
 - **Stash** one piece for later by dragging it into the Stash slot (free, once per move).
 - **Cave-ins.** If nothing in your hand fits, the ceiling collapses: you take damage and the two fullest rows are cleared.
 - **Specials.** Cleared lines charge your hero's special. Tap it when it glows.
@@ -21,7 +25,7 @@ This is the rebuilt core of the game: three heroes and five floors, tuned with a
 | Hero | HP | Starter relic | Special |
 |---|---|---|---|
 | Knight | 68 | Oath Shield: start each fight with 6 shield | Bulwark: big shield and clears all rubble |
-| Rogue | 64 | Twin Daggers: combos build twice as fast, coins +1 | Shadowstep: fresh hand, enemy delayed, next clear doubled |
+| Rogue | 64 | Twin Daggers: combos build faster, coins +1 | Shadowstep: fresh hand, enemy delayed, next clear doubled |
 | Mage | 58 | Seer's Orb: multi-line clears get +1 to the multiplier; Rainbow blocks in the bag | Meteor: fires the fullest row and column at x2.5 |
 
 ## The run

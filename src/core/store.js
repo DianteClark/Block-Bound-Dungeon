@@ -14,7 +14,7 @@ function write(key, value) {
   } catch (e) { /* storage full or blocked: the game keeps running */ }
 }
 
-export const DEFAULT_SETTINGS = { music: 0.55, sfx: 0.8, vibrate: true, shake: true, motion: false, fast: false };
+export const DEFAULT_SETTINGS = { music: 0.55, sfx: 0.8, vibrate: true, motion: false, fast: false };
 
 export const store = {
   settings: () => ({ ...DEFAULT_SETTINGS, ...read('settings', {}) }),

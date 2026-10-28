@@ -1,5 +1,5 @@
 /* The run: map, rooms, rewards, shop, campfire and events. Pure logic like combat.js. */
-import { FLOORS, MAP_ROWS, GOLD, PRICES, REST_HEAL, BOSS_HEAL, BAG_MIN, POTION_SLOTS, MAX_BLOCK_LEVEL, FIGHT_RELIC_CHANCE } from '../data/rules.js';
+import { FLOORS, MAP_ROWS, GOLD, PRICES, REST_HEAL, BOSS_HEAL, BAG_MIN, POTION_SLOTS, MAX_BLOCK_LEVEL, FIGHT_RELIC_CHANCE, FLAWLESS_GOLD, OVERKILL_GOLD } from '../data/rules.js';
 import { HEROES } from '../data/heroes.js';
 import { RELICS } from '../data/relics.js';
 import { POTIONS } from '../data/potions.js';
@@ -167,7 +167,10 @@ export function gainPotion(run, id) {
 /** Called once a fight is won: pays gold, heals, and rolls the reward choices. */
 export function winFight(run) {
   const rng = makeRng(run), kind = run.room.t, f = run.floor;
-  const gold = GOLD[kind](f) + rng.int(-3, 3);
+  const c = run.combat;
+  const flawless = c.hpLost === 0 ? FLAWLESS_GOLD(f) : 0;
+  const overkill = OVERKILL_GOLD(c.overkill, f);
+  const gold = GOLD[kind](f) + rng.int(-3, 3) + flawless + overkill;
   run.gold += gold;
   run.stats.gold += gold;
   const healAmt = mod(run, 'fightHeal') + (kind === 'boss' ? Math.round(run.maxHp * BOSS_HEAL) : 0);
@@ -177,7 +180,7 @@ export function winFight(run) {
   if (kind === 'combat') choices = fightChoices(run);
   else if (kind === 'elite') choices = relicOffers(run, 3, 1, 3).map(id => ({ k: 'relic', id }));
   else choices = relicOffers(run, 3, 2, 3).map(id => ({ k: 'relic', id }));
-  run.room.reward = { gold, healed: run.hp - before, choices, done: false };
+  run.room.reward = { gold, flawless, overkill, healed: run.hp - before, choices, done: false };
   run.combat = null;
   return run.room.reward;
 }

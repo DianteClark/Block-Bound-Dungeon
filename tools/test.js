@@ -100,6 +100,58 @@ test('rewards, shop and campfire keep gold and levels valid', () => {
   assert.equal(rest(run), 0, 'only one campfire action');
 });
 
+test('dealing enough damage breaks a big attack', () => {
+  const run = newRun('knight', 21);
+  enterNode(run, 0);
+  const c = run.combat, e = c.enemy;
+  e.hp = e.maxHp = 999;
+  e.intent = { k: 'atk', v: 20, t: 3, left: 3, brk: 30, dealt: 0 };
+  for (let col = 0; col < N - 1; col++) c.board[col] = 'sword';
+  run.lvl.sword = 3; // 8 swords x 5 = 40 damage, enough to break
+  c.hand[0] = { cells: [[0, 0]], h: 1, w: 1, type: 'sword' };
+  const ev = place(run, 0, 0, N - 1);
+  assert.ok(ev.some(x => x.t === 'break'), 'break event');
+  assert.notEqual(e.intent.k === 'atk' && e.intent.v === 20 && e.intent.brk === 30, true, 'a new intent replaced the broken one');
+  assert.ok(!ev.some(x => x.t === 'hitPlayer'), 'the broken attack never lands');
+});
+
+test('a combo survives one move without a clear, not two', () => {
+  const run = newRun('rogue', 22);
+  enterNode(run, 0);
+  const c = run.combat;
+  c.enemy.hp = c.enemy.maxHp = 9999; c.enemy.intent = { k: 'armor', v: 1, t: 9, left: 9, brk: 0, dealt: 0 };
+  const single = () => ({ cells: [[0, 0]], h: 1, w: 1, type: 'shield' });
+  const clearRow = r => { c.board.fill(null); for (let col = 0; col < N - 1; col++) c.board[r * N + col] = 'shield'; c.hand = [single(), single(), single()]; return place(run, 0, r, N - 1); };
+  const miss = () => { c.board.fill(null); c.hand = [single(), single(), single()]; return place(run, 0, 4, 4); };
+  clearRow(0); assert.equal(c.streak, 1);
+  miss(); assert.equal(c.streak, 1, 'still alive after one miss');
+  clearRow(0); assert.equal(c.streak, 2, 'combo continued');
+  miss(); miss(); assert.equal(c.streak, 0, 'two misses end it');
+});
+
+test('rubble and gnaw hit the cells they telegraphed', () => {
+  const run = newRun('mage', 23);
+  enterNode(run, 0);
+  const c = run.combat, e = c.enemy;
+  e.hp = e.maxHp = 9999;
+  e.intent = { k: 'rubble', v: 3, t: 1, left: 1, brk: 0, dealt: 0, marks: [10, 20, 30] };
+  c.board.fill(null); c.board[20] = 'sword';
+  c.hand = [{ cells: [[0, 0]], h: 1, w: 1, type: 'coin' }, null, null];
+  const ev = place(run, 0, 7, 7);
+  const rub = ev.find(x => x.t === 'rubble');
+  assert.deepEqual(rub.cells, [10, 20, 30]);
+  assert.deepEqual(rub.crushed, [20], 'a block left on a marked cell is crushed');
+  assert.ok([10, 20, 30].every(i => c.board[i] === 'rubble'));
+});
+
+test('flawless fights and overkill pay bonus gold', () => {
+  const run = newRun('knight', 24);
+  enterNode(run, 0);
+  run.combat.hpLost = 0; run.combat.overkill = 40; run.combat.over = 'win';
+  const R = winFight(run);
+  assert.ok(R.flawless > 0 && R.overkill > 0);
+});
+
 test('every piece of content has art', () => {
   const need = [
     ...Object.values(HEROES).flatMap(H => [H.art, H.special.art]),

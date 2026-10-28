@@ -128,6 +128,14 @@ const SFX = {
   lose: () => [64, 62, 60, 55].forEach((m, i) => tone({ f: mtof(m), type: 'triangle', vol: 0.12, dur: i === 3 ? 0.9 : 0.3, at: i * 0.22, rev: 0.6 })),
   boss: () => { tone({ f: 55, type: 'sawtooth', vol: 0.3, dur: 1.2, lp: 500, attack: 0.05 }); tone({ f: 82.4, type: 'sawtooth', vol: 0.2, dur: 1.2, lp: 500, attack: 0.05 }); noise({ f: 200, vol: 0.2, dur: 1, attack: 0.1 }); },
   revive: () => { SFX.special(); SFX.heal(); },
+  tick: () => tone({ f: 1320, type: 'triangle', vol: 0.05, dur: 0.05 }),
+  comboLost: () => { tone({ f: 660, f2: 330, type: 'triangle', vol: 0.07, dur: 0.22 }); },
+  break: () => {
+    for (let i = 0; i < 6; i++) tone({ f: 1800 + Math.random() * 2400, type: 'triangle', vol: 0.06, dur: 0.18, at: i * 0.025, rev: 0.4 });
+    noise({ f: 5000, f2: 1500, filter: 'highpass', vol: 0.22, dur: 0.3, rev: 0.3 });
+    tone({ f: 220, f2: 70, type: 'sine', vol: 0.4, dur: 0.3 });
+  },
+  heartbeat: () => { tone({ f: 70, f2: 50, type: 'sine', vol: 0.35, dur: 0.12 }); tone({ f: 64, f2: 46, type: 'sine', vol: 0.28, dur: 0.12, at: 0.18 }); },
 };
 
 /* ---------- music ---------- */

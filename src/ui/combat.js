@@ -5,7 +5,7 @@ import { app, register, go, save, sfx, buzz, T } from './app.js';
 import { renderRunbar, setBars, enemySheet, setPotionHook } from './sheets.js';
 import { endRun, music } from './screens.js';
 import { store } from '../core/store.js';
-import { GRID as N } from '../data/rules.js';
+import { GRID as N, COMBO_WINDOW } from '../data/rules.js';
 import { BLOCKS } from '../data/blocks.js';
 import { RELICS } from '../data/relics.js';
 import { HEROES } from '../data/heroes.js';
@@ -14,7 +14,7 @@ import { fits, fitsAnyRotation, filledIn, colCells, fullestCol } from '../engine
 import {
   place, previewPlace, rotatePiece, stashPiece, useSpecial, specialReady, intentDamage, peekNext, pieceAt, STASH,
 } from '../engine/combat.js';
-import { specialNeed } from '../engine/stats.js';
+import { specialNeed, streakStep } from '../engine/stats.js';
 import { winFight } from '../engine/run.js';
 
 const COLORS = { sword: '#f0555b', shield: '#4d9bff', heart: '#4fcf7a', coin: '#ffc93c', rainbow: '#c77dff', rubble: '#8c8698' };
@@ -47,7 +47,7 @@ function tile(type) {
 /* ---------- view state ---------- */
 const V = {
   run: null, cv: null, ctx: null, dpr: 1, L: null, bg: null, board: null,
-  push: 0, press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0,
+  push: 0, intent: null, sweeps: [], jolt: null, flashT: 0, press: null, drag: null, busy: false, pops: new Map(), fading: new Map(), drops: new Map(), parts: [], raf: 0,
 };
 
 register('combat', open);
@@ -70,7 +70,7 @@ function open() {
         </div>
       </div>
       <div class="pbar">
-        <button class="shieldv num" id="shield" aria-label="Shield"><span class="sv">${img('ui_shield', 28)}<b>0</b></span></button>
+        <button class="hero" id="hero" aria-label="Your hero and shield"><span class="bubble" id="bubble"></span>${img(H.art, 58)}<span class="sv num zero" id="shield">${img('ui_shield', 22)}<b>0</b></span></button>
         <div class="combo" id="combo"></div>
         <button class="special" id="special" aria-label="${esc(H.special.name)}">
           <span class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="#120d19" stroke-width="5"/><circle id="ring" cx="20" cy="20" r="17" fill="none" stroke="#ffc93c" stroke-width="5" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="107"/></svg>${img(H.special.art, 30)}</span>
@@ -84,13 +84,13 @@ function open() {
   sizeWatch.disconnect();
   sizeWatch.observe($('#bw'));
   V.board = c.board.slice();
-  V.drag = V.press = null; V.busy = false; V.parts = []; V.pops.clear(); V.fading.clear(); V.drops.clear();
+  V.drag = V.press = null; V.busy = false; V.parts = []; V.sweeps = []; V.jolt = null; V.flashT = 0; V.pops.clear(); V.fading.clear(); V.drops.clear();
   layout();
   hud();
   setPotionHook({ play: ev => play(ev), busy: () => V.busy });
   bindInput();
   on(root, '#foe, #intent', () => { sfx('tap'); enemySheet(run); });
-  on(root, '#shield', () => toast('<b>Shield</b> blocks enemy damage. Half of any leftover shield fades each time the enemy acts.', 'ui_shield', 3200));
+  on(root, '#hero', () => toast('<b>Shield</b> blocks enemy damage. Half of any leftover shield fades each time the enemy acts.', 'ui_shield', 3200));
   on(root, '#special', () => {
     if (V.busy) return;
     if (specialReady(run)) { const ev = useSpecial(run); if (ev) { save(); play(ev); } return; }
@@ -107,7 +107,7 @@ function open() {
 /* ---------- HUD ---------- */
 function hud(s) {
   const run = V.run, c = run.combat, e = c.enemy;
-  s = s || { hp: run.hp, maxHp: run.maxHp, gold: run.gold, charge: run.charge, shield: c.shield, ehp: e.hp, earmor: e.armor, rage: e.rage, streak: c.streak };
+  s = s || { hp: run.hp, maxHp: run.maxHp, gold: run.gold, charge: run.charge, shield: c.shield, ehp: e.hp, earmor: e.armor, rage: e.rage, streak: c.streak, gap: c.gap, intent: e.intent };
   const pct = Math.max(0, s.ehp / e.maxHp);
   const bar = $('#ehp');
   if (!bar) return;
@@ -116,10 +116,14 @@ function hud(s) {
   bar.querySelector('span').textContent = `${Math.max(0, s.ehp)} / ${e.maxHp}`;
   setHTML($('#badges'), (s.earmor ? `<span class="badge num">${img('i_armor', 22)}${s.earmor}</span>` : '')
     + (s.rage ? `<span class="badge num" style="color:#ff9aa6">${img('i_rage', 22)}+${s.rage}</span>` : ''));
-  intentHUD(s.rage, s.shield);
+  intentHUD(s.rage, s.shield, s.intent);
   const sh = $('#shield');
   sh.querySelector('b').textContent = s.shield;
   sh.classList.toggle('zero', !s.shield);
+  const bub = $('#bubble');
+  bub.style.opacity = s.shield ? Math.min(1, 0.45 + s.shield / 30) : 0;
+  bub.style.transform = `scale(${s.shield ? Math.min(1.12, 0.86 + s.shield / 80) : 0.7})`;
+  comboHUD(s.streak, s.gap);
   const need = specialNeed(run), ring = $('#ring');
   ring.style.strokeDashoffset = 107 * (1 - Math.min(1, s.charge / need));
   $('#special').classList.toggle('ready', s.charge >= need && !c.over);
@@ -145,18 +149,31 @@ function incoming(it, rage, shield) {
   return Math.max(0, total - shield);
 }
 
-function intentHUD(rage, shield) {
-  const run = V.run, c = run.combat, it = c.enemy.intent;
+/** Combo meter: the chain so far and how many moves are left to keep it. */
+function comboHUD(streak, gap) {
+  const el = $('#combo');
+  if (!streak) { el.classList.remove('on'); return; }
+  const left = COMBO_WINDOW - gap;
+  setHTML(el, `<b>Combo ${streak}</b><span class="cp">${Array.from({ length: COMBO_WINDOW }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</span>`
+    + `<small>${left === 1 ? 'Clear now to keep it' : `Next clear +${(streak * streakStep(V.run)).toFixed(2)}`}</small>`);
+  el.classList.add('on');
+  el.classList.toggle('last', left === 1);
+}
+
+function intentHUD(rage, shield, snap) {
+  const run = V.run, c = run.combat, it = snap || c.enemy.intent;
   if (!it) return;
+  V.intent = it;
   const [val, name] = intentText(it, rage);
   const d = ATTACKS.has(it.k) ? intentDamage(run, it) : 0;
   const take = ATTACKS.has(it.k) ? incoming(it, rage, shield) : null;
   const takeHTML = take == null ? '' : take > 0 ? `<span class="take num">You take ${take}</span>` : '<span class="take ok">Fully blocked</span>';
+  const brkHTML = it.brk ? `<span class="brk"><span class="bb"><i style="transform:scaleX(${Math.min(1, it.dealt / it.brk)})"></i></span><em class="num">Break ${Math.min(it.dealt, it.brk)}/${it.brk}</em></span>` : '';
   const box = $('#intent');
   box.classList.toggle('soon', it.left <= 1 && ATTACKS.has(it.k));
-  setHTML(box, `${img('i_' + it.k, 38)}<div class="what"><b class="num">${val || name}</b><small>${val ? name + ', ' : ''}${it.left <= 1 ? 'next move' : `in ${it.left} moves`}</small>${takeHTML}</div>
+  setHTML(box, `${img('i_' + it.k, 38)}<div class="what"><b class="num">${val || name}</b><small>${val ? name + ', ' : ''}${it.left <= 1 ? 'next move' : `in ${it.left} moves`}</small>${takeHTML}${brkHTML}</div>
     <div class="pips">${Array.from({ length: Math.min(6, Math.max(it.left, it.t)) }, (_, k) => `<i class="${k < it.left ? 'on' : ''}"></i>`).join('')}</div>`);
-  box.setAttribute('aria-label', `${MOVES[it.k].name}: ${MOVES[it.k].desc(it, d)} In ${it.left} moves.`);
+  box.setAttribute('aria-label', `${MOVES[it.k].name}: ${MOVES[it.k].desc(it, d)} In ${it.left} moves.${it.brk ? ` Deal ${it.brk} damage first to break it.` : ''}`);
   const nx = peekNext(run), [nv, nn] = intentText(nx, rage);
   setHTML($('#next'), `Then: ${img('i_' + nx.k, 18)} ${nn}${nv ? ' ' + nv : ''}`);
 }
@@ -231,6 +248,12 @@ function frame(now) {
   ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, L.W, L.H);
   const cs = L.cell;
+  // a short jolt of the board itself (never the whole screen)
+  if (V.jolt) {
+    const k = (now - V.jolt.t0) / V.jolt.dur;
+    if (k >= 1) V.jolt = null;
+    else { const a = V.jolt.amp * (1 - k); ctx.translate(Math.sin(now / 17) * a, Math.cos(now / 23) * a * 0.6); }
+  }
 
   // board well and empty slots (pre-rendered)
   const bg = V.bg, side = bg.width / dpr;
@@ -270,6 +293,8 @@ function frame(now) {
       ctx.globalAlpha = 1;
     }
   }
+  const urgent = drawTelegraph(ctx, now, L);
+
   // ghost of the dragged piece where it would land
   if (d && d.valid) {
     for (const i of ghost) {
@@ -323,7 +348,63 @@ function frame(now) {
     rr(ctx, x - q.s / 2, y - q.s / 2, q.s, q.s, q.s * 0.3); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  if (V.pops.size || V.fading.size || V.drops.size || V.parts.length || V.drag) invalidate();
+
+  // light sweeping along each cleared line
+  V.sweeps = V.sweeps.filter(w => now - w.t0 < w.dur);
+  for (const w of V.sweeps) {
+    const k = (now - w.t0) / w.dur, len = L.S + cs * 2, head = -cs + k * len;
+    ctx.globalAlpha = 0.9 * (1 - k * 0.6);
+    ctx.fillStyle = '#fff';
+    for (const r of w.rows) { rr(ctx, L.bx + Math.max(0, head - cs * 1.4), L.by + r * cs + cs * 0.3, Math.min(cs * 1.4, Math.max(0, head)), cs * 0.4, cs * 0.2); ctx.fill(); }
+    for (const col of w.cols) { rr(ctx, L.bx + col * cs + cs * 0.3, L.by + Math.max(0, head - cs * 1.4), cs * 0.4, Math.min(cs * 1.4, Math.max(0, head)), cs * 0.2); ctx.fill(); }
+  }
+  // freeze-frame flash on big moments
+  if (V.flashT > now) {
+    ctx.globalAlpha = Math.min(0.28, (V.flashT - now) / 500);
+    ctx.fillStyle = '#fff';
+    rr(ctx, L.bx - 7, L.by - 7, L.S + 14, L.S + 14, 16); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if (V.pops.size || V.fading.size || V.drops.size || V.parts.length || V.drag || V.sweeps.length || V.jolt || V.flashT > now || urgent) invalidate();
+}
+
+/** Show what the enemy's next move will hit. Returns true while it should pulse. */
+function drawTelegraph(ctx, now, L) {
+  const it = V.intent, c = V.run.combat;
+  if (!it || c.over) return false;
+  const cs = L.cell, urgent = it.left <= 1, p = urgent ? 0.55 + 0.45 * Math.sin(now / 110) : 0.75;
+  const at = i => [L.bx + (i % N) * cs, L.by + Math.floor(i / N) * cs];
+  let shown = false;
+  ctx.lineWidth = 2.5;
+  if (it.k === 'rubble' && it.marks) {
+    ctx.setLineDash([5, 4]);
+    for (const i of it.marks) {
+      const [x, y] = at(i), filled = !!V.board[i];
+      if (!filled) { ctx.globalAlpha = 0.22 * p; drawTile('rubble', x, y, cs, 0.8); ctx.globalAlpha = 1; }
+      ctx.strokeStyle = filled ? `rgba(255,107,114,${p})` : `rgba(214,206,226,${p})`;
+      rr(ctx, x + 3, y + 3, cs - 6, cs - 6, cs * 0.2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    shown = it.marks.length > 0;
+  } else if (it.k === 'gnaw' && it.marks) {
+    for (const i of it.marks) {
+      if (!V.board[i]) continue;
+      const [x, y] = at(i);
+      ctx.strokeStyle = `rgba(255,90,100,${p})`; ctx.lineWidth = 3.5;
+      rr(ctx, x + 2, y + 2, cs - 4, cs - 4, cs * 0.2); ctx.stroke();
+      shown = true;
+    }
+  } else if (it.k === 'breath') {
+    const col = fullestCol(V.board);
+    ctx.fillStyle = `rgba(255,122,61,${0.1 + 0.16 * p})`;
+    rr(ctx, L.bx + col * cs + 1, L.by + 1, cs - 2, L.S - 2, cs * 0.2); ctx.fill();
+    shown = true;
+  } else if (it.k === 'frost') {
+    ctx.fillStyle = `rgba(159,227,255,${0.1 + 0.16 * p})`;
+    rr(ctx, L.bx + 1, L.by + (N - 1) * cs + 1, L.S - 2, cs - 2, cs * 0.2); ctx.fill();
+    shown = true;
+  }
+  return urgent && shown;
 }
 
 /** fitsAnyRotation, remembered until the board or the piece changes. */
@@ -352,13 +433,16 @@ function burst(i, type, n = 6) {
   }
 }
 
-/** Sparks that fly from cleared cells to a HUD element. */
+/** Sparks that fly from cleared cells (or any screen points) to a HUD element. */
 function flyTo(cells, el, color) {
+  const cr = V.cv.getBoundingClientRect(), L = V.L;
+  fly(cells.map(i => [cr.left + L.bx + (i % N) * L.cell + L.cell / 2, cr.top + L.by + Math.floor(i / N) * L.cell + L.cell / 2]), el, color);
+}
+function fly(points, el, color) {
   if (!el || document.body.classList.contains('reduce-motion')) return;
-  const cr = V.cv.getBoundingClientRect(), tr = el.getBoundingClientRect();
-  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2, L = V.L;
-  cells.slice(0, 10).forEach((i, k) => {
-    const x = cr.left + L.bx + (i % N) * L.cell + L.cell / 2, y = cr.top + L.by + Math.floor(i / N) * L.cell + L.cell / 2;
+  const tr = el.getBoundingClientRect();
+  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+  points.slice(0, 10).forEach(([x, y], k) => {
     const dot = document.createElement('i');
     dot.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:12px;height:12px;margin:-6px;border-radius:4px;background:${color};border:2px solid #21172b`;
     $('#fx').appendChild(dot);
@@ -368,16 +452,16 @@ function flyTo(cells, el, color) {
   });
 }
 
-/** Pop a relic's icon and name under the relic bar when it does something. */
+/** Pop a relic's icon and name over the top of the board when it does something. */
 let popsLive = 0;
 function relicPop(id) {
   const R = RELICS[id], anchor = $('.rb-relics');
-  if (!R || !anchor) return;
-  const r = anchor.getBoundingClientRect();
+  if (!R || !anchor || !V.L) return;
+  const r = V.cv.getBoundingClientRect();
   const d = document.createElement('div');
   d.className = 'relicpop';
-  d.style.left = Math.max(8, r.left - 20) + 'px';
-  d.style.top = r.bottom + 6 + popsLive * 40 + 'px';
+  d.style.left = r.left + V.L.bx + 10 + 'px';
+  d.style.top = r.top + V.L.by + 10 + popsLive * 40 + 'px';
   d.innerHTML = `${img(R.art, 28)}<span>${esc(R.name)}</span>`;
   $('#fx').appendChild(d);
   popsLive++;
@@ -385,7 +469,30 @@ function relicPop(id) {
   setTimeout(() => { d.remove(); popsLive--; }, 1500);
 }
 
-function shakeScreen() { if (app.settings.shake && !app.settings.motion) bump($('#app'), 'shake'); }
+/** Jolt the board (not the screen). */
+function jolt(amp, ms = 260) { if (!app.settings.motion) { V.jolt = { amp, dur: ms, t0: performance.now() }; invalidate(); } }
+
+/** One running damage number above the enemy for the whole move, instead of a pile of small ones. */
+function showTally(n) {
+  const foe = $('#foe');
+  let el = $('#tally');
+  if (!el) { el = document.createElement('div'); el.id = 'tally'; el.className = 'tally'; $('#fx').appendChild(el); }
+  const r = foe.getBoundingClientRect();
+  el.style.left = r.left + r.width / 2 + 'px';
+  el.style.top = r.top + 4 + 'px';
+  el.textContent = `-${n}`;
+  el.classList.toggle('big', n >= 30);
+  el.classList.remove('out');
+  bump(el, 'tpop');
+  clearTimeout(V.tallyT);
+  V.tallyT = setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, 950);
+}
+
+/** A big word over the board: Double!, Broken!, Flawless! */
+function boardWord(text, color = '#ffc93c') {
+  const r = V.cv.getBoundingClientRect(), L = V.L;
+  floatText([r.left + L.bx + L.S / 2, r.top + L.by + L.S * 0.42], text, color, true);
+}
 
 /* ---------- input ---------- */
 function pt(e) { const r = V.cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
@@ -471,7 +578,8 @@ async function doPlace(i, r, c) {
 /* ---------- event playback ---------- */
 async function play(events) {
   V.busy = true;
-  const run = V.run, foe = $('#foe');
+  V.tally = 0;
+  const run = V.run, foe = $('#foe'), hero = $('#hero');
   for (const e of events) {
     if (app.screen !== 'combat') break;
     invalidate();
@@ -484,40 +592,53 @@ async function play(events) {
         break;
       }
       case 'clear': {
-        const now = performance.now();
+        const now = performance.now(), big = e.lines >= 3 || e.meteor;
         for (const [i, t] of e.cells) { V.fading.set(i, { type: t, t0: now, dur: T(320) }); V.board[i] = null; burst(i, t, e.lines > 1 ? 7 : 5); }
+        V.sweeps.push({ rows: e.rows, cols: e.cols, t0: now, dur: T(300) });
         sfx(e.meteor ? 'special' : 'clear', e.lines, e.streak);
-        buzz(e.lines > 1 ? 30 : 15);
+        buzz(big ? 40 : e.lines > 1 ? 25 : 12);
         const ids = e.cells.map(x => x[0]);
         const by = t => ids.filter((_, k) => e.cells[k][1] === t || e.cells[k][1] === 'rainbow');
-        if (e.dmg) flyTo(by('sword').length ? by('sword') : ids, foe, COLORS.sword);
-        if (e.shield) flyTo(by('shield'), $('#shield'), COLORS.shield);
-        if (e.heal) flyTo(by('heart'), $('#hpbar'), COLORS.heart);
+        if (e.dmg) { flyTo(by('sword').length ? by('sword') : ids, foe, COLORS.sword); bump(hero, 'attack'); }
+        if (e.shield) flyTo(by('shield'), hero, COLORS.shield);
+        if (e.heal) flyTo(by('heart'), hero, COLORS.heart);
         if (e.gold) flyTo(by('coin'), $('#goldpill'), COLORS.coin);
         const words = ['', '', 'Double!', 'Triple!', 'Quadruple!', 'Incredible!'];
-        const combo = $('#combo');
-        const label = e.meteor ? 'Meteor!' : e.lines >= 2 ? words[Math.min(5, e.lines)] : e.streak >= 1 ? `Combo ${e.streak + 1}` : '';
-        if (label) { combo.textContent = `${label}  x${e.mult}`; combo.classList.add('on'); bump(combo, 'pop'); }
-        if (e.lines >= 3) shakeScreen();
-        await wait(T(240));
+        const label = e.meteor ? 'Meteor!' : e.lines >= 2 ? words[Math.min(5, e.lines)] : '';
+        if (label) boardWord(`${label} x${e.mult}`);
+        if (big) { V.flashT = now + T(260); jolt(5); await wait(T(110)); } // a beat of freeze-frame
+        await wait(T(220));
         break;
       }
       case 'tally': hud(s); break;
-      case 'streakEnd': $('#combo').classList.remove('on'); break;
+      case 'comboWait': hud(s); sfx('tick'); break;
+      case 'streakEnd': hud(s); floatText($('#combo'), 'Combo lost', '#ab9ebd'); sfx('comboLost'); break;
       case 'hitEnemy': {
-        bump(foe, 'hit');
+        const bigHit = e.amount >= 20;
+        bump(foe, bigHit ? 'hitbig' : 'hit');
         if (e.absorbed) floatText(foe, `${e.absorbed} blocked`, '#b4d6ff');
-        if (e.amount) floatText(foe, `-${e.amount}`, e.source === 'thorns' ? '#ffcf6a' : '#ff6b72', e.amount >= 25);
-        sfx(e.amount ? 'hit' : 'armorHit', e.amount >= 25);
-        if (e.amount >= 25) shakeScreen();
+        if (e.amount) {
+          if (e.source === 'thorns') floatText(foe, `-${e.amount}`, '#ffcf6a');
+          else { V.tally += e.amount; showTally(V.tally); }
+        }
+        sfx(e.amount ? 'hit' : 'armorHit', bigHit);
         hud(s);
-        await wait(T(140));
+        await wait(T(bigHit ? 170 : 130));
         break;
       }
-      case 'shield': floatText($('#shield'), `+${e.amount}`, '#8fc3ff'); bump($('#shield'), 'pop'); sfx('shield'); hud(s); break;
-      case 'heal': floatText($('#hpbar'), `+${e.amount}`, '#7ff0a0'); sfx('heal'); hud(s); break;
+      case 'break': {
+        bump($('#intent'), 'shatter'); bump(foe, 'hitbig');
+        boardWord('Broken!', '#ffd96a');
+        sfx('break'); buzz(50);
+        V.flashT = performance.now() + T(200);
+        hud(s);
+        await wait(T(420));
+        break;
+      }
+      case 'shield': floatText(hero, `+${e.amount}`, '#8fc3ff'); bump($('#shield'), 'pop'); sfx('shield'); hud(s); break;
+      case 'heal': floatText(hero, `+${e.amount}`, '#7ff0a0'); sfx('heal'); hud(s); break;
       case 'gold': floatText($('#goldpill'), `+${e.amount}`, '#ffd96a'); sfx('gold'); hud(s); break;
-      case 'enrage': floatText(foe, 'Enraged!', '#ff6b72', true); sfx('enrage'); shakeScreen(); hud(s); await wait(T(500)); break;
+      case 'enrage': floatText(foe, 'Enraged!', '#ff6b72', true); foe.classList.add('enraged'); sfx('enrage'); hud(s); await wait(T(500)); break;
       case 'enemyMove': {
         await wait(T(120));
         bump(foe, 'lunge');
@@ -526,10 +647,13 @@ async function play(events) {
         break;
       }
       case 'hitPlayer': {
-        if (e.blocked) { floatText($('#shield'), `${e.blocked} blocked`, '#b4d6ff'); sfx('block'); }
+        if (e.blocked) { floatText(hero, `${e.blocked} blocked`, '#b4d6ff'); bump($('#shield'), 'pop'); sfx('block'); }
         if (e.amount) {
-          floatText($('#hpbar'), `-${e.amount}`, '#ff6b72', e.amount >= 15);
-          sfx('hurt', e.amount >= 15); buzz(40); shakeScreen(); flash('rgba(240,60,70,.35)');
+          floatText(hero, `-${e.amount}`, '#ff6b72', e.amount >= 15);
+          bump(hero, 'hurt');
+          sfx('hurt', e.amount >= 15); buzz(40);
+          if (e.amount >= 15) { flash('rgba(240,60,70,.3)'); jolt(4); }
+          if (s.hp > 0 && s.hp <= s.maxHp * 0.25) sfx('heartbeat');
         }
         hud(s);
         await wait(T(180));
@@ -540,7 +664,8 @@ async function play(events) {
       case 'rubble': {
         const now = performance.now();
         for (const i of e.cells) { V.board[i] = 'rubble'; V.drops.set(i, now); }
-        sfx('rubble'); await wait(T(320));
+        if (e.crushed && e.crushed.length) floatText(foe, `${e.crushed.length} crushed`, '#ff9aa6');
+        sfx('rubble'); hud(s); await wait(T(320));
         break;
       }
       case 'sap': floatText($('#special'), `-${e.amount}`, '#d7bcff'); sfx('magic'); hud(s); break;
@@ -548,33 +673,39 @@ async function play(events) {
         const now = performance.now();
         for (const [i, t] of e.cells) { if (!t) continue; V.fading.set(i, { type: t, t0: now, dur: T(380), fire: !!e.fire }); V.board[i] = null; }
         if (!e.fire) sfx('rubble');
+        if (e.fire) jolt(4);
         await wait(T(320));
         break;
       }
       case 'hex': sfx('magic'); toast('Your hand was <b>hexed</b> into rubble.', 'i_hex', 1800); break;
-      case 'shiftUp': case 'flip': V.board = e.board.slice(); sfx('quake'); shakeScreen(); await wait(T(380)); break;
+      case 'shiftUp': case 'flip': V.board = e.board.slice(); sfx('quake'); jolt(6, 380); await wait(T(380)); break;
       case 'shieldFade': hud(s); break;
       case 'deal': sfx('pick'); break;
       case 'cavein': {
         banner('Cave-in!', e.dmg ? `The ceiling crashes down for ${e.dmg}` : 'Your kit turns it on the enemy', 1300);
         const now = performance.now();
         for (const [i, t] of e.cells) { V.fading.set(i, { type: t, t0: now, dur: T(420) }); V.board[i] = null; }
-        sfx('cavein'); shakeScreen();
+        sfx('cavein'); jolt(7, 420);
         await wait(T(450));
         break;
       }
       case 'revive': banner('Reborn!', 'The Phoenix Feather burns away', 1600); sfx('revive'); hud(s); await wait(T(600)); break;
       case 'special': {
         const H = HEROES[run.hero];
+        bump(hero, 'cast');
         banner(H.special.name, '', 1100); sfx('special'); buzz(30);
         await wait(T(300));
         break;
       }
-      case 'potion': break;
+      case 'potion': bump(hero, 'cast'); break;
       case 'relic': relicPop(e.id); sfx('ready'); break;
-      case 'delay': floatText($('#intent'), `+${e.amount} moves`, '#d7bcff'); sfx('magic'); break;
+      case 'delay': floatText($('#intent'), `+${e.amount} moves`, '#d7bcff'); sfx('magic'); hud(s); break;
       case 'win': {
-        foe.classList.add('die'); sfx('win');
+        foe.classList.add('die'); sfx('win'); buzz(30);
+        V.flashT = performance.now() + T(240);
+        const fr = foe.getBoundingClientRect();
+        fly(Array.from({ length: 8 }, () => [fr.left + fr.width * (0.2 + Math.random() * 0.6), fr.top + fr.height * (0.2 + Math.random() * 0.6)]), $('#goldpill'), COLORS.coin);
+        if (run.combat.hpLost === 0) { await wait(T(250)); boardWord('Flawless!', '#7ff0a0'); }
         await wait(T(900));
         break;
       }
@@ -592,6 +723,5 @@ async function play(events) {
   if (c.over === 'lose') { run.over = 'lose'; return endRun(); }
   if (specialReady(run) && !V.wasReady) { sfx('ready'); bump($('#special'), 'pop'); }
   V.wasReady = specialReady(run);
-  if (!store.flag('tutorial') && c.moves === 3) toast('<b>Watch the countdown.</b> The enemy acts when its pips run out. Tap it for details.', 'i_atk', 4200);
+  if (!store.flag('tutorial') && c.moves === 3) toast('<b>Watch the countdown.</b> The enemy acts when its pips run out. Big attacks can be broken by dealing enough damage first.', 'i_atk', 5200);
 }
-

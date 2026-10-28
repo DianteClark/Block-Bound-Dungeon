@@ -1,7 +1,7 @@
 /* Combat rules. Every action takes the run, changes run.combat, and returns a list of
  * events ({t: 'clear', ...}) that the UI animates and the balance lab ignores.
  * Nothing in here touches the page. */
-import { GRID as N, HAND, LINE_MULT, PURE_BONUS, CAVE_IN_DMG, ENEMY_HP, ENEMY_DMG, SHIELD_FADE } from '../data/rules.js';
+import { GRID as N, HAND, LINE_MULT, PURE_BONUS, CAVE_IN_DMG, ENEMY_HP, ENEMY_DMG, SHIELD_FADE, COMBO_WINDOW, BREAK } from '../data/rules.js';
 import { BLOCKS } from '../data/blocks.js';
 import { SHAPES, rotate } from '../data/shapes.js';
 import { ENEMIES, ATTACKS, enemiesFor } from '../data/enemies.js';
@@ -19,8 +19,9 @@ function emit(run, ev, e) {
   const c = run.combat, en = c && c.enemy;
   e.s = {
     hp: run.hp, maxHp: run.maxHp, gold: run.gold, charge: run.charge,
-    shield: c ? c.shield : 0, streak: c ? c.streak : 0,
+    shield: c ? c.shield : 0, streak: c ? c.streak : 0, gap: c ? c.gap : 0,
     ehp: en ? en.hp : 0, earmor: en ? en.armor : 0, rage: en ? en.rage : 0,
+    intent: en && en.intent ? { ...en.intent } : null,
   };
   ev.push(e);
 }
@@ -37,8 +38,8 @@ export function startCombat(run, kind, enemyId) {
   };
   const c = {
     kind, enemy, board: Array(N * N).fill(null), hand: [], stash: null, stashUsed: false,
-    shield: mod(run, 'startShield'), streak: 0, moves: 0, firstClear: true, doubleNext: false,
-    pile: [], over: null,
+    shield: mod(run, 'startShield'), streak: 0, gap: 0, moves: 0, firstClear: true, doubleNext: false,
+    pile: [], over: null, hpLost: 0, overkill: 0,
   };
   run.combat = c;
   run.charge = Math.min(specialNeed(run), run.charge + mod(run, 'startCharge'));
@@ -47,11 +48,22 @@ export function startCombat(run, kind, enemyId) {
   return c;
 }
 
+const SIGNATURE = new Set(['gnaw', 'hex', 'breath', 'frost', 'flip']);
+
 function nextIntent(run) {
-  const e = run.combat.enemy, moves = ENEMIES[e.id].moves;
+  const c = run.combat, e = c.enemy, moves = ENEMIES[e.id].moves, rng = makeRng(run);
   const m = moves[e.mi % moves.length];
   e.mi++;
-  e.intent = { ...m, left: m.t + mod(run, 'slowEnemy') };
+  const it = { ...m, left: m.t + mod(run, 'slowEnemy') };
+  // break threshold
+  const total = ATTACKS.has(m.k) ? intentDamage(run, m) * (m.n || 1) : 0;
+  it.brk = SIGNATURE.has(m.k) ? Math.round(e.maxHp * BREAK.signature)
+    : total >= BREAK.min ? Math.round(total * BREAK.mult) : 0;
+  it.dealt = 0;
+  // telegraph: rubble and gnaw pick their target cells now, so the board can show them
+  if (m.k === 'rubble') it.marks = rng.shuffle(emptyCells(c.board)).slice(0, m.v);
+  if (m.k === 'gnaw') it.marks = rng.shuffle(liveCells(c.board)).slice(0, m.v);
+  e.intent = it;
 }
 
 /** The move after the current intent (shown greyed out under it). */
@@ -221,6 +233,16 @@ function damageEnemy(run, ev, amount, source) {
   e.hp -= dealt;
   run.stats.damage += dealt;
   emit(run, ev, { t: 'hitEnemy', amount: amount - absorbed, absorbed, source });
+  if (e.hp <= 0) c.overkill = amount - absorbed - dealt;
+  const it = e.intent;
+  if (it && it.brk && e.hp > 0) {
+    it.dealt += dealt;
+    if (it.dealt >= it.brk) {
+      emit(run, ev, { t: 'break', k: it.k });
+      nextIntent(run);
+      e.intent.left++; // this move's enemy tick shouldn't eat into the new intent
+    }
+  }
   const E = ENEMIES[e.id];
   if (E.enrage && !e.enraged && e.hp > 0 && e.hp <= e.maxHp / 2) {
     e.enraged = true;
@@ -243,6 +265,7 @@ function hitPlayer(run, ev, amount, attack = true) {
   c.shield -= blocked;
   const lost = Math.min(run.hp, amount - blocked);
   run.hp -= lost;
+  c.hpLost += lost;
   emit(run, ev, { t: 'hitPlayer', amount: amount - blocked, blocked });
   if (attack && mod(run, 'thorns') && c.enemy.hp > 0) { relicFx(run, ev, 'thorns'); damageEnemy(run, ev, mod(run, 'thorns'), 'thorns'); }
   if (run.hp <= 0) {
@@ -268,7 +291,7 @@ function endCombat(run, ev, result) {
 export function intentDamage(run, it) {
   const e = run.combat.enemy;
   const scale = ENEMY_DMG[ENEMIES[e.id].floor - 1];
-  if (it.k === 'breath') return Math.round(5 * scale) + e.rage;
+  if (it.k === 'breath') return Math.round(6 * scale) + e.rage;
   return ATTACKS.has(it.k) ? Math.round(it.v * scale) + e.rage : 0;
 }
 
@@ -277,6 +300,11 @@ export function intentDamage(run, it) {
 function emptyCells(board) {
   const out = [];
   board.forEach((t, i) => { if (!t) out.push(i); });
+  return out;
+}
+function liveCells(board) {
+  const out = [];
+  board.forEach((t, i) => { if (t && t !== 'rubble') out.push(i); });
   return out;
 }
 
@@ -302,9 +330,11 @@ function enemyAct(run, ev) {
     }
     case 'rage': e.rage += it.v; break;
     case 'rubble': {
-      const cells = rng.shuffle(emptyCells(c.board)).slice(0, it.v);
+      // marked cells turn to rubble; a block you placed on one is crushed into rubble too
+      const cells = it.marks || [];
+      const crushed = cells.filter(i => c.board[i] && c.board[i] !== 'rubble');
       for (const i of cells) c.board[i] = 'rubble';
-      emit(run, ev, { t: 'rubble', cells });
+      emit(run, ev, { t: 'rubble', cells, crushed });
       break;
     }
     case 'sap': {
@@ -313,9 +343,8 @@ function enemyAct(run, ev) {
       break;
     }
     case 'gnaw': {
-      const filled = [];
-      c.board.forEach((t, i) => { if (t && t !== 'rubble') filled.push(i); });
-      const cells = rng.shuffle(filled).slice(0, it.v);
+      // only marked blocks still on the board get chewed; clearing them first saves them
+      const cells = (it.marks || []).filter(i => c.board[i] && c.board[i] !== 'rubble');
       emit(run, ev, { t: 'remove', cells: cells.map(i => [i, c.board[i]]) });
       for (const i of cells) c.board[i] = null;
       break;
@@ -403,8 +432,11 @@ export function place(run, i, r, col) {
   run.stats.moves++;
 
   const plan = planClear(run, c.board);
-  if (plan) fireClear(run, ev, plan);
-  else if (c.streak) { emit(run, ev, { t: 'streakEnd', streak: c.streak }); c.streak = 0; }
+  if (plan) { fireClear(run, ev, plan); c.gap = 0; }
+  else if (c.streak && ++c.gap >= COMBO_WINDOW) {
+    emit(run, ev, { t: 'streakEnd', streak: c.streak });
+    c.streak = 0; c.gap = 0;
+  } else if (c.streak) emit(run, ev, { t: 'comboWait' });
 
   enemyTick(run, ev);
   if (!c.over && c.hand.every(x => !x)) { dealHand(run); emit(run, ev, { t: 'deal' }); }
